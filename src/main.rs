@@ -144,10 +144,14 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
             if !is_tasks_mode {
                 ensure_selected_visible(
                     &mut app.scroll_offset,
-                    app.selected,
-                    app.entry_indices.len(),
+                    app.selected + 1,
+                    app.entry_indices.len() + 1,
                     visible_height,
                 );
+                // Keep header visible when first entry is selected
+                if app.selected == 0 {
+                    app.scroll_offset = 0;
+                }
             }
 
             let lines = if is_tasks_mode {
@@ -160,21 +164,23 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 && app.mode == Mode::Edit
                 && let Some(ref buffer) = app.edit_buffer
                 && let Some(entry) = app.get_selected_entry()
-                && app.selected >= app.scroll_offset
             {
-                let screen_row = app.selected - app.scroll_offset;
-                let prefix = entry.prefix();
-                let cursor_col = prefix.width() + buffer.cursor_display_pos();
+                let line_index = app.selected + 1;
+                if line_index >= app.scroll_offset {
+                    let screen_row = line_index - app.scroll_offset;
+                    let prefix = entry.prefix();
+                    let cursor_col = prefix.width() + buffer.cursor_display_pos();
 
-                #[allow(clippy::cast_possible_truncation)]
-                let cursor_x = content_area.x + cursor_col as u16;
-                #[allow(clippy::cast_possible_truncation)]
-                let cursor_y = content_area.y + screen_row as u16;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let cursor_x = content_area.x + cursor_col as u16;
+                    #[allow(clippy::cast_possible_truncation)]
+                    let cursor_y = content_area.y + screen_row as u16;
 
-                if cursor_x < content_area.x + content_area.width
-                    && cursor_y < content_area.y + content_area.height
-                {
-                    f.set_cursor_position((cursor_x, cursor_y));
+                    if cursor_x < content_area.x + content_area.width
+                        && cursor_y < content_area.y + content_area.height
+                    {
+                        f.set_cursor_position((cursor_x, cursor_y));
+                    }
                 }
             }
 

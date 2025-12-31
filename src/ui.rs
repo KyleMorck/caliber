@@ -58,6 +58,11 @@ pub fn render_tasks_view(app: &App) -> Vec<RatatuiLine<'static>> {
 pub fn render_daily_view(app: &App) -> Vec<RatatuiLine<'static>> {
     let mut lines = Vec::new();
 
+    lines.push(RatatuiLine::from(Span::styled(
+        "Entries",
+        Style::default().fg(Color::Cyan),
+    )));
+
     for (entry_idx, &line_idx) in app.entry_indices.iter().enumerate() {
         if let Line::Entry(entry) = &app.lines[line_idx] {
             let is_selected = entry_idx == app.selected;
