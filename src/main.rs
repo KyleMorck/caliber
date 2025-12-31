@@ -41,7 +41,11 @@ fn calculate_wrapped_position(full_text: &str, cursor_pos: usize, width: usize) 
 
         if char_idx + word_chars > cursor_pos {
             let chars_into_word = cursor_pos - char_idx;
-            let width_into_word: usize = word.chars().take(chars_into_word).collect::<String>().width();
+            let width_into_word: usize = word
+                .chars()
+                .take(chars_into_word)
+                .collect::<String>()
+                .width();
             col += width_into_word;
             return (row, col);
         }
@@ -154,42 +158,42 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 ui::render_daily_view(&app)
             };
 
-            if !is_tasks_mode {
-                if app.mode == Mode::Edit
-                    && let Some(ref buffer) = app.edit_buffer
-                    && let Some(entry) = app.get_selected_entry()
+            if !is_tasks_mode
+                && app.mode == Mode::Edit
+                && let Some(ref buffer) = app.edit_buffer
+                && let Some(entry) = app.get_selected_entry()
+            {
+                let width = content_area.width as usize;
+
+                let mut visual_row: usize = 0;
+                for (i, line) in lines.iter().enumerate() {
+                    if i == app.selected + 1 {
+                        break;
+                    }
+                    let line_width = line.to_string().width();
+                    visual_row += if line_width == 0 {
+                        1
+                    } else {
+                        line_width.div_ceil(width)
+                    };
+                }
+
+                let prefix = entry.prefix();
+                let full_text = format!("{}{}", prefix, buffer.content());
+                let cursor_pos = prefix.chars().count() + buffer.cursor_char_pos();
+
+                let (wrap_row, wrap_col) =
+                    calculate_wrapped_position(&full_text, cursor_pos, width);
+
+                #[allow(clippy::cast_possible_truncation)]
+                let cursor_x = content_area.x + wrap_col as u16;
+                #[allow(clippy::cast_possible_truncation)]
+                let cursor_y = content_area.y + (visual_row + wrap_row) as u16;
+
+                if cursor_x <= content_area.x + content_area.width
+                    && cursor_y < content_area.y + content_area.height
                 {
-                    let width = content_area.width as usize;
-
-                    let mut visual_row: usize = 0;
-                    for (i, line) in lines.iter().enumerate() {
-                        if i == app.selected + 1 {
-                            break;
-                        }
-                        let line_width = line.to_string().width();
-                        visual_row += if line_width == 0 {
-                            1
-                        } else {
-                            (line_width + width - 1) / width
-                        };
-                    }
-
-                    let prefix = entry.prefix();
-                    let full_text = format!("{}{}", prefix, buffer.content());
-                    let cursor_pos = prefix.chars().count() + buffer.cursor_char_pos();
-
-                    let (wrap_row, wrap_col) = calculate_wrapped_position(&full_text, cursor_pos, width);
-
-                    #[allow(clippy::cast_possible_truncation)]
-                    let cursor_x = content_area.x + wrap_col as u16;
-                    #[allow(clippy::cast_possible_truncation)]
-                    let cursor_y = content_area.y + (visual_row + wrap_row) as u16;
-
-                    if cursor_x <= content_area.x + content_area.width
-                        && cursor_y < content_area.y + content_area.height
-                    {
-                        f.set_cursor_position((cursor_x, cursor_y));
-                    }
+                    f.set_cursor_position((cursor_x, cursor_y));
                 }
             }
 
@@ -226,7 +230,8 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 let inner_area = help_block.inner(popup_area);
                 f.render_widget(help_block, popup_area);
 
-                let help_content = ui::render_help_content(app.help_scroll, app.help_visible_height);
+                let help_content =
+                    ui::render_help_content(app.help_scroll, app.help_visible_height);
                 let help_paragraph = Paragraph::new(help_content);
                 f.render_widget(help_paragraph, inner_area);
 
@@ -240,18 +245,27 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 let footer_line = if arrows.is_empty() {
                     ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
-                        ratatui::text::Span::styled(" close ", Style::default().fg(Color::DarkGray)),
+                        ratatui::text::Span::styled(
+                            " close ",
+                            Style::default().fg(Color::DarkGray),
+                        ),
                     ])
                 } else {
                     ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled(arrows, Style::default().fg(Color::White)),
-                        ratatui::text::Span::styled(" scroll  ", Style::default().fg(Color::DarkGray)),
+                        ratatui::text::Span::styled(
+                            " scroll  ",
+                            Style::default().fg(Color::DarkGray),
+                        ),
                         ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
-                        ratatui::text::Span::styled(" close ", Style::default().fg(Color::DarkGray)),
+                        ratatui::text::Span::styled(
+                            " close ",
+                            Style::default().fg(Color::DarkGray),
+                        ),
                     ])
                 };
-                let footer = Paragraph::new(footer_line)
-                    .alignment(ratatui::layout::Alignment::Right);
+                let footer =
+                    Paragraph::new(footer_line).alignment(ratatui::layout::Alignment::Right);
                 f.render_widget(footer, footer_area);
             }
         })?;

@@ -64,6 +64,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         KeyCode::Char('h' | '[') => app.prev_day()?,
         KeyCode::Char('l' | ']') => app.next_day()?,
         KeyCode::Char('t') => app.goto_today()?,
+        KeyCode::Char('g') => app.gather_completed_tasks(),
         _ => {}
     }
     Ok(())
@@ -111,6 +112,7 @@ pub fn handle_tasks_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         KeyCode::Down | KeyCode::Char('j') => app.task_move_down(),
         KeyCode::Enter => app.task_jump_to_day()?,
         KeyCode::Char('x') => app.task_toggle()?,
+        KeyCode::Char('r') => app.refresh_tasks()?,
         KeyCode::Char(':') => app.mode = Mode::Command,
         _ => {}
     }

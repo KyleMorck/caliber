@@ -243,6 +243,43 @@ impl App {
         }
     }
 
+    pub fn gather_completed_tasks(&mut self) {
+        let task_indices: Vec<usize> = self
+            .lines
+            .iter()
+            .enumerate()
+            .filter_map(|(i, line)| match line {
+                Line::Entry(e) if matches!(e.entry_type, EntryType::Task { .. }) => Some(i),
+                _ => None,
+            })
+            .collect();
+
+        if task_indices.is_empty() {
+            return;
+        }
+
+        let mut tasks: Vec<Entry> = task_indices
+            .iter()
+            .filter_map(|&i| {
+                if let Line::Entry(e) = &self.lines[i] {
+                    Some(e.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        tasks.sort_by_key(|e| !matches!(e.entry_type, EntryType::Task { completed: true }));
+
+        for (slot, &line_idx) in task_indices.iter().enumerate() {
+            self.lines[line_idx] = Line::Entry(tasks[slot].clone());
+        }
+
+        self.entry_indices = Self::compute_entry_indices(&self.lines);
+        self.selected = 0;
+        self.save();
+    }
+
     pub fn move_up(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
@@ -293,6 +330,14 @@ impl App {
 
     pub fn exit_tasks_mode(&mut self) {
         self.mode = Mode::Daily;
+    }
+
+    pub fn refresh_tasks(&mut self) -> io::Result<()> {
+        self.task_items = storage::collect_incomplete_tasks()?;
+        self.task_selected = self
+            .task_selected
+            .min(self.task_items.len().saturating_sub(1));
+        Ok(())
     }
 
     pub fn task_move_up(&mut self) {
