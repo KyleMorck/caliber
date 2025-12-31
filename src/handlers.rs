@@ -3,6 +3,28 @@ use std::io;
 use crossterm::event::KeyCode;
 
 use crate::app::{App, Mode};
+use crate::ui;
+
+pub fn handle_help_key(app: &mut App, key: KeyCode) {
+    let total_lines = ui::get_help_total_lines();
+    let max_scroll = total_lines.saturating_sub(app.help_visible_height);
+
+    match key {
+        KeyCode::Char('?') | KeyCode::Esc => {
+            app.show_help = false;
+            app.help_scroll = 0;
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if app.help_scroll < max_scroll {
+                app.help_scroll += 1;
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            app.help_scroll = app.help_scroll.saturating_sub(1);
+        }
+        _ => {}
+    }
+}
 
 pub fn handle_command_key(app: &mut App, key: KeyCode) -> io::Result<()> {
     match key {
@@ -26,6 +48,7 @@ pub fn handle_command_key(app: &mut App, key: KeyCode) -> io::Result<()> {
 
 pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
     match key {
+        KeyCode::Char('?') => app.show_help = true,
         KeyCode::Char(':') => app.mode = Mode::Command,
         KeyCode::Tab => app.enter_tasks_mode()?,
         KeyCode::Enter => app.new_task(true),
@@ -82,6 +105,7 @@ pub fn handle_editing_key(app: &mut App, key: KeyCode) {
 
 pub fn handle_tasks_key(app: &mut App, key: KeyCode) -> io::Result<()> {
     match key {
+        KeyCode::Char('?') => app.show_help = true,
         KeyCode::Tab => app.exit_tasks_mode(),
         KeyCode::Up | KeyCode::Char('k') => app.task_move_up(),
         KeyCode::Down | KeyCode::Char('j') => app.task_move_down(),

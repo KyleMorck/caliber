@@ -1,4 +1,5 @@
 use ratatui::{
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line as RatatuiLine, Span},
 };
@@ -167,7 +168,9 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled("d", Style::default().fg(Color::Gray)),
             Span::styled(" Delete  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Tab", Style::default().fg(Color::Gray)),
-            Span::styled(" Tasks", Style::default().fg(Color::DarkGray)),
+            Span::styled(" Tasks  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("?", Style::default().fg(Color::Gray)),
+            Span::styled(" Help", Style::default().fg(Color::DarkGray)),
         ]),
         Mode::Tasks => RatatuiLine::from(vec![
             Span::styled(
@@ -181,7 +184,133 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled("Enter", Style::default().fg(Color::Gray)),
             Span::styled(" Go to day  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Tab", Style::default().fg(Color::Gray)),
-            Span::styled(" Daily mode", Style::default().fg(Color::DarkGray)),
+            Span::styled(" Daily mode  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("?", Style::default().fg(Color::Gray)),
+            Span::styled(" Help", Style::default().fg(Color::DarkGray)),
         ]),
     }
+}
+
+pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
+    let vertical = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(area);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(vertical[1])[1]
+}
+
+#[allow(clippy::vec_init_then_push)]
+pub fn get_help_lines() -> Vec<RatatuiLine<'static>> {
+    let header_style = Style::default().fg(Color::Cyan);
+    let key_style = Style::default().fg(Color::Yellow);
+    let desc_style = Style::default().fg(Color::White);
+
+    let mut lines = Vec::new();
+
+    // Daily mode
+    lines.push(
+        RatatuiLine::from(Span::styled("--- Daily ---", header_style))
+            .alignment(Alignment::Center),
+    );
+    lines.push(help_line(
+        "Enter",
+        "New entry at end",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line("i", "Insert entry below", key_style, desc_style));
+    lines.push(help_line("e", "Edit selected", key_style, desc_style));
+    lines.push(help_line(
+        "x",
+        "Toggle task complete",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line("d", "Delete entry", key_style, desc_style));
+    lines.push(help_line("j/k", "Navigate up/down", key_style, desc_style));
+    lines.push(help_line("h/l", "Previous/next day", key_style, desc_style));
+    lines.push(help_line("[/]", "Previous/next day", key_style, desc_style));
+    lines.push(help_line("t", "Go to today", key_style, desc_style));
+    lines.push(help_line("Tab", "Tasks view", key_style, desc_style));
+    lines.push(help_line(":", "Command mode", key_style, desc_style));
+    lines.push(RatatuiLine::from(""));
+
+    // Edit mode
+    lines.push(
+        RatatuiLine::from(Span::styled("--- Edit ---", header_style))
+            .alignment(Alignment::Center),
+    );
+    lines.push(help_line(
+        "Enter",
+        "Save and add new",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line("Tab", "Toggle entry type", key_style, desc_style));
+    lines.push(help_line("Esc", "Save and exit", key_style, desc_style));
+    lines.push(help_line("←/→", "Move cursor", key_style, desc_style));
+    lines.push(RatatuiLine::from(""));
+
+    // Tasks mode
+    lines.push(
+        RatatuiLine::from(Span::styled("--- Tasks ---", header_style))
+            .alignment(Alignment::Center),
+    );
+    lines.push(help_line("j/k", "Navigate up/down", key_style, desc_style));
+    lines.push(help_line("x", "Toggle task", key_style, desc_style));
+    lines.push(help_line("Enter", "Go to day", key_style, desc_style));
+    lines.push(help_line("Tab", "Daily view", key_style, desc_style));
+    lines.push(RatatuiLine::from(""));
+
+    // Commands
+    lines.push(
+        RatatuiLine::from(Span::styled("--- Commands ---", header_style))
+            .alignment(Alignment::Center),
+    );
+    lines.push(help_line(
+        ":goto",
+        "Go to date (YYYY/MM/DD or MM/DD)",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        ":gt",
+        "Go to date (shorthand)",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(":q", "Quit", key_style, desc_style));
+
+    lines
+}
+
+fn help_line(key: &str, desc: &str, key_style: Style, desc_style: Style) -> RatatuiLine<'static> {
+    RatatuiLine::from(vec![
+        Span::styled(format!("{key:>8}  "), key_style),
+        Span::styled(desc.to_string(), desc_style),
+    ])
+}
+
+pub fn get_help_total_lines() -> usize {
+    get_help_lines().len()
+}
+
+pub fn render_help_content(scroll: usize, visible_height: usize) -> Vec<RatatuiLine<'static>> {
+    get_help_lines()
+        .into_iter()
+        .skip(scroll)
+        .take(visible_height)
+        .collect()
 }

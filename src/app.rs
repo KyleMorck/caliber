@@ -28,6 +28,9 @@ pub struct App {
     pub status_message: Option<String>,
     pub task_items: Vec<TaskItem>,
     pub task_selected: usize,
+    pub show_help: bool,
+    pub help_scroll: usize,
+    pub help_visible_height: usize,
 }
 
 impl App {
@@ -48,6 +51,9 @@ impl App {
             status_message: None,
             task_items: Vec::new(),
             task_selected: 0,
+            show_help: false,
+            help_scroll: 0,
+            help_visible_height: 0,
         })
     }
 

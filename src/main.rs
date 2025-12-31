@@ -18,7 +18,7 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph},
 };
 
 use app::{App, Mode};
@@ -152,17 +152,78 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
 
             let footer = Paragraph::new(ui::render_footer(&app));
             f.render_widget(footer, chunks[1]);
+
+            // Render help popup overlay
+            if app.show_help {
+                let popup_area = ui::centered_rect(50, 70, size);
+                app.help_visible_height = popup_area.height.saturating_sub(3) as usize;
+
+                f.render_widget(Clear, popup_area);
+
+                let total = ui::get_help_total_lines();
+                let max_scroll = total.saturating_sub(app.help_visible_height);
+                let can_scroll_up = app.help_scroll > 0;
+                let can_scroll_down = app.help_scroll < max_scroll;
+
+                let arrows = match (can_scroll_up, can_scroll_down) {
+                    (true, true) => "▲▼",
+                    (true, false) => "▲",
+                    (false, true) => "▼",
+                    (false, false) => "",
+                };
+
+                let help_block = Block::default()
+                    .title(" Keybindings ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Cyan));
+
+                let inner_area = help_block.inner(popup_area);
+                f.render_widget(help_block, popup_area);
+
+                let help_content = ui::render_help_content(app.help_scroll, app.help_visible_height);
+                let help_paragraph = Paragraph::new(help_content);
+                f.render_widget(help_paragraph, inner_area);
+
+                // Footer spanning bottom of inner area, right-aligned
+                let footer_area = ratatui::layout::Rect {
+                    x: inner_area.x,
+                    y: inner_area.y + inner_area.height.saturating_sub(1),
+                    width: inner_area.width,
+                    height: 1,
+                };
+                let footer_line = if arrows.is_empty() {
+                    ratatui::text::Line::from(vec![
+                        ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
+                        ratatui::text::Span::styled(" close ", Style::default().fg(Color::DarkGray)),
+                    ])
+                } else {
+                    ratatui::text::Line::from(vec![
+                        ratatui::text::Span::styled(arrows, Style::default().fg(Color::White)),
+                        ratatui::text::Span::styled(" scroll  ", Style::default().fg(Color::DarkGray)),
+                        ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
+                        ratatui::text::Span::styled(" close ", Style::default().fg(Color::DarkGray)),
+                    ])
+                };
+                let footer = Paragraph::new(footer_line)
+                    .alignment(ratatui::layout::Alignment::Right);
+                f.render_widget(footer, footer_area);
+            }
         })?;
 
         if event::poll(std::time::Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
         {
             app.status_message = None;
-            match app.mode {
-                Mode::Command => handlers::handle_command_key(&mut app, key.code)?,
-                Mode::Daily => handlers::handle_normal_key(&mut app, key.code)?,
-                Mode::Edit => handlers::handle_editing_key(&mut app, key.code),
-                Mode::Tasks => handlers::handle_tasks_key(&mut app, key.code)?,
+
+            if app.show_help {
+                handlers::handle_help_key(&mut app, key.code);
+            } else {
+                match app.mode {
+                    Mode::Command => handlers::handle_command_key(&mut app, key.code)?,
+                    Mode::Daily => handlers::handle_normal_key(&mut app, key.code)?,
+                    Mode::Edit => handlers::handle_editing_key(&mut app, key.code),
+                    Mode::Tasks => handlers::handle_tasks_key(&mut app, key.code)?,
+                }
             }
         }
 
