@@ -16,7 +16,7 @@ use crossterm::{
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
     widgets::{Block, Borders, Clear, Paragraph},
 };
@@ -25,7 +25,12 @@ use unicode_width::UnicodeWidthStr;
 use app::{App, Mode};
 use config::Config;
 
-fn ensure_selected_visible(scroll_offset: &mut usize, selected: usize, entry_count: usize, visible_height: usize) {
+fn ensure_selected_visible(
+    scroll_offset: &mut usize,
+    selected: usize,
+    entry_count: usize,
+    visible_height: usize,
+) {
     if entry_count == 0 {
         *scroll_offset = 0;
         return;
@@ -35,6 +40,47 @@ fn ensure_selected_visible(scroll_offset: &mut usize, selected: usize, entry_cou
     }
     if selected >= *scroll_offset + visible_height {
         *scroll_offset = selected - visible_height + 1;
+    }
+}
+
+fn cursor_position_in_wrap(
+    text: &str,
+    cursor_display_pos: usize,
+    max_width: usize,
+) -> (usize, usize) {
+    use unicode_width::UnicodeWidthStr;
+
+    if max_width == 0 {
+        return (0, cursor_display_pos);
+    }
+
+    let mut row = 0;
+    let mut col = 0;
+    let mut current_width = 0;
+    let mut chars_processed = 0;
+
+    for ch in text.chars() {
+        let ch_width = ch.to_string().width();
+
+        if chars_processed == cursor_display_pos {
+            return (row, col);
+        }
+
+        if current_width + ch_width > max_width && current_width > 0 {
+            row += 1;
+            current_width = 0;
+        }
+
+        col = current_width;
+        current_width += ch_width;
+        chars_processed += ch_width;
+    }
+
+    // Cursor at end of text
+    if current_width >= max_width {
+        (row + 1, 0)
+    } else {
+        (row, current_width)
     }
 }
 
@@ -116,15 +162,20 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 .constraints([Constraint::Min(3), Constraint::Length(1)])
                 .split(size);
 
-            let title = if is_tasks_mode {
-                " Tasks ".to_string()
+            let main_block = if is_tasks_mode {
+                let incomplete_count = app.task_items.iter().filter(|t| !t.completed).count();
+                let tasks_title = format!(" Todos [{}] ", incomplete_count);
+                Block::default()
+                    .title_top(ratatui::text::Line::from(tasks_title).alignment(Alignment::Right))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::White))
             } else {
-                app.current_date.format(" %m/%d/%y ").to_string()
+                let date_title = app.current_date.format(" %m/%d/%y ").to_string();
+                Block::default()
+                    .title_top(ratatui::text::Line::from(date_title).alignment(Alignment::Right))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::White))
             };
-            let main_block = Block::default()
-                .title(title)
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::White));
 
             let inner = main_block.inner(chunks[0]);
 
@@ -141,7 +192,18 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
 
             let visible_height = content_area.height as usize;
 
-            if !is_tasks_mode {
+            let content_width = content_area.width as usize;
+
+            if is_tasks_mode {
+                let visual_line = app.task_visual_line();
+                let total_lines = app.task_total_lines();
+                ensure_selected_visible(
+                    &mut app.task_scroll_offset,
+                    visual_line,
+                    total_lines,
+                    visible_height,
+                );
+            } else {
                 ensure_selected_visible(
                     &mut app.scroll_offset,
                     app.selected + 1,
@@ -157,7 +219,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
             let lines = if is_tasks_mode {
                 ui::render_tasks_view(&app)
             } else {
-                ui::render_daily_view(&app)
+                ui::render_daily_view(&app, content_width)
             };
 
             if !is_tasks_mode
@@ -165,14 +227,32 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 && let Some(ref buffer) = app.edit_buffer
                 && let Some(entry) = app.get_selected_entry()
             {
-                let line_index = app.selected + 1;
-                if line_index >= app.scroll_offset {
-                    let screen_row = line_index - app.scroll_offset;
-                    let prefix = entry.prefix();
-                    let cursor_col = prefix.width() + buffer.cursor_display_pos();
+                let prefix = entry.prefix();
+                let prefix_width = prefix.width();
+                let text_width = content_width.saturating_sub(prefix_width);
+
+                // Calculate which wrapped line the cursor is on
+                let (cursor_row, cursor_col) = cursor_position_in_wrap(
+                    buffer.content(),
+                    buffer.cursor_display_pos(),
+                    text_width,
+                );
+
+                // Entry starts at line (selected + 1) accounting for header
+                let entry_start_line = app.selected + 1;
+                let cursor_line = entry_start_line + cursor_row;
+
+                // Ensure cursor line is visible (may need to scroll for wrapped lines)
+                if cursor_line >= app.scroll_offset + visible_height {
+                    app.scroll_offset = cursor_line - visible_height + 1;
+                }
+
+                if cursor_line >= app.scroll_offset {
+                    let screen_row = cursor_line - app.scroll_offset;
+                    let col_offset = prefix_width;
 
                     #[allow(clippy::cast_possible_truncation)]
-                    let cursor_x = content_area.x + cursor_col as u16;
+                    let cursor_x = content_area.x + (col_offset + cursor_col) as u16;
                     #[allow(clippy::cast_possible_truncation)]
                     let cursor_y = content_area.y + screen_row as u16;
 
@@ -185,7 +265,12 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
             }
 
             #[allow(clippy::cast_possible_truncation)]
-            let content = Paragraph::new(lines).scroll((app.scroll_offset as u16, 0));
+            let scroll_offset = if is_tasks_mode {
+                app.task_scroll_offset
+            } else {
+                app.scroll_offset
+            };
+            let content = Paragraph::new(lines).scroll((scroll_offset as u16, 0));
             f.render_widget(content, content_area);
 
             let footer = Paragraph::new(ui::render_footer(&app));

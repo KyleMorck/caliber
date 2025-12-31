@@ -55,11 +55,14 @@ pub fn render_tasks_view(app: &App) -> Vec<RatatuiLine<'static>> {
     lines
 }
 
-pub fn render_daily_view(app: &App) -> Vec<RatatuiLine<'static>> {
+pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
+    use unicode_width::UnicodeWidthStr;
+
     let mut lines = Vec::new();
 
+    let date_header = app.current_date.format("%m/%d/%y").to_string();
     lines.push(RatatuiLine::from(Span::styled(
-        "Entries",
+        date_header,
         Style::default().fg(Color::Cyan),
     )));
 
@@ -84,20 +87,47 @@ pub fn render_daily_view(app: &App) -> Vec<RatatuiLine<'static>> {
                 entry.content.clone()
             };
 
-            if is_selected && !is_editing {
-                let rest_of_prefix = entry.prefix().chars().skip(1).collect::<String>();
+            let prefix = entry.prefix();
+            let prefix_width = prefix.width();
+
+            if is_editing {
+                // Wrap editing entry to multiple lines
+                let wrapped = wrap_text(&text, width.saturating_sub(prefix_width));
+                for (i, line_text) in wrapped.iter().enumerate() {
+                    if i == 0 {
+                        lines.push(RatatuiLine::from(Span::styled(
+                            format!("{prefix}{line_text}"),
+                            content_style,
+                        )));
+                    } else {
+                        // Continuation lines: indent to align with content
+                        let indent = " ".repeat(prefix_width);
+                        lines.push(RatatuiLine::from(Span::styled(
+                            format!("{indent}{line_text}"),
+                            content_style,
+                        )));
+                    }
+                }
+            } else if is_selected {
+                // Selected but not editing: show with indicator, truncate if needed
+                let rest_of_prefix = prefix.chars().skip(1).collect::<String>();
                 let indicator = if app.mode == Mode::Order {
                     Span::styled("≡", Style::default().fg(Color::Yellow))
                 } else {
                     Span::styled("→", Style::default().fg(Color::Cyan))
                 };
+                let available = width.saturating_sub(prefix_width);
+                let display_text = truncate_text(&text, available);
                 lines.push(RatatuiLine::from(vec![
                     indicator,
-                    Span::styled(format!("{rest_of_prefix}{text}"), content_style),
+                    Span::styled(format!("{rest_of_prefix}{display_text}"), content_style),
                 ]));
             } else {
+                // Normal entry: truncate if needed
+                let available = width.saturating_sub(prefix_width);
+                let display_text = truncate_text(&text, available);
                 lines.push(RatatuiLine::from(Span::styled(
-                    format!("{}{}", entry.prefix(), text),
+                    format!("{prefix}{display_text}"),
                     content_style,
                 )));
             }
@@ -109,6 +139,60 @@ pub fn render_daily_view(app: &App) -> Vec<RatatuiLine<'static>> {
             "(No entries - press Enter to add)",
             Style::default().fg(Color::DarkGray),
         )));
+    }
+
+    lines
+}
+
+fn truncate_text(text: &str, max_width: usize) -> String {
+    use unicode_width::UnicodeWidthStr;
+
+    if text.width() <= max_width {
+        return text.to_string();
+    }
+
+    let ellipsis = "…";
+    let target_width = max_width.saturating_sub(1); // Room for ellipsis
+
+    let mut result = String::new();
+    let mut current_width = 0;
+
+    for ch in text.chars() {
+        let ch_width = ch.to_string().width();
+        if current_width + ch_width > target_width {
+            break;
+        }
+        result.push(ch);
+        current_width += ch_width;
+    }
+
+    format!("{result}{ellipsis}")
+}
+
+fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+    use unicode_width::UnicodeWidthStr;
+
+    if max_width == 0 {
+        return vec![text.to_string()];
+    }
+
+    let mut lines = Vec::new();
+    let mut current_line = String::new();
+    let mut current_width = 0;
+
+    for ch in text.chars() {
+        let ch_width = ch.to_string().width();
+        if current_width + ch_width > max_width && !current_line.is_empty() {
+            lines.push(current_line);
+            current_line = String::new();
+            current_width = 0;
+        }
+        current_line.push(ch);
+        current_width += ch_width;
+    }
+
+    if !current_line.is_empty() || lines.is_empty() {
+        lines.push(current_line);
     }
 
     lines
@@ -133,7 +217,7 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled(" Cancel", Style::default().fg(Color::DarkGray)),
         ]),
         Mode::Daily => RatatuiLine::from(vec![
-            Span::styled(" DAILY ", Style::default().fg(Color::Black).bg(Color::Blue)),
+            Span::styled(" DAILY ", Style::default().fg(Color::Black).bg(Color::Cyan)),
             Span::styled("  Enter", Style::default().fg(Color::Gray)),
             Span::styled(" New  ", Style::default().fg(Color::DarkGray)),
             Span::styled("e", Style::default().fg(Color::Gray)),
@@ -170,7 +254,10 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled(" Help", Style::default().fg(Color::DarkGray)),
         ]),
         Mode::Order => RatatuiLine::from(vec![
-            Span::styled(" ORDER ", Style::default().fg(Color::Black).bg(Color::Yellow)),
+            Span::styled(
+                " ORDER ",
+                Style::default().fg(Color::Black).bg(Color::Yellow),
+            ),
             Span::styled("  j/k", Style::default().fg(Color::Gray)),
             Span::styled(" Move up/down  ", Style::default().fg(Color::DarkGray)),
             Span::styled("o/Enter", Style::default().fg(Color::Gray)),
@@ -247,7 +334,12 @@ pub fn get_help_lines() -> Vec<RatatuiLine<'static>> {
     lines.push(
         RatatuiLine::from(Span::styled("--- Order ---", header_style)).alignment(Alignment::Center),
     );
-    lines.push(help_line("j/k", "Move entry up/down", key_style, desc_style));
+    lines.push(help_line(
+        "j/k",
+        "Move entry up/down",
+        key_style,
+        desc_style,
+    ));
     lines.push(help_line("o/Enter", "Save", key_style, desc_style));
     lines.push(help_line("Esc", "Cancel", key_style, desc_style));
     lines.push(RatatuiLine::from(""));

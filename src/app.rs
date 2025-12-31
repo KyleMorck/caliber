@@ -34,6 +34,7 @@ pub struct App {
     pub help_visible_height: usize,
     pub original_lines: Option<Vec<Line>>,
     pub scroll_offset: usize,
+    pub task_scroll_offset: usize,
 }
 
 impl App {
@@ -59,6 +60,7 @@ impl App {
             help_visible_height: 0,
             original_lines: None,
             scroll_offset: 0,
+            task_scroll_offset: 0,
         })
     }
 
@@ -371,6 +373,7 @@ impl App {
         self.save();
         self.task_items = storage::collect_incomplete_tasks()?;
         self.task_selected = 0;
+        self.task_scroll_offset = 0;
         self.mode = Mode::Tasks;
         Ok(())
     }
@@ -384,6 +387,7 @@ impl App {
         self.task_selected = self
             .task_selected
             .min(self.task_items.len().saturating_sub(1));
+        self.task_scroll_offset = 0;
         Ok(())
     }
 
@@ -397,6 +401,53 @@ impl App {
         if !self.task_items.is_empty() && self.task_selected < self.task_items.len() - 1 {
             self.task_selected += 1;
         }
+    }
+
+    pub fn task_visual_line(&self) -> usize {
+        if self.task_items.is_empty() {
+            return 0;
+        }
+
+        let mut date_headers = 0;
+        let mut last_date = None;
+        let mut is_first_of_date = false;
+
+        for (idx, item) in self.task_items.iter().enumerate() {
+            if last_date != Some(item.date) {
+                date_headers += 1;
+                last_date = Some(item.date);
+                if idx == self.task_selected {
+                    is_first_of_date = true;
+                }
+            }
+            if idx == self.task_selected {
+                break;
+            }
+        }
+
+        let visual_line = date_headers + self.task_selected;
+
+        // If first task of a date, return the date header line so it stays visible
+        if is_first_of_date && visual_line > 0 {
+            visual_line - 1
+        } else {
+            visual_line
+        }
+    }
+
+    pub fn task_total_lines(&self) -> usize {
+        if self.task_items.is_empty() {
+            return 1; // "(no incomplete tasks)" placeholder
+        }
+
+        let unique_dates = self
+            .task_items
+            .iter()
+            .map(|item| item.date)
+            .collect::<std::collections::HashSet<_>>()
+            .len();
+
+        unique_dates + self.task_items.len()
     }
 
     pub fn task_jump_to_day(&mut self) -> io::Result<()> {
