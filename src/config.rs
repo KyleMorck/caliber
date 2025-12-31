@@ -66,8 +66,5 @@ pub fn get_config_path() -> PathBuf {
 }
 
 fn get_default_journal_path() -> PathBuf {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("caliber")
-        .join("journal.md")
+    get_config_dir().join("journals").join("journal.md")
 }

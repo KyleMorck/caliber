@@ -141,14 +141,13 @@ pub fn save_day_lines(date: NaiveDate, lines: &[Line]) -> io::Result<()> {
     save_day(date, &content)
 }
 
-pub fn get_data_dir() -> PathBuf {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("caliber")
-}
-
 pub fn get_journal_path() -> PathBuf {
-    get_data_dir().join("journal.md")
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".config")
+        .join("caliber")
+        .join("journals")
+        .join("journal.md")
 }
 
 fn day_header(date: NaiveDate) -> String {
