@@ -33,10 +33,21 @@ caliber init         # Create config file
 | `h/l` or `[/]` | Previous/next day |
 | `t` | Go to today |
 | `g` | Gather completed tasks to top |
+| `o` | Order mode (rearrange entries) |
 | `Tab` | Switch to Tasks view |
 | `?` | Show help |
 | `:goto` or `:gt` | Go to date (YYYY/MM/DD or MM/DD) |
 | `:q` | Quit |
+
+### Order Mode
+
+Rearrange entries within a day.
+
+| Key | Action |
+|-----|--------|
+| `j/k` | Move entry up/down |
+| `o` or `Enter` | Save new order |
+| `Esc` | Cancel |
 
 ### Edit Mode
 

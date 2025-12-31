@@ -65,6 +65,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         KeyCode::Char('l' | ']') => app.next_day()?,
         KeyCode::Char('t') => app.goto_today()?,
         KeyCode::Char('g') => app.gather_completed_tasks(),
+        KeyCode::Char('o') => app.enter_order_mode(),
         _ => {}
     }
     Ok(())
@@ -117,4 +118,14 @@ pub fn handle_tasks_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         _ => {}
     }
     Ok(())
+}
+
+pub fn handle_order_key(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Char('o') | KeyCode::Enter => app.exit_order_mode(true),
+        KeyCode::Esc => app.exit_order_mode(false),
+        KeyCode::Up | KeyCode::Char('k') => app.order_move_up(),
+        KeyCode::Down | KeyCode::Char('j') => app.order_move_down(),
+        _ => {}
+    }
 }

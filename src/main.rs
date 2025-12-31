@@ -283,6 +283,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                     Mode::Daily => handlers::handle_normal_key(&mut app, key.code)?,
                     Mode::Edit => handlers::handle_editing_key(&mut app, key.code),
                     Mode::Tasks => handlers::handle_tasks_key(&mut app, key.code)?,
+                    Mode::Order => handlers::handle_order_key(&mut app, key.code),
                 }
             }
         }

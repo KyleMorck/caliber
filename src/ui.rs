@@ -87,8 +87,13 @@ pub fn render_daily_view(app: &App) -> Vec<RatatuiLine<'static>> {
 
             if is_selected && !is_editing {
                 let rest_of_prefix = entry.prefix().chars().skip(1).collect::<String>();
+                let indicator = if app.mode == Mode::Order {
+                    Span::styled("≡", Style::default().fg(Color::Yellow))
+                } else {
+                    Span::styled("→", Style::default().fg(Color::Cyan))
+                };
                 lines.push(RatatuiLine::from(vec![
-                    Span::styled("→", Style::default().fg(Color::Cyan)),
+                    indicator,
                     Span::styled(format!("{rest_of_prefix}{text}"), content_style),
                 ]));
             } else {
@@ -124,18 +129,18 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled("Tab", Style::default().fg(Color::Gray)),
             Span::styled(" Save and new  ", Style::default().fg(Color::DarkGray)),
             Span::styled("⇧Tab", Style::default().fg(Color::Gray)),
-            Span::styled(" Toggle type  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(" Toggle entry type  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Esc", Style::default().fg(Color::Gray)),
             Span::styled(" Cancel", Style::default().fg(Color::DarkGray)),
         ]),
         Mode::Daily => RatatuiLine::from(vec![
             Span::styled(" DAILY ", Style::default().fg(Color::Black).bg(Color::Blue)),
             Span::styled("  Enter", Style::default().fg(Color::Gray)),
-            Span::styled(" New entry  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(" New  ", Style::default().fg(Color::DarkGray)),
             Span::styled("e", Style::default().fg(Color::Gray)),
             Span::styled(" Edit  ", Style::default().fg(Color::DarkGray)),
             Span::styled("i", Style::default().fg(Color::Gray)),
-            Span::styled(" Insert below  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(" New below  ", Style::default().fg(Color::DarkGray)),
             Span::styled("x", Style::default().fg(Color::Gray)),
             Span::styled(" Toggle  ", Style::default().fg(Color::DarkGray)),
             Span::styled("d", Style::default().fg(Color::Gray)),
@@ -143,7 +148,7 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled("g", Style::default().fg(Color::Gray)),
             Span::styled(" Gather  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Tab", Style::default().fg(Color::Gray)),
-            Span::styled(" Tasks  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(" All tasks  ", Style::default().fg(Color::DarkGray)),
             Span::styled("?", Style::default().fg(Color::Gray)),
             Span::styled(" Help", Style::default().fg(Color::DarkGray)),
         ]),
@@ -164,6 +169,15 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled(" Daily mode  ", Style::default().fg(Color::DarkGray)),
             Span::styled("?", Style::default().fg(Color::Gray)),
             Span::styled(" Help", Style::default().fg(Color::DarkGray)),
+        ]),
+        Mode::Order => RatatuiLine::from(vec![
+            Span::styled(" ORDER ", Style::default().fg(Color::Black).bg(Color::Yellow)),
+            Span::styled("  j/k", Style::default().fg(Color::Gray)),
+            Span::styled(" Move up/down  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("o/Enter", Style::default().fg(Color::Gray)),
+            Span::styled(" Save  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("Esc", Style::default().fg(Color::Gray)),
+            Span::styled(" Cancel", Style::default().fg(Color::DarkGray)),
         ]),
     }
 }
@@ -225,8 +239,18 @@ pub fn get_help_lines() -> Vec<RatatuiLine<'static>> {
         key_style,
         desc_style,
     ));
+    lines.push(help_line("o", "Order mode", key_style, desc_style));
     lines.push(help_line("Tab", "Tasks view", key_style, desc_style));
     lines.push(help_line(":", "Command mode", key_style, desc_style));
+    lines.push(RatatuiLine::from(""));
+
+    // Order mode
+    lines.push(
+        RatatuiLine::from(Span::styled("--- Order ---", header_style)).alignment(Alignment::Center),
+    );
+    lines.push(help_line("j/k", "Move entry up/down", key_style, desc_style));
+    lines.push(help_line("o/Enter", "Save", key_style, desc_style));
+    lines.push(help_line("Esc", "Cancel", key_style, desc_style));
     lines.push(RatatuiLine::from(""));
 
     // Edit mode
@@ -261,14 +285,8 @@ pub fn get_help_lines() -> Vec<RatatuiLine<'static>> {
             .alignment(Alignment::Center),
     );
     lines.push(help_line(
-        ":goto",
+        ":goto/:gt",
         "Go to date (YYYY/MM/DD or MM/DD)",
-        key_style,
-        desc_style,
-    ));
-    lines.push(help_line(
-        ":gt",
-        "Go to date (shorthand)",
         key_style,
         desc_style,
     ));

@@ -11,6 +11,7 @@ pub enum Mode {
     Edit,
     Command,
     Tasks,
+    Order,
 }
 
 pub struct App {
@@ -31,6 +32,7 @@ pub struct App {
     pub show_help: bool,
     pub help_scroll: usize,
     pub help_visible_height: usize,
+    pub original_lines: Option<Vec<Line>>,
 }
 
 impl App {
@@ -54,6 +56,7 @@ impl App {
             show_help: false,
             help_scroll: 0,
             help_visible_height: 0,
+            original_lines: None,
         })
     }
 
@@ -278,6 +281,46 @@ impl App {
         self.entry_indices = Self::compute_entry_indices(&self.lines);
         self.selected = 0;
         self.save();
+    }
+
+    pub fn enter_order_mode(&mut self) {
+        if !self.entry_indices.is_empty() {
+            self.original_lines = Some(self.lines.clone());
+            self.mode = Mode::Order;
+        }
+    }
+
+    pub fn exit_order_mode(&mut self, save: bool) {
+        if save {
+            self.save();
+        } else if let Some(original) = self.original_lines.take() {
+            self.lines = original;
+            self.entry_indices = Self::compute_entry_indices(&self.lines);
+        }
+        self.original_lines = None;
+        self.mode = Mode::Daily;
+    }
+
+    pub fn order_move_up(&mut self) {
+        if self.selected == 0 {
+            return;
+        }
+        let curr_line_idx = self.entry_indices[self.selected];
+        let prev_line_idx = self.entry_indices[self.selected - 1];
+        self.lines.swap(curr_line_idx, prev_line_idx);
+        self.entry_indices = Self::compute_entry_indices(&self.lines);
+        self.selected -= 1;
+    }
+
+    pub fn order_move_down(&mut self) {
+        if self.selected >= self.entry_indices.len() - 1 {
+            return;
+        }
+        let curr_line_idx = self.entry_indices[self.selected];
+        let next_line_idx = self.entry_indices[self.selected + 1];
+        self.lines.swap(curr_line_idx, next_line_idx);
+        self.entry_indices = Self::compute_entry_indices(&self.lines);
+        self.selected += 1;
     }
 
     pub fn move_up(&mut self) {
