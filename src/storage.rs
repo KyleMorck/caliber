@@ -390,6 +390,16 @@ pub struct FilterItem {
     pub completed: bool,
 }
 
+/// An entry from another day that should appear on a target date via @date syntax.
+#[derive(Debug, Clone)]
+pub struct LaterItem {
+    pub source_date: NaiveDate,
+    pub line_index: usize,
+    pub content: String,
+    pub entry_type: EntryType,
+    pub completed: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FilterType {
     Task,
@@ -407,8 +417,13 @@ pub struct Filter {
 pub static TAG_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"#([a-zA-Z][a-zA-Z0-9_-]*)").unwrap());
 
+/// Matches @date patterns:
+/// - @MM/DD (e.g., @1/9, @01/09)
+/// - @MM/DD/YY (e.g., @1/9/26, @01/09/26)
+/// - @MM/DD/YYYY (e.g., @1/9/2026, @01/09/2026)
+/// - @YYYY/MM/DD (ISO format, e.g., @2026/1/9)
 pub static LATER_DATE_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"@(\d{1,2}/\d{1,2})").unwrap());
+    LazyLock::new(|| Regex::new(r"@(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)").unwrap());
 
 #[must_use]
 pub fn extract_tags(content: &str) -> Vec<String> {
@@ -416,6 +431,111 @@ pub fn extract_tags(content: &str) -> Vec<String> {
         .captures_iter(content)
         .map(|cap| cap[1].to_string())
         .collect()
+}
+
+/// Parses a date string (without @) into a NaiveDate.
+/// Tries ISO (YYYY/MM/DD), MM/DD/YYYY, MM/DD/YY, and MM/DD formats.
+/// For MM/DD without year, uses "always future" logic: if date has passed
+/// this year, assumes next year.
+#[must_use]
+pub fn parse_later_date(date_str: &str, today: NaiveDate) -> Option<NaiveDate> {
+    use chrono::Datelike;
+
+    // YYYY/MM/DD (only if first part is exactly 4 digits)
+    if let Some(first_slash) = date_str.find('/')
+        && first_slash == 4
+        && date_str[..4].chars().all(|c| c.is_ascii_digit())
+        && let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y/%m/%d")
+    {
+        return Some(date);
+    }
+
+    // MM/DD/YYYY or MM/DD/YY
+    if date_str.matches('/').count() == 2 {
+        let parts: Vec<&str> = date_str.split('/').collect();
+        if parts.len() == 3
+            && let (Ok(month), Ok(day), Ok(year)) = (
+                parts[0].parse::<u32>(),
+                parts[1].parse::<u32>(),
+                parts[2].parse::<i32>(),
+            )
+        {
+            // If year is 2 digits, assume 20xx
+            let full_year = if year < 100 { 2000 + year } else { year };
+            if let Some(date) = NaiveDate::from_ymd_opt(full_year, month, day) {
+                return Some(date);
+            }
+        }
+    }
+
+    // MM/DD (no year) - use "always future" logic
+    let parts: Vec<&str> = date_str.split('/').collect();
+    if parts.len() == 2 {
+        let month: u32 = parts[0].parse().ok()?;
+        let day: u32 = parts[1].parse().ok()?;
+        if let Some(date) = NaiveDate::from_ymd_opt(today.year(), month, day) {
+            if date < today {
+                return NaiveDate::from_ymd_opt(today.year() + 1, month, day);
+            }
+            return Some(date);
+        }
+    }
+
+    None
+}
+
+/// Extracts the target date from entry content if it contains an @date pattern.
+#[must_use]
+pub fn extract_target_date(content: &str, today: NaiveDate) -> Option<NaiveDate> {
+    LATER_DATE_REGEX
+        .captures(content)
+        .and_then(|cap| cap.get(1))
+        .and_then(|m| parse_later_date(m.as_str(), today))
+}
+
+/// Collects all entries with @date matching the target date.
+/// Entries from the target date itself are excluded (they're regular entries).
+pub fn collect_later_entries_for_date(target_date: NaiveDate) -> io::Result<Vec<LaterItem>> {
+    let journal = load_journal()?;
+    let mut items = Vec::new();
+    let mut current_date: Option<NaiveDate> = None;
+    let mut line_index_in_day: usize = 0;
+
+    for line in journal.lines() {
+        if let Some(date) = parse_day_header(line) {
+            current_date = Some(date);
+            line_index_in_day = 0;
+            continue;
+        }
+
+        if let Some(source_date) = current_date {
+            // Skip entries from the target day itself (they're regular entries)
+            if source_date == target_date {
+                line_index_in_day += 1;
+                continue;
+            }
+
+            let parsed = parse_line(line);
+            if let Line::Entry(entry) = parsed
+                && let Some(entry_target) = extract_target_date(&entry.content, target_date)
+                && entry_target == target_date
+            {
+                let completed = matches!(entry.entry_type, EntryType::Task { completed: true });
+                items.push(LaterItem {
+                    source_date,
+                    line_index: line_index_in_day,
+                    content: entry.content,
+                    entry_type: entry.entry_type,
+                    completed,
+                });
+            }
+            line_index_in_day += 1;
+        }
+    }
+
+    // Sort by source date (chronologically - older first)
+    items.sort_by_key(|item| item.source_date);
+    Ok(items)
 }
 
 #[must_use]
@@ -689,5 +809,81 @@ mod tests {
         assert!(updated.contains("# 2024/01/14\n- Day 14"));
         assert!(updated.contains("# 2024/01/15\n- Updated task"));
         assert!(updated.contains("# 2024/01/16\n- Day 16"));
+    }
+
+    #[test]
+    fn test_parse_later_date_iso() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = parse_later_date("2026/01/15", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_parse_later_date_mm_dd_yyyy() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = parse_later_date("1/15/2026", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_parse_later_date_mm_dd_yy() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = parse_later_date("1/15/26", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_parse_later_date_mm_dd_future() {
+        // If today is Jan 1, @1/15 should be this year (hasn't passed)
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = parse_later_date("1/15", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_parse_later_date_mm_dd_past_to_next_year() {
+        // If today is Jan 20, @1/15 should be next year (already passed)
+        let today = NaiveDate::from_ymd_opt(2026, 1, 20).unwrap();
+        let result = parse_later_date("1/15", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2027, 1, 15));
+    }
+
+    #[test]
+    fn test_extract_target_date_from_content() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = extract_target_date("Call dentist @1/15", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_extract_target_date_no_match() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = extract_target_date("Just a regular note", today);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_later_date_regex_matches() {
+        // Test the regex matches various formats
+        let test_cases = [
+            "@1/9",
+            "@01/09",
+            "@1/9/26",
+            "@01/09/26",
+            "@1/9/2026",
+            "@01/09/2026",
+            "@2026/1/9",
+            "@2026/01/09",
+        ];
+        for case in test_cases {
+            assert!(LATER_DATE_REGEX.is_match(case), "Should match: {case}");
+        }
+    }
+
+    #[test]
+    fn test_parse_later_date_01_04_26() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let result = parse_later_date("01/04/26", today);
+        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 4));
     }
 }

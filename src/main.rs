@@ -160,7 +160,7 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
             // Compute values before mutable borrow
             let filter_visual_line = app.filter_visual_line();
             let filter_total_lines = app.filter_total_lines();
-            let entry_count = app.entry_indices.len();
+            let daily_item_count = app.daily_item_count();
 
             match &mut app.view {
                 ViewMode::Filter(state) => {
@@ -174,8 +174,8 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                 ViewMode::Daily(state) => {
                     ensure_selected_visible(
                         &mut state.scroll_offset,
-                        state.selected + 1,
-                        entry_count + 1,
+                        state.selected + 1,   // +1 for date header line
+                        daily_item_count + 1, // +1 for date header line
                         visible_height,
                     );
                     // Keep date header visible when first entry is selected
@@ -292,7 +292,49 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Resu
                             text_width,
                         );
 
-                        let entry_start_line = *entry_index + 1;
+                        // Account for later items + date header
+                        let entry_start_line = state.later_items.len() + *entry_index + 1;
+                        let cursor_line = entry_start_line + cursor_row;
+
+                        if cursor_line >= state.scroll_offset + visible_height {
+                            state.scroll_offset = cursor_line - visible_height + 1;
+                        }
+
+                        if cursor_line >= state.scroll_offset {
+                            let screen_row = cursor_line - state.scroll_offset;
+
+                            #[allow(clippy::cast_possible_truncation)]
+                            let cursor_x = content_area.x + (prefix_width + cursor_col) as u16;
+                            #[allow(clippy::cast_possible_truncation)]
+                            let cursor_y = content_area.y + screen_row as u16;
+
+                            if cursor_x < content_area.x + content_area.width
+                                && cursor_y < content_area.y + content_area.height
+                            {
+                                f.set_cursor_position((cursor_x, cursor_y));
+                            }
+                        }
+                    }
+                    EditContext::LaterEdit { later_index, .. } => {
+                        let ViewMode::Daily(state) = &mut app.view else {
+                            unreachable!()
+                        };
+                        let Some(later_item) = state.later_items.get(*later_index) else {
+                            return;
+                        };
+                        let prefix_width = later_item.entry_type.prefix().width();
+                        let date_suffix_width = 8; // " (MM/DD)"
+                        let text_width =
+                            content_width.saturating_sub(prefix_width + date_suffix_width);
+
+                        let (cursor_row, cursor_col) = cursor_position_in_wrap(
+                            buffer.content(),
+                            buffer.cursor_display_pos(),
+                            text_width,
+                        );
+
+                        // +1 for date header
+                        let entry_start_line = *later_index + 1;
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {

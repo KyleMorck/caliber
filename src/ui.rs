@@ -203,10 +203,100 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         Style::default().fg(Color::Cyan),
     )));
 
+    let later_count = state.later_items.len();
+
+    // === Later entries section (at top) ===
+    for (later_idx, later_item) in state.later_items.iter().enumerate() {
+        let is_selected = later_idx == state.selected;
+        let is_editing = is_selected
+            && matches!(
+                app.input_mode,
+                InputMode::Edit(EditContext::LaterEdit { .. })
+            );
+
+        let content_style = if later_item.completed {
+            Style::default().fg(Color::DarkGray)
+        } else {
+            Style::default()
+        };
+
+        let text = if is_editing {
+            if let Some(ref buffer) = app.edit_buffer {
+                buffer.content().to_string()
+            } else {
+                later_item.content.clone()
+            }
+        } else {
+            later_item.content.clone()
+        };
+
+        let prefix = later_item.entry_type.prefix();
+        let prefix_width = prefix.width();
+        let source_suffix = format!(" ({})", later_item.source_date.format("%m/%d"));
+        let source_suffix_width = source_suffix.width();
+        let later_prefix_style = Style::default().fg(Color::Red);
+
+        if is_editing {
+            let available = width.saturating_sub(prefix_width + source_suffix_width);
+            let wrapped = wrap_text(&text, available);
+            for (i, line_text) in wrapped.iter().enumerate() {
+                if i == 0 {
+                    let first_char = prefix.chars().next().unwrap_or('-').to_string();
+                    let rest_of_prefix: String = prefix.chars().skip(1).collect();
+                    let spans = vec![
+                        Span::styled(first_char, later_prefix_style),
+                        Span::styled(rest_of_prefix, content_style),
+                        Span::styled(line_text.clone(), content_style),
+                        Span::styled(source_suffix.clone(), Style::default().fg(Color::DarkGray)),
+                    ];
+                    lines.push(RatatuiLine::from(spans));
+                } else {
+                    let indent = " ".repeat(prefix_width);
+                    lines.push(RatatuiLine::from(Span::styled(
+                        format!("{indent}{line_text}"),
+                        content_style,
+                    )));
+                }
+            }
+        } else if is_selected {
+            let available = width.saturating_sub(prefix_width + source_suffix_width);
+            let display_text = truncate_text(&text, available);
+            let rest_of_prefix: String = prefix.chars().skip(1).collect();
+            let mut spans = vec![
+                Span::styled("→", Style::default().fg(Color::Red)),
+                Span::styled(rest_of_prefix, content_style),
+            ];
+            spans.extend(style_content(&display_text, content_style));
+            spans.push(Span::styled(
+                source_suffix,
+                Style::default().fg(Color::DarkGray),
+            ));
+            lines.push(RatatuiLine::from(spans));
+        } else {
+            let available = width.saturating_sub(prefix_width + source_suffix_width);
+            let display_text = truncate_text(&text, available);
+            let first_char = prefix.chars().next().unwrap_or('-').to_string();
+            let rest_of_prefix: String = prefix.chars().skip(1).collect();
+            let mut spans = vec![
+                Span::styled(first_char, later_prefix_style),
+                Span::styled(rest_of_prefix, content_style),
+            ];
+            spans.extend(style_content(&display_text, content_style));
+            spans.push(Span::styled(
+                source_suffix,
+                Style::default().fg(Color::DarkGray),
+            ));
+            lines.push(RatatuiLine::from(spans));
+        }
+    }
+
+    // === Regular entries section ===
     for (entry_idx, &line_idx) in app.entry_indices.iter().enumerate() {
         if let Line::Entry(entry) = &app.lines[line_idx] {
-            let is_selected = entry_idx == state.selected;
-            let is_editing = is_selected && matches!(app.input_mode, InputMode::Edit(_));
+            let selection_idx = later_count + entry_idx;
+            let is_selected = selection_idx == state.selected;
+            let is_editing =
+                is_selected && matches!(app.input_mode, InputMode::Edit(EditContext::Daily { .. }));
 
             let content_style = if matches!(entry.entry_type, EntryType::Task { completed: true }) {
                 Style::default().fg(Color::DarkGray)
@@ -265,7 +355,8 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         }
     }
 
-    if app.entry_indices.is_empty() {
+    // Empty state only if both later and regular entries are empty
+    if state.later_items.is_empty() && app.entry_indices.is_empty() {
         lines.push(RatatuiLine::from(Span::styled(
             "(No entries - press Enter to add)",
             Style::default().fg(Color::DarkGray),

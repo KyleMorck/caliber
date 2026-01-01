@@ -89,6 +89,14 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             app.jump_to_last();
             return Ok(());
         }
+        KeyCode::Char('u') => {
+            app.undo();
+            return Ok(());
+        }
+        KeyCode::Char('v') => {
+            app.view_entry_source()?;
+            return Ok(());
+        }
         _ => {}
     }
 
@@ -97,7 +105,6 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         ViewMode::Daily(_) => match key {
             KeyCode::Enter => app.new_task(true),
             KeyCode::Char('o') => app.new_task(false),
-            KeyCode::Char('u') => app.undo(),
             KeyCode::Char('h' | '[') => app.prev_day()?,
             KeyCode::Char('l' | ']') => app.next_day()?,
             KeyCode::Char('t') => app.goto_today()?,
@@ -107,8 +114,6 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         },
         ViewMode::Filter(_) => match key {
             KeyCode::Esc => app.exit_filter(),
-            KeyCode::Char('u') => app.undo(),
-            KeyCode::Char('v') => app.filter_jump_to_day()?,
             KeyCode::Char('r') => app.refresh_filter()?,
             KeyCode::Enter => app.filter_quick_add(),
             _ => {}
