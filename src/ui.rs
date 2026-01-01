@@ -348,10 +348,12 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             ),
             Span::styled("  x", Style::default().fg(Color::Gray)),
             Span::styled(" Toggle  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("d", Style::default().fg(Color::Gray)),
+            Span::styled(" Delete  ", Style::default().fg(Color::DarkGray)),
             Span::styled("r", Style::default().fg(Color::Gray)),
             Span::styled(" Refresh  ", Style::default().fg(Color::DarkGray)),
-            Span::styled("Enter", Style::default().fg(Color::Gray)),
-            Span::styled(" Go to day  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("v", Style::default().fg(Color::Gray)),
+            Span::styled(" View day  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Esc", Style::default().fg(Color::Gray)),
             Span::styled(" Exit  ", Style::default().fg(Color::DarkGray)),
             Span::styled("?", Style::default().fg(Color::Gray)),
@@ -486,8 +488,9 @@ pub fn get_help_lines() -> Vec<RatatuiLine<'static>> {
     lines.push(help_line("g/G", "Jump first/last", key_style, desc_style));
     lines.push(help_line("e", "Edit entry", key_style, desc_style));
     lines.push(help_line("x", "Toggle task", key_style, desc_style));
+    lines.push(help_line("d", "Delete entry", key_style, desc_style));
     lines.push(help_line("r", "Refresh results", key_style, desc_style));
-    lines.push(help_line("Enter", "Go to day", key_style, desc_style));
+    lines.push(help_line("v", "View day", key_style, desc_style));
     lines.push(help_line("/", "Edit filter", key_style, desc_style));
     lines.push(help_line("Esc", "Exit to daily", key_style, desc_style));
     lines.push(RatatuiLine::from(""));

@@ -628,10 +628,79 @@ impl App {
         self.mode = Mode::Edit;
     }
 
+    pub fn filter_cycle_entry_type(&mut self) -> io::Result<()> {
+        let Some(item) = self.filter_items.get(self.filter_selected) else {
+            return Ok(());
+        };
+
+        let date = item.source_date;
+        let line_index = item.line_index;
+
+        let new_type = Self::cycle_entry_in_storage(date, line_index)?;
+
+        if let Some(new_type) = new_type {
+            let item = &mut self.filter_items[self.filter_selected];
+            item.entry_type = new_type;
+            item.completed = matches!(item.entry_type, EntryType::Task { completed: true });
+        }
+
+        if date == self.current_date {
+            self.reload_current_day()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn filter_delete(&mut self) -> io::Result<()> {
+        let Some(item) = self.filter_items.get(self.filter_selected) else {
+            return Ok(());
+        };
+
+        let date = item.source_date;
+        let line_index = item.line_index;
+
+        Self::delete_entry_in_storage(date, line_index)?;
+        self.filter_items.remove(self.filter_selected);
+
+        if !self.filter_items.is_empty() && self.filter_selected >= self.filter_items.len() {
+            self.filter_selected = self.filter_items.len() - 1;
+        }
+
+        if date == self.current_date {
+            self.reload_current_day()?;
+        }
+
+        Ok(())
+    }
+
     fn toggle_entry_in_storage(date: NaiveDate, line_index: usize) -> io::Result<()> {
         let mut lines = storage::load_day_lines(date)?;
         if let Some(Line::Entry(entry)) = lines.get_mut(line_index) {
             entry.toggle_complete();
+        }
+        storage::save_day_lines(date, &lines)
+    }
+
+    fn cycle_entry_in_storage(date: NaiveDate, line_index: usize) -> io::Result<Option<EntryType>> {
+        let mut lines = storage::load_day_lines(date)?;
+        let new_type = if let Some(Line::Entry(entry)) = lines.get_mut(line_index) {
+            entry.entry_type = match entry.entry_type {
+                EntryType::Task { .. } => EntryType::Note,
+                EntryType::Note => EntryType::Event,
+                EntryType::Event => EntryType::Task { completed: false },
+            };
+            Some(entry.entry_type.clone())
+        } else {
+            None
+        };
+        storage::save_day_lines(date, &lines)?;
+        Ok(new_type)
+    }
+
+    fn delete_entry_in_storage(date: NaiveDate, line_index: usize) -> io::Result<()> {
+        let mut lines = storage::load_day_lines(date)?;
+        if line_index < lines.len() {
+            lines.remove(line_index);
         }
         storage::save_day_lines(date, &lines)
     }
