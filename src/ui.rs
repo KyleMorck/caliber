@@ -63,7 +63,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
     let header = format!("Filter: {}", state.query);
     lines.push(RatatuiLine::from(Span::styled(
         header,
-        Style::default().fg(Color::Cyan),
+        Style::default().fg(Color::Magenta),
     )));
 
     let is_quick_adding = matches!(
@@ -447,7 +447,7 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 ViewMode::Daily(_) => app.command_buffer.clone(),
             };
             RatatuiLine::from(vec![
-                Span::styled("/", Style::default().fg(Color::Yellow)),
+                Span::styled("/", Style::default().fg(Color::Magenta)),
                 Span::raw(buffer),
                 Span::styled("█", Style::default().fg(Color::White)),
             ])
