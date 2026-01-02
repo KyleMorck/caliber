@@ -773,7 +773,11 @@ pub fn parse_filter_query(query: &str) -> Filter {
     for token in query.split_whitespace() {
         // Date filters: @before:DATE, @after:DATE, @overdue
         if let Some(date_str) = token.strip_prefix("@before:") {
-            if let Some(date) = parse_natural_date(date_str, today) {
+            if filter.before_date.is_some() {
+                filter
+                    .invalid_tokens
+                    .push("Multiple @before dates".to_string());
+            } else if let Some(date) = parse_natural_date(date_str, today) {
                 filter.before_date = Some(date);
             } else {
                 filter.invalid_tokens.push(token.to_string());
@@ -781,7 +785,11 @@ pub fn parse_filter_query(query: &str) -> Filter {
             continue;
         }
         if let Some(date_str) = token.strip_prefix("@after:") {
-            if let Some(date) = parse_natural_date(date_str, today) {
+            if filter.after_date.is_some() {
+                filter
+                    .invalid_tokens
+                    .push("Multiple @after dates".to_string());
+            } else if let Some(date) = parse_natural_date(date_str, today) {
                 filter.after_date = Some(date);
             } else {
                 filter.invalid_tokens.push(token.to_string());
@@ -817,18 +825,30 @@ pub fn parse_filter_query(query: &str) -> Filter {
                 (type_str, None)
             };
 
-            match base_type {
-                "tasks" | "task" | "t" => {
-                    filter.entry_type = Some(FilterType::Task);
-                    filter.completed = match modifier {
-                        Some("done" | "completed") => Some(true),
-                        Some("all") => None,
-                        _ => Some(false),
-                    };
+            let new_type = match base_type {
+                "tasks" | "task" | "t" => Some(FilterType::Task),
+                "notes" | "note" | "n" => Some(FilterType::Note),
+                "events" | "event" | "e" => Some(FilterType::Event),
+                _ => None,
+            };
+
+            if let Some(new_type) = new_type {
+                if filter.entry_type.is_some() && filter.entry_type != Some(new_type.clone()) {
+                    filter
+                        .invalid_tokens
+                        .push("Multiple entry types".to_string());
+                } else {
+                    filter.entry_type = Some(new_type);
+                    if base_type == "tasks" || base_type == "task" || base_type == "t" {
+                        filter.completed = match modifier {
+                            Some("done" | "completed") => Some(true),
+                            Some("all") => None,
+                            _ => Some(false),
+                        };
+                    }
                 }
-                "notes" | "note" | "n" => filter.entry_type = Some(FilterType::Note),
-                "events" | "event" | "e" => filter.entry_type = Some(FilterType::Event),
-                _ => filter.invalid_tokens.push(token.to_string()),
+            } else {
+                filter.invalid_tokens.push(token.to_string());
             }
         } else if let Some(tag) = token.strip_prefix('#') {
             filter.tags.push(tag.to_string());
@@ -1401,6 +1421,31 @@ mod tests {
     fn test_filter_invalid_date_value() {
         let filter = parse_filter_query("@before:invalid");
         assert_eq!(filter.invalid_tokens, vec!["@before:invalid"]);
+    }
+
+    #[test]
+    fn test_filter_multiple_entry_types() {
+        let filter = parse_filter_query("!tasks !notes");
+        assert_eq!(filter.invalid_tokens, vec!["Multiple entry types"]);
+    }
+
+    #[test]
+    fn test_filter_duplicate_entry_type_ignored() {
+        let filter = parse_filter_query("!tasks !t");
+        assert!(filter.invalid_tokens.is_empty());
+        assert_eq!(filter.entry_type, Some(FilterType::Task));
+    }
+
+    #[test]
+    fn test_filter_multiple_before_dates() {
+        let filter = parse_filter_query("@before:1/1 @before:1/15");
+        assert_eq!(filter.invalid_tokens, vec!["Multiple @before dates"]);
+    }
+
+    #[test]
+    fn test_filter_multiple_after_dates() {
+        let filter = parse_filter_query("@after:1/1 @after:1/15");
+        assert_eq!(filter.invalid_tokens, vec!["Multiple @after dates"]);
     }
 
     #[test]

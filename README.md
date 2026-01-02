@@ -184,7 +184,12 @@ Reorder entries within a day.
 
 DATE in filters supports natural language: `tomorrow`, `yesterday`, `next-mon`, `last-fri`, `7d`, `-7d`, plus standard formats.
 
-Combine filters: `!tasks #work` finds incomplete tasks tagged #work.
+**Combining filters:**
+
+- Positive filters use AND: `!tasks #work meeting` finds incomplete tasks tagged #work containing "meeting"
+- Negative filters use OR: `not:#work not:#personal` excludes entries with either tag
+- Only one entry type allowed (use `not:` for "or" logic: `not:!events` shows tasks and notes)
+- Only one `@before:` and one `@after:` allowed per query
 
 ## Journal Format
 
