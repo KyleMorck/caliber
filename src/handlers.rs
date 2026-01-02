@@ -2,7 +2,7 @@ use std::io;
 
 use crossterm::event::KeyCode;
 
-use crate::app::{App, InputMode, ViewMode};
+use crate::app::{App, InputMode, InsertPosition, ViewMode};
 use crate::ui;
 
 pub fn handle_help_key(app: &mut App, key: KeyCode) {
@@ -113,8 +113,9 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
     // View-specific keys
     match &app.view {
         ViewMode::Daily(_) => match key {
-            KeyCode::Enter => app.new_task(true),
-            KeyCode::Char('o') => app.new_task(false),
+            KeyCode::Enter => app.new_task(InsertPosition::Bottom),
+            KeyCode::Char('o') => app.new_task(InsertPosition::Below),
+            KeyCode::Char('O') => app.new_task(InsertPosition::Above),
             KeyCode::Char('h' | '[') => app.prev_day()?,
             KeyCode::Char('l' | ']') => app.next_day()?,
             KeyCode::Char('t') => app.goto_today()?,

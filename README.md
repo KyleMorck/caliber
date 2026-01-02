@@ -108,7 +108,7 @@ The entry will appear in the "Later" section when you view that date.
 | Key | Action |
 |-----|--------|
 | `Enter` | New entry at end |
-| `o` | New entry below current |
+| `o/O` | New entry below/above current |
 | `e` | Edit selected entry |
 | `j/k` or `↓/↑` | Navigate down/up |
 | `g/G` | Jump to first/last entry |

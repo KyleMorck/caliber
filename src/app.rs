@@ -86,6 +86,13 @@ pub enum InputMode {
     QueryInput,
 }
 
+/// Where to insert a new entry
+pub enum InsertPosition {
+    Bottom,
+    Below,
+    Above,
+}
+
 pub struct App {
     // Core data (always loaded)
     pub current_date: NaiveDate,
@@ -717,7 +724,7 @@ impl App {
                     },
                     content: String::new(),
                 };
-                self.add_entry_internal(new_entry, false);
+                self.add_entry_internal(new_entry, InsertPosition::Below);
             }
             _ => {}
         }
@@ -744,20 +751,24 @@ impl App {
         }
     }
 
-    fn add_entry_internal(&mut self, entry: Entry, at_bottom: bool) {
+    fn add_entry_internal(&mut self, entry: Entry, position: InsertPosition) {
         let ViewMode::Daily(state) = &mut self.view else {
             return;
         };
 
         let later_count = state.later_entries.len();
 
-        let insert_pos = if at_bottom || self.entry_indices.is_empty() {
+        let insert_pos = if matches!(position, InsertPosition::Bottom) || self.entry_indices.is_empty() {
             self.lines.len()
         } else {
             // Convert visual selection to entry index (skip later entries)
             let entry_index = state.selected.saturating_sub(later_count);
             if entry_index < self.entry_indices.len() {
-                self.entry_indices[entry_index] + 1
+                match position {
+                    InsertPosition::Below => self.entry_indices[entry_index] + 1,
+                    InsertPosition::Above => self.entry_indices[entry_index],
+                    InsertPosition::Bottom => unreachable!(),
+                }
             } else {
                 self.lines.len()
             }
@@ -779,8 +790,8 @@ impl App {
         self.input_mode = InputMode::Edit(EditContext::Daily { entry_index });
     }
 
-    pub fn new_task(&mut self, at_bottom: bool) {
-        self.add_entry_internal(Entry::new_task(""), at_bottom);
+    pub fn new_task(&mut self, position: InsertPosition) {
+        self.add_entry_internal(Entry::new_task(""), position);
     }
 
     pub fn undo(&mut self) {

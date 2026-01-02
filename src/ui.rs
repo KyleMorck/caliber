@@ -583,7 +583,7 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
         key_style,
         desc_style,
     ));
-    lines.push(help_line("o", "New entry below", key_style, desc_style));
+    lines.push(help_line("o/O", "New entry below/above", key_style, desc_style));
     lines.push(help_line("e", "Edit selected", key_style, desc_style));
     lines.push(help_line(
         "x",
