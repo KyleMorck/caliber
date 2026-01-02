@@ -1188,35 +1188,8 @@ impl App {
         let ViewMode::Filter(state) = &self.view else {
             return 0;
         };
-
-        if state.entries.is_empty() {
-            return 0;
-        }
-
-        let mut date_headers = 0;
-        let mut last_date = None;
-        let mut is_first_of_date = false;
-
-        for (idx, filter_entry) in state.entries.iter().enumerate() {
-            if last_date != Some(filter_entry.source_date) {
-                date_headers += 1;
-                last_date = Some(filter_entry.source_date);
-                if idx == state.selected {
-                    is_first_of_date = true;
-                }
-            }
-            if idx == state.selected {
-                break;
-            }
-        }
-
-        let visual_line = date_headers + state.selected;
-
-        if is_first_of_date && visual_line > 0 {
-            visual_line - 1
-        } else {
-            visual_line
-        }
+        // +1 for the "Filter: {query}" header line
+        state.selected + 1
     }
 
     #[must_use]
@@ -1224,19 +1197,8 @@ impl App {
         let ViewMode::Filter(state) = &self.view else {
             return 1;
         };
-
-        if state.entries.is_empty() {
-            return 1;
-        }
-
-        let unique_dates = state
-            .entries
-            .iter()
-            .map(|filter_entry| filter_entry.source_date)
-            .collect::<std::collections::HashSet<_>>()
-            .len();
-
-        unique_dates + state.entries.len()
+        // +1 for the "Filter: {query}" header line
+        state.entries.len() + 1
     }
 
     fn reload_current_day(&mut self) -> io::Result<()> {
