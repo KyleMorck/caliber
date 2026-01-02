@@ -16,15 +16,11 @@ fn default_sort_order() -> Vec<String> {
     ]
 }
 
-fn default_favorite_tags() -> Vec<String> {
-    vec!["feature".to_string(), "bug".to_string(), "idea".to_string()]
-}
-
-fn default_filters() -> HashMap<String, String> {
+fn default_favorite_tags() -> HashMap<String, String> {
     let mut m = HashMap::new();
-    m.insert("t".to_string(), "!tasks".to_string());
-    m.insert("n".to_string(), "!notes".to_string());
-    m.insert("e".to_string(), "!events".to_string());
+    m.insert("1".to_string(), "feature".to_string());
+    m.insert("2".to_string(), "bug".to_string());
+    m.insert("3".to_string(), "idea".to_string());
     m
 }
 
@@ -35,8 +31,8 @@ pub struct Config {
     #[serde(default = "default_sort_order")]
     pub sort_order: Vec<String>,
     #[serde(default = "default_favorite_tags")]
-    pub favorite_tags: Vec<String>,
-    #[serde(default = "default_filters")]
+    pub favorite_tags: HashMap<String, String>,
+    #[serde(default)]
     pub filters: HashMap<String, String>,
 }
 
@@ -58,16 +54,14 @@ impl Config {
         }
     }
 
-    /// Get favorite tag by number key (1-9 maps to index 0-8, 0 maps to index 9)
+    /// Get favorite tag by number key (0-9)
     #[must_use]
     pub fn get_favorite_tag(&self, key: char) -> Option<&str> {
-        let index = match key {
-            '1'..='9' => (key as usize) - ('1' as usize),
-            '0' => 9,
-            _ => return None,
-        };
+        if !key.is_ascii_digit() {
+            return None;
+        }
         self.favorite_tags
-            .get(index)
+            .get(&key.to_string())
             .map(String::as_str)
             .filter(|s| !s.is_empty())
     }
@@ -92,7 +86,7 @@ impl Config {
             fs::create_dir_all(parent)?;
         }
 
-        fs::write(&path, include_str!("config_template.toml"))?;
+        fs::write(&path, "")?;
         Ok(true)
     }
 
@@ -131,8 +125,12 @@ mod tests {
 
     #[test]
     fn test_get_favorite_tag() {
+        let mut tags = HashMap::new();
+        tags.insert("1".to_string(), "work".to_string());
+        tags.insert("2".to_string(), "personal".to_string());
+
         let config = Config {
-            favorite_tags: vec!["work".to_string(), "personal".to_string()],
+            favorite_tags: tags,
             ..Default::default()
         };
 
@@ -144,8 +142,11 @@ mod tests {
 
     #[test]
     fn test_get_favorite_tag_empty_string() {
+        let mut tags = HashMap::new();
+        tags.insert("1".to_string(), "".to_string());
+
         let config = Config {
-            favorite_tags: vec!["".to_string()],
+            favorite_tags: tags,
             ..Default::default()
         };
 
@@ -153,15 +154,15 @@ mod tests {
     }
 
     #[test]
-    fn test_get_favorite_tag_tenth_slot() {
-        let mut tags = vec!["".to_string(); 9];
-        tags.push("tenth".to_string());
+    fn test_get_favorite_tag_zero_key() {
+        let mut tags = HashMap::new();
+        tags.insert("0".to_string(), "zeroth".to_string());
 
         let config = Config {
             favorite_tags: tags,
             ..Default::default()
         };
 
-        assert_eq!(config.get_favorite_tag('0'), Some("tenth"));
+        assert_eq!(config.get_favorite_tag('0'), Some("zeroth"));
     }
 }

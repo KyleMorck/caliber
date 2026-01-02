@@ -79,10 +79,10 @@ Toggle between types with `Shift+Tab` while editing.
 
 Tags (`#project`, `#urgent`) are highlighted in yellow and can be filtered.
 
-**Favorite tags** let you quickly filter by commonly-used tags. Press `1-9` or `0` to instantly filter by a favorite tag. Type `#1` through `#0` while editing to auto-expand to the tag name. Configure your favorites in the config file.
+**Favorite tags** let you quickly filter by commonly-used tags. Press `0-9` to instantly filter by a favorite tag. Type `#0` through `#9` while editing to auto-expand to the tag name. Default: 1=feature, 2=bug, 3=idea.
 
 **Saved filters** let you define reusable filter queries. Use `$name` in any filter to expand it:
-- `$t` → expands to `!tasks` (default)
+- `$t` → expands to `!tasks`
 - `$someday` → expands to your custom filter
 - Combine them: `$t #work` → `!tasks #work`
 
@@ -218,11 +218,14 @@ default_file = "/path/to/journal.md"
 # Custom sort order for 's' command
 sort_order = ["uncompleted", "notes", "events", "completed"]
 
-# Favorite tags for quick access (default: ["feature", "bug", "idea"])
-# Press 1-9 or 0 to filter; type #1-#0 while editing to auto-expand
-favorite_tags = ["feature", "bug", "idea", "refactor", "docs"]
+# Favorite tags - press 0-9 to filter, type #0-#9 while editing to auto-expand
+# Default: 1="feature", 2="bug", 3="idea"
+[favorite_tags]
+1 = "feature"
+2 = "bug"
+3 = "idea"
 
-# Saved filters - use $name in filter queries (default: t, n, e)
+# Saved filters - use $name in filter queries to expand
 [filters]
 t = "!tasks"
 n = "!notes"
@@ -231,7 +234,7 @@ someday = "!tasks #someday"
 stale = "!tasks @before:-7d"
 ```
 
-Run `caliber init` to create the config file.
+Run `caliber init` to create an empty config file.
 
 ## License
 
