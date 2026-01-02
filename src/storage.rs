@@ -382,7 +382,7 @@ pub fn save_day(date: NaiveDate, content: &str) -> io::Result<()> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FilterItem {
+pub struct FilterEntry {
     pub source_date: NaiveDate,
     pub content: String,
     pub line_index: usize,
@@ -392,7 +392,7 @@ pub struct FilterItem {
 
 /// An entry from another day that should appear on a target date via @date syntax.
 #[derive(Debug, Clone)]
-pub struct LaterItem {
+pub struct LaterEntry {
     pub source_date: NaiveDate,
     pub line_index: usize,
     pub content: String,
@@ -499,9 +499,9 @@ pub fn extract_target_date(content: &str, today: NaiveDate) -> Option<NaiveDate>
 
 /// Collects all entries with @date matching the target date.
 /// Entries from the target date itself are excluded (they're regular entries).
-pub fn collect_later_entries_for_date(target_date: NaiveDate) -> io::Result<Vec<LaterItem>> {
+pub fn collect_later_entries_for_date(target_date: NaiveDate) -> io::Result<Vec<LaterEntry>> {
     let journal = load_journal()?;
-    let mut items = Vec::new();
+    let mut entries = Vec::new();
     let mut current_date: Option<NaiveDate> = None;
     let mut line_index_in_day: usize = 0;
 
@@ -525,7 +525,7 @@ pub fn collect_later_entries_for_date(target_date: NaiveDate) -> io::Result<Vec<
                 && entry_target == target_date
             {
                 let completed = matches!(entry.entry_type, EntryType::Task { completed: true });
-                items.push(LaterItem {
+                entries.push(LaterEntry {
                     source_date,
                     line_index: line_index_in_day,
                     content: entry.content,
@@ -538,8 +538,8 @@ pub fn collect_later_entries_for_date(target_date: NaiveDate) -> io::Result<Vec<
     }
 
     // Sort by source date (chronologically - older first)
-    items.sort_by_key(|item| item.source_date);
-    Ok(items)
+    entries.sort_by_key(|entry| entry.source_date);
+    Ok(entries)
 }
 
 fn parse_type_keyword(s: &str) -> Option<FilterType> {
@@ -596,9 +596,9 @@ pub fn parse_filter_query(query: &str) -> Filter {
     filter
 }
 
-pub fn collect_filtered_entries(filter: &Filter) -> io::Result<Vec<FilterItem>> {
+pub fn collect_filtered_entries(filter: &Filter) -> io::Result<Vec<FilterEntry>> {
     let journal = load_journal()?;
-    let mut items = Vec::new();
+    let mut entries = Vec::new();
     let mut current_date: Option<NaiveDate> = None;
     let mut line_index_in_day: usize = 0;
 
@@ -615,7 +615,7 @@ pub fn collect_filtered_entries(filter: &Filter) -> io::Result<Vec<FilterItem>> 
                 let matches = entry_matches_filter(&entry, filter);
                 if matches {
                     let completed = matches!(entry.entry_type, EntryType::Task { completed: true });
-                    items.push(FilterItem {
+                    entries.push(FilterEntry {
                         source_date: date,
                         content: entry.content,
                         line_index: line_index_in_day,
@@ -628,8 +628,8 @@ pub fn collect_filtered_entries(filter: &Filter) -> io::Result<Vec<FilterItem>> 
         }
     }
 
-    items.sort_by_key(|item| item.source_date);
-    Ok(items)
+    entries.sort_by_key(|entry| entry.source_date);
+    Ok(entries)
 }
 
 fn entry_type_to_filter_type(entry_type: &EntryType) -> FilterType {

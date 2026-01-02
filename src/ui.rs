@@ -78,11 +78,11 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
         InputMode::Edit(EditContext::FilterEdit { .. })
     );
 
-    for (idx, item) in state.items.iter().enumerate() {
+    for (idx, filter_entry) in state.entries.iter().enumerate() {
         let is_selected = idx == state.selected && !is_quick_adding;
         let is_editing_this = is_selected && is_editing;
 
-        let content_style = if item.completed {
+        let content_style = if filter_entry.completed {
             Style::default().fg(Color::DarkGray)
         } else {
             Style::default()
@@ -92,16 +92,16 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
             if let Some(ref buffer) = app.edit_buffer {
                 buffer.content().to_string()
             } else {
-                item.content.clone()
+                filter_entry.content.clone()
             }
         } else {
-            item.content.clone()
+            filter_entry.content.clone()
         };
 
-        let prefix = item.entry_type.prefix();
+        let prefix = filter_entry.entry_type.prefix();
         let prefix_width = prefix.width();
 
-        let date_suffix = format!(" ({})", item.source_date.format("%m/%d"));
+        let date_suffix = format!(" ({})", filter_entry.source_date.format("%m/%d"));
         let date_suffix_width = date_suffix.width();
 
         if is_selected {
@@ -126,7 +126,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                     }
                 }
             } else {
-                let sel_prefix = match &item.entry_type {
+                let sel_prefix = match &filter_entry.entry_type {
                     EntryType::Task { completed: false } => " [ ] ",
                     EntryType::Task { completed: true } => " [x] ",
                     EntryType::Note => " ",
@@ -136,7 +136,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                 let display_text = truncate_text(&text, available);
                 let mut spans = vec![Span::styled("→", Style::default().fg(Color::Cyan))];
                 spans.push(Span::styled(sel_prefix.to_string(), content_style));
-                spans.extend(style_content(&display_text, content_style, item.completed));
+                spans.extend(style_content(&display_text, content_style, filter_entry.completed));
                 spans.push(Span::styled(
                     date_suffix,
                     Style::default().fg(Color::DarkGray),
@@ -147,7 +147,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
             let available = width.saturating_sub(prefix_width + date_suffix_width);
             let display_text = truncate_text(&text, available);
             let mut spans = vec![Span::styled(prefix.to_string(), content_style)];
-            spans.extend(style_content(&display_text, content_style, item.completed));
+            spans.extend(style_content(&display_text, content_style, filter_entry.completed));
             spans.push(Span::styled(
                 date_suffix,
                 Style::default().fg(Color::DarkGray),
@@ -181,7 +181,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
         }
     }
 
-    if state.items.is_empty() && !is_quick_adding {
+    if state.entries.is_empty() && !is_quick_adding {
         lines.push(RatatuiLine::from(Span::styled(
             "(no matches)",
             Style::default().fg(Color::DarkGray),
@@ -206,10 +206,10 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         Style::default().fg(Color::Cyan),
     )));
 
-    let later_count = state.later_items.len();
+    let later_count = state.later_entries.len();
 
     // === Later entries section (at top) ===
-    for (later_idx, later_item) in state.later_items.iter().enumerate() {
+    for (later_idx, later_entry) in state.later_entries.iter().enumerate() {
         let is_selected = later_idx == state.selected;
         let is_editing = is_selected
             && matches!(
@@ -217,7 +217,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 InputMode::Edit(EditContext::LaterEdit { .. })
             );
 
-        let content_style = if later_item.completed {
+        let content_style = if later_entry.completed {
             Style::default().fg(Color::DarkGray)
         } else {
             Style::default()
@@ -227,15 +227,15 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
             if let Some(ref buffer) = app.edit_buffer {
                 buffer.content().to_string()
             } else {
-                later_item.content.clone()
+                later_entry.content.clone()
             }
         } else {
-            later_item.content.clone()
+            later_entry.content.clone()
         };
 
-        let prefix = later_item.entry_type.prefix();
+        let prefix = later_entry.entry_type.prefix();
         let prefix_width = prefix.width();
-        let source_suffix = format!(" ({})", later_item.source_date.format("%m/%d"));
+        let source_suffix = format!(" ({})", later_entry.source_date.format("%m/%d"));
         let source_suffix_width = source_suffix.width();
         let later_prefix_style = Style::default().fg(Color::Red);
 
@@ -269,7 +269,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 Span::styled("→", Style::default().fg(Color::Red)),
                 Span::styled(rest_of_prefix, content_style),
             ];
-            spans.extend(style_content(&display_text, content_style, later_item.completed));
+            spans.extend(style_content(&display_text, content_style, later_entry.completed));
             spans.push(Span::styled(
                 source_suffix,
                 Style::default().fg(Color::DarkGray),
@@ -284,7 +284,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 Span::styled(first_char, later_prefix_style),
                 Span::styled(rest_of_prefix, content_style),
             ];
-            spans.extend(style_content(&display_text, content_style, later_item.completed));
+            spans.extend(style_content(&display_text, content_style, later_entry.completed));
             spans.push(Span::styled(
                 source_suffix,
                 Style::default().fg(Color::DarkGray),
@@ -360,7 +360,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     }
 
     // Empty state only if both later and regular entries are empty
-    if state.later_items.is_empty() && app.entry_indices.is_empty() {
+    if state.later_entries.is_empty() && app.entry_indices.is_empty() {
         lines.push(RatatuiLine::from(Span::styled(
             "(No entries - press Enter to add)",
             Style::default().fg(Color::DarkGray),

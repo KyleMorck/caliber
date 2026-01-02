@@ -163,7 +163,7 @@ fn run_app<B: ratatui::backend::Backend>(
             // Compute values before mutable borrow
             let filter_visual_line = app.filter_visual_line();
             let filter_total_lines = app.filter_total_lines();
-            let daily_item_count = app.daily_item_count();
+            let daily_entry_count = app.daily_entry_count();
 
             match &mut app.view {
                 ViewMode::Filter(state) => {
@@ -178,7 +178,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     ensure_selected_visible(
                         &mut state.scroll_offset,
                         state.selected + 1,   // +1 for date header line
-                        daily_item_count + 1, // +1 for date header line
+                        daily_entry_count + 1, // +1 for date header line
                         visible_height,
                     );
                     // Keep date header visible when first entry is selected
@@ -211,7 +211,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             text_width,
                         );
 
-                        let entry_start_line = state.items.len() + 1; // +1 for header
+                        let entry_start_line = state.entries.len() + 1; // +1 for header
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {
@@ -237,10 +237,10 @@ fn run_app<B: ratatui::backend::Backend>(
                         let ViewMode::Filter(state) = &mut app.view else {
                             unreachable!()
                         };
-                        let Some(item) = state.items.get(*filter_index) else {
+                        let Some(filter_entry) = state.entries.get(*filter_index) else {
                             return;
                         };
-                        let prefix_width = item.entry_type.prefix().len();
+                        let prefix_width = filter_entry.entry_type.prefix().len();
                         let date_suffix_width = 8;
                         let text_width =
                             content_width.saturating_sub(prefix_width + date_suffix_width);
@@ -295,8 +295,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             text_width,
                         );
 
-                        // Account for later items + date header
-                        let entry_start_line = state.later_items.len() + *entry_index + 1;
+                        // Account for later entries + date header
+                        let entry_start_line = state.later_entries.len() + *entry_index + 1;
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {
@@ -322,10 +322,10 @@ fn run_app<B: ratatui::backend::Backend>(
                         let ViewMode::Daily(state) = &mut app.view else {
                             unreachable!()
                         };
-                        let Some(later_item) = state.later_items.get(*later_index) else {
+                        let Some(later_entry) = state.later_entries.get(*later_index) else {
                             return;
                         };
-                        let prefix_width = later_item.entry_type.prefix().width();
+                        let prefix_width = later_entry.entry_type.prefix().width();
                         let date_suffix_width = 8; // " (MM/DD)"
                         let text_width =
                             content_width.saturating_sub(prefix_width + date_suffix_width);
