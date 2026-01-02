@@ -438,6 +438,10 @@ pub static NATURAL_DATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)@(tomorrow|yesterday|(?:next|last)-(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|-?[1-9]\d*d)").unwrap()
 });
 
+/// Matches favorite tag shortcuts: #1 through #9 and #0
+pub static FAVORITE_TAG_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"#([0-9])\b").unwrap());
+
 #[must_use]
 pub fn extract_tags(content: &str) -> Vec<String> {
     TAG_REGEX
@@ -599,6 +603,29 @@ pub fn normalize_natural_dates(content: &str, today: NaiveDate) -> String {
             if let Some(date) = parse_natural_date(natural_str, today) {
                 let normalized = format!("@{}/{}", date.format("%m"), date.format("%d"));
                 result = result.replacen(m.as_str(), &normalized, 1);
+            }
+        }
+    }
+
+    result
+}
+
+/// Replaces favorite tag shortcuts (#1 through #0) with actual tags from config.
+/// Tags that don't exist in config are left unchanged.
+#[must_use]
+pub fn expand_favorite_tags(content: &str, favorite_tags: &[String]) -> String {
+    let mut result = content.to_string();
+
+    for cap in FAVORITE_TAG_REGEX.captures_iter(content) {
+        if let Some(m) = cap.get(0) {
+            let digit = &cap[1];
+            let index = match digit {
+                "0" => 9,
+                d => d.parse::<usize>().unwrap() - 1,
+            };
+
+            if let Some(tag) = favorite_tags.get(index).filter(|s| !s.is_empty()) {
+                result = result.replacen(m.as_str(), &format!("#{tag}"), 1);
             }
         }
     }
@@ -1344,5 +1371,48 @@ mod tests {
     fn test_filter_invalid_date_value() {
         let filter = parse_filter_query("@before:invalid");
         assert_eq!(filter.invalid_tokens, vec!["@before:invalid"]);
+    }
+
+    #[test]
+    fn test_expand_favorite_tags_basic() {
+        let tags = vec!["work".to_string(), "personal".to_string()];
+        assert_eq!(expand_favorite_tags("Task #1", &tags), "Task #work");
+        assert_eq!(expand_favorite_tags("Task #2", &tags), "Task #personal");
+    }
+
+    #[test]
+    fn test_expand_favorite_tags_missing() {
+        let tags = vec!["work".to_string()];
+        assert_eq!(expand_favorite_tags("Task #2", &tags), "Task #2");
+    }
+
+    #[test]
+    fn test_expand_favorite_tags_tenth() {
+        let mut tags = vec!["".to_string(); 9];
+        tags.push("tenth".to_string());
+        assert_eq!(expand_favorite_tags("Task #0", &tags), "Task #tenth");
+    }
+
+    #[test]
+    fn test_expand_favorite_tags_multiple() {
+        let tags = vec!["work".to_string(), "urgent".to_string()];
+        assert_eq!(
+            expand_favorite_tags("Task #1 #2", &tags),
+            "Task #work #urgent"
+        );
+    }
+
+    #[test]
+    fn test_expand_favorite_tags_empty_slot() {
+        let tags = vec!["work".to_string(), "".to_string(), "urgent".to_string()];
+        assert_eq!(expand_favorite_tags("Task #2", &tags), "Task #2");
+    }
+
+    #[test]
+    fn test_expand_favorite_tags_not_followed_by_word() {
+        let tags = vec!["work".to_string()];
+        assert_eq!(expand_favorite_tags("Task #1abc", &tags), "Task #1abc");
+        assert_eq!(expand_favorite_tags("Task #1", &tags), "Task #work");
+        assert_eq!(expand_favorite_tags("#1 task", &tags), "#work task");
     }
 }

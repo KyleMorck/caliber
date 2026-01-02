@@ -79,6 +79,8 @@ Toggle between types with `Shift+Tab` while editing.
 
 Tags (`#project`, `#urgent`) are highlighted in yellow and can be filtered.
 
+**Favorite tags** let you quickly filter by commonly-used tags. Press `1-9` or `0` to instantly filter by a favorite tag. Type `#1` through `#0` while editing to auto-expand to the tag name. Configure your favorites in the config file.
+
 Date references are highlighted in red. Use `@date` to schedule an entry for a future day:
 
 ```markdown
@@ -114,6 +116,7 @@ The entry will appear in the "Later" section when you view that date.
 | `s` | Sort entries |
 | `m` | Move mode (reorder entries) |
 | `T/N/E` | Quick filter tasks/notes/events |
+| `0-9` | Filter by favorite tag |
 | `/` | Open filter mode |
 | `?` | Show help |
 | `:goto` or `:g` | Go to date (YYYY/MM/DD or MM/DD) |
@@ -204,6 +207,10 @@ default_file = "/path/to/journal.md"
 
 # Custom sort order for 's' command
 sort_order = ["uncompleted", "notes", "events", "completed"]
+
+# Favorite tags for quick access (default: ["feature", "bug", "idea"])
+# Press 1-9 or 0 to filter; type #1-#0 while editing to auto-expand
+favorite_tags = ["feature", "bug", "idea", "refactor", "docs"]
 ```
 
 Run `caliber init` to create the config file.

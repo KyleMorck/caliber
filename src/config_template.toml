@@ -9,3 +9,8 @@
 # Omit a type to leave it unsorted
 # Default: ["completed", "events", "notes", "uncompleted"]
 # sort_order = ["completed", "events", "notes", "uncompleted"]
+
+# Favorite tags accessible via number keys 1-9 (and 0 for 10th)
+# Press a number key to filter by that tag; type #1-#0 to auto-expand
+# Default: ["feature", "bug", "idea"]
+# favorite_tags = ["feature", "bug", "idea", "refactor", "docs"]

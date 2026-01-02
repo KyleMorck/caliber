@@ -101,6 +101,12 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             app.yank_current_entry();
             return Ok(());
         }
+        KeyCode::Char(c @ ('1'..='9' | '0')) => {
+            if let Some(tag) = app.config.get_favorite_tag(c) {
+                app.quick_filter(&format!("#{tag}"))?;
+            }
+            return Ok(());
+        }
         _ => {}
     }
 

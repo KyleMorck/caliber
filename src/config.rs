@@ -16,12 +16,22 @@ fn default_sort_order() -> Vec<String> {
     ]
 }
 
+fn default_favorite_tags() -> Vec<String> {
+    vec![
+        "feature".to_string(),
+        "bug".to_string(),
+        "idea".to_string(),
+    ]
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub default_file: Option<String>,
     #[serde(default = "default_sort_order")]
     pub sort_order: Vec<String>,
+    #[serde(default = "default_favorite_tags")]
+    pub favorite_tags: Vec<String>,
 }
 
 impl Config {
@@ -40,6 +50,20 @@ impl Config {
         } else {
             result
         }
+    }
+
+    /// Get favorite tag by number key (1-9 maps to index 0-8, 0 maps to index 9)
+    #[must_use]
+    pub fn get_favorite_tag(&self, key: char) -> Option<&str> {
+        let index = match key {
+            '1'..='9' => (key as usize) - ('1' as usize),
+            '0' => 9,
+            _ => return None,
+        };
+        self.favorite_tags
+            .get(index)
+            .map(String::as_str)
+            .filter(|s| !s.is_empty())
     }
 
     pub fn load() -> io::Result<Self> {
@@ -93,4 +117,45 @@ pub fn get_config_path() -> PathBuf {
 
 pub fn get_default_journal_path() -> PathBuf {
     get_config_dir().join("journals").join("journal.md")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_favorite_tag() {
+        let config = Config {
+            favorite_tags: vec!["work".to_string(), "personal".to_string()],
+            ..Default::default()
+        };
+
+        assert_eq!(config.get_favorite_tag('1'), Some("work"));
+        assert_eq!(config.get_favorite_tag('2'), Some("personal"));
+        assert_eq!(config.get_favorite_tag('3'), None);
+        assert_eq!(config.get_favorite_tag('0'), None);
+    }
+
+    #[test]
+    fn test_get_favorite_tag_empty_string() {
+        let config = Config {
+            favorite_tags: vec!["".to_string()],
+            ..Default::default()
+        };
+
+        assert_eq!(config.get_favorite_tag('1'), None);
+    }
+
+    #[test]
+    fn test_get_favorite_tag_tenth_slot() {
+        let mut tags = vec!["".to_string(); 9];
+        tags.push("tenth".to_string());
+
+        let config = Config {
+            favorite_tags: tags,
+            ..Default::default()
+        };
+
+        assert_eq!(config.get_favorite_tag('0'), Some("tenth"));
+    }
 }

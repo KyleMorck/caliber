@@ -2,6 +2,7 @@ use std::io;
 
 use chrono::{Datelike, Days, Local, NaiveDate};
 
+use crate::config::Config;
 use crate::cursor::CursorBuffer;
 use crate::storage::{self, Entry, EntryType, FilterEntry, LaterEntry, Line};
 
@@ -112,11 +113,11 @@ pub struct App {
     pub last_deleted: Option<(NaiveDate, usize, Entry)>,
 
     // Config
-    pub sort_order: Vec<String>,
+    pub config: Config,
 }
 
 impl App {
-    pub fn new(sort_order: Vec<String>) -> io::Result<Self> {
+    pub fn new(config: Config) -> io::Result<Self> {
         let current_date = Local::now().date_naive();
         let lines = storage::load_day_lines(current_date)?;
         let entry_indices = Self::compute_entry_indices(&lines);
@@ -136,7 +137,7 @@ impl App {
             help_scroll: 0,
             help_visible_height: 0,
             last_deleted: None,
-            sort_order,
+            config,
         })
     }
 
@@ -528,6 +529,7 @@ impl App {
             return;
         };
         let content = buffer.into_content();
+        let content = storage::expand_favorite_tags(&content, &self.config.favorite_tags);
         let content = storage::normalize_natural_dates(&content, Local::now().date_naive());
 
         match std::mem::replace(&mut self.input_mode, InputMode::Normal) {
@@ -841,11 +843,12 @@ impl App {
             return;
         }
 
+        let sort_order = self.config.validated_sort_order();
         let get_priority = |line: &Line| -> usize {
             let Line::Entry(entry) = line else {
-                return self.sort_order.len();
+                return sort_order.len();
             };
-            for (i, type_name) in self.sort_order.iter().enumerate() {
+            for (i, type_name) in sort_order.iter().enumerate() {
                 match (type_name.as_str(), &entry.entry_type) {
                     ("completed", EntryType::Task { completed: true }) => return i,
                     ("uncompleted", EntryType::Task { completed: false }) => return i,
@@ -854,7 +857,7 @@ impl App {
                     _ => {}
                 }
             }
-            self.sort_order.len()
+            sort_order.len()
         };
 
         let mut entries: Vec<Line> = entry_positions

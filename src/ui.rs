@@ -614,6 +614,12 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
     lines.push(help_line("T", "Filter tasks", key_style, desc_style));
     lines.push(help_line("N", "Filter notes", key_style, desc_style));
     lines.push(help_line("E", "Filter events", key_style, desc_style));
+    lines.push(help_line(
+        "0-9",
+        "Filter favorite tag",
+        key_style,
+        desc_style,
+    ));
     lines.push(help_line(":", "Command mode", key_style, desc_style));
     lines.push(RatatuiLine::from(""));
 

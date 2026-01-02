@@ -92,7 +92,7 @@ fn main() -> Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let res = run_app(&mut terminal, config.validated_sort_order());
+    let res = run_app(&mut terminal, config);
 
     disable_raw_mode()?;
     execute!(
@@ -111,9 +111,9 @@ fn main() -> Result<(), io::Error> {
 
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
-    sort_order: Vec<String>,
+    config: config::Config,
 ) -> io::Result<()> {
-    let mut app = App::new(sort_order)?;
+    let mut app = App::new(config)?;
 
     loop {
         let is_filter_context = matches!(app.view, ViewMode::Filter(_))
