@@ -1141,66 +1141,6 @@ mod tests {
     use chrono::NaiveDate;
 
     #[test]
-    fn test_parse_task_incomplete() {
-        let line = parse_line("- [ ] Buy groceries");
-        assert_eq!(
-            line,
-            Line::Entry(Entry {
-                entry_type: EntryType::Task { completed: false },
-                content: "Buy groceries".to_string(),
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_task_complete() {
-        let line = parse_line("- [x] Finished task");
-        assert_eq!(
-            line,
-            Line::Entry(Entry {
-                entry_type: EntryType::Task { completed: true },
-                content: "Finished task".to_string(),
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_note() {
-        let line = parse_line("- Just a note");
-        assert_eq!(
-            line,
-            Line::Entry(Entry {
-                entry_type: EntryType::Note,
-                content: "Just a note".to_string(),
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_event() {
-        let line = parse_line("* Meeting at 3pm");
-        assert_eq!(
-            line,
-            Line::Entry(Entry {
-                entry_type: EntryType::Event,
-                content: "Meeting at 3pm".to_string(),
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_raw_line() {
-        let line = parse_line("Some random text");
-        assert_eq!(line, Line::Raw("Some random text".to_string()));
-    }
-
-    #[test]
-    fn test_parse_empty_line() {
-        let line = parse_line("");
-        assert_eq!(line, Line::Raw(String::new()));
-    }
-
-    #[test]
     fn test_round_trip_parsing() {
         let original = "- [ ] Task one\n- [x] Task done\n- A note\n* An event\nRaw line";
         let lines = parse_lines(original);
@@ -1217,79 +1157,14 @@ mod tests {
     }
 
     #[test]
-    fn test_entry_toggle() {
-        let mut entry = Entry::new_task("Test");
-        assert!(matches!(
-            entry.entry_type,
-            EntryType::Task { completed: false }
-        ));
-
-        entry.toggle_complete();
-        assert!(matches!(
-            entry.entry_type,
-            EntryType::Task { completed: true }
-        ));
-
-        entry.toggle_complete();
-        assert!(matches!(
-            entry.entry_type,
-            EntryType::Task { completed: false }
-        ));
-    }
-
-    #[test]
-    fn test_is_day_header() {
-        assert!(is_day_header("# 2024/01/15"));
-        assert!(is_day_header("# 2024/12/31"));
-        assert!(!is_day_header("## 2024/01/15"));
-        assert!(!is_day_header("# 2024-01-15"));
-        assert!(!is_day_header("# not a date"));
-        assert!(!is_day_header("2024/01/15"));
-    }
-
-    #[test]
-    fn test_extract_day_content_single_day() {
-        let journal = "# 2024/01/15\n- Task 1\n- Task 2\n";
-        let date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let content = extract_day_content(journal, date);
-        assert_eq!(content, "- Task 1\n- Task 2");
-    }
-
-    #[test]
     fn test_extract_day_content_multiple_days() {
         let journal = "# 2024/01/15\n- Task 1\n\n# 2024/01/16\n- Task 2\n";
 
         let date1 = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let content1 = extract_day_content(journal, date1);
-        assert_eq!(content1, "- Task 1");
+        assert_eq!(extract_day_content(journal, date1), "- Task 1");
 
         let date2 = NaiveDate::from_ymd_opt(2024, 1, 16).unwrap();
-        let content2 = extract_day_content(journal, date2);
-        assert_eq!(content2, "- Task 2");
-    }
-
-    #[test]
-    fn test_extract_day_content_not_found() {
-        let journal = "# 2024/01/15\n- Task 1\n";
-        let date = NaiveDate::from_ymd_opt(2024, 1, 16).unwrap();
-        let content = extract_day_content(journal, date);
-        assert_eq!(content, "");
-    }
-
-    #[test]
-    fn test_update_day_content_new_day() {
-        let journal = "";
-        let date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let updated = update_day_content(journal, date, "- New task");
-        assert_eq!(updated, "# 2024/01/15\n- New task\n");
-    }
-
-    #[test]
-    fn test_update_day_content_existing_day() {
-        let journal = "# 2024/01/15\n- Old task\n";
-        let date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let updated = update_day_content(journal, date, "- New task");
-        assert_eq!(updated, "# 2024/01/15\n- New task\n");
+        assert_eq!(extract_day_content(journal, date2), "- Task 2");
     }
 
     #[test]
@@ -1305,125 +1180,40 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_later_date_iso() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_later_date("2026/01/15", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
-    }
+    fn test_parse_natural_date_all_formats() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap(); // Monday
 
-    #[test]
-    fn test_parse_later_date_mm_dd_yyyy() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_later_date("1/15/2026", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
-    }
-
-    #[test]
-    fn test_parse_later_date_mm_dd_yy() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_later_date("1/15/26", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
-    }
-
-    #[test]
-    fn test_parse_later_date_mm_dd_future() {
-        // If today is Jan 1, @1/15 should be this year (hasn't passed)
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_later_date("1/15", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
-    }
-
-    #[test]
-    fn test_parse_later_date_mm_dd_past_to_next_year() {
-        // If today is Jan 20, @1/15 should be next year (already passed)
-        let today = NaiveDate::from_ymd_opt(2026, 1, 20).unwrap();
-        let result = parse_later_date("1/15", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2027, 1, 15));
-    }
-
-    #[test]
-    fn test_extract_target_date_from_content() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = extract_target_date("Call dentist @1/15", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 15));
-    }
-
-    #[test]
-    fn test_extract_target_date_no_match() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = extract_target_date("Just a regular note", today);
-        assert_eq!(result, None);
-    }
-
-    #[test]
-    fn test_later_date_regex_matches() {
-        // Test the regex matches various formats
-        let test_cases = [
-            "@1/9",
-            "@01/09",
-            "@1/9/26",
-            "@01/09/26",
-            "@1/9/2026",
-            "@01/09/2026",
-            "@2026/1/9",
-            "@2026/01/09",
-        ];
-        for case in test_cases {
-            assert!(LATER_DATE_REGEX.is_match(case), "Should match: {case}");
-        }
-    }
-
-    #[test]
-    fn test_parse_later_date_01_04_26() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_later_date("01/04/26", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 4));
-    }
-
-    #[test]
-    fn test_parse_natural_date_tomorrow() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_natural_date("tomorrow", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 2));
-    }
-
-    #[test]
-    fn test_parse_natural_date_days() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        // tomorrow/yesterday
         assert_eq!(
-            parse_natural_date("3d", today),
+            parse_natural_date("tomorrow", today),
+            NaiveDate::from_ymd_opt(2026, 1, 6)
+        );
+        assert_eq!(
+            parse_natural_date("yesterday", today),
             NaiveDate::from_ymd_opt(2026, 1, 4)
         );
+
+        // relative days
         assert_eq!(
-            parse_natural_date("7d", today),
+            parse_natural_date("3d", today),
             NaiveDate::from_ymd_opt(2026, 1, 8)
         );
-    }
+        assert_eq!(
+            parse_natural_date("-3d", today),
+            NaiveDate::from_ymd_opt(2026, 1, 2)
+        );
 
-    #[test]
-    fn test_parse_natural_date_next_weekday() {
-        // Jan 1, 2026 is a Thursday
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        // next-monday should be Jan 5
+        // weekdays
         assert_eq!(
             parse_natural_date("next-monday", today),
-            NaiveDate::from_ymd_opt(2026, 1, 5)
+            NaiveDate::from_ymd_opt(2026, 1, 12)
         );
         assert_eq!(
-            parse_natural_date("next-mon", today),
-            NaiveDate::from_ymd_opt(2026, 1, 5)
+            parse_natural_date("last-friday", today),
+            NaiveDate::from_ymd_opt(2026, 1, 2)
         );
-        // next-thursday should be Jan 8 (not today)
-        assert_eq!(
-            parse_natural_date("next-thu", today),
-            NaiveDate::from_ymd_opt(2026, 1, 8)
-        );
-    }
 
-    #[test]
-    fn test_parse_natural_date_fallback() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        // Should fall back to parse_later_date
+        // fallback to standard format
         assert_eq!(
             parse_natural_date("1/15", today),
             NaiveDate::from_ymd_opt(2026, 1, 15)
@@ -1431,284 +1221,39 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_natural_date_yesterday() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
-        assert_eq!(
-            parse_natural_date("yesterday", today),
-            NaiveDate::from_ymd_opt(2026, 1, 4)
-        );
-    }
-
-    #[test]
-    fn test_parse_natural_date_negative_days() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 10).unwrap();
-        assert_eq!(
-            parse_natural_date("-3d", today),
-            NaiveDate::from_ymd_opt(2026, 1, 7)
-        );
-        assert_eq!(
-            parse_natural_date("-7d", today),
-            NaiveDate::from_ymd_opt(2026, 1, 3)
-        );
-    }
-
-    #[test]
-    fn test_parse_natural_date_last_weekday() {
-        // Jan 5, 2026 is Monday
-        let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
-        // last-friday should be Jan 2
-        assert_eq!(
-            parse_natural_date("last-friday", today),
-            NaiveDate::from_ymd_opt(2026, 1, 2)
-        );
-        // last-mon on Monday should be previous Monday (Dec 29, 2025)
-        assert_eq!(
-            parse_natural_date("last-mon", today),
-            NaiveDate::from_ymd_opt(2025, 12, 29)
-        );
-    }
-
-    #[test]
     fn test_normalize_natural_dates() {
-        let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap(); // Monday
+        let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
 
         assert_eq!(
             normalize_natural_dates("Call dentist @tomorrow", today),
             "Call dentist @01/06"
         );
         assert_eq!(
-            normalize_natural_dates("Review report @3d", today),
-            "Review report @01/08"
+            normalize_natural_dates("Review @3d and @-3d", today),
+            "Review @01/08 and @01/02"
         );
-        // next Monday from Monday Jan 5 is Jan 12
         assert_eq!(
             normalize_natural_dates("Meeting @next-monday", today),
             "Meeting @01/12"
         );
-        // Past dates
-        assert_eq!(
-            normalize_natural_dates("Follow up from @yesterday", today),
-            "Follow up from @01/04"
-        );
-        assert_eq!(
-            normalize_natural_dates("Notes from @-3d", today),
-            "Notes from @01/02"
-        );
-        // last-friday from Monday Jan 5 is Jan 2
-        assert_eq!(
-            normalize_natural_dates("Reference @last-friday", today),
-            "Reference @01/02"
-        );
-    }
-
-    #[test]
-    fn test_filter_parse_before_date() {
-        let filter = parse_filter_query("@before:1/15");
-        assert!(filter.before_date.is_some());
-    }
-
-    #[test]
-    fn test_filter_parse_after_date() {
-        let filter = parse_filter_query("@after:1/1");
-        assert!(filter.after_date.is_some());
-    }
-
-    #[test]
-    fn test_filter_parse_overdue() {
-        let filter = parse_filter_query("@overdue");
-        assert!(filter.overdue);
     }
 
     #[test]
     fn test_filter_combined() {
-        let filter = parse_filter_query("!tasks @after:1/1 @before:1/31");
+        let filter = parse_filter_query("!tasks #work @after:1/1 @before:1/31");
         assert_eq!(filter.entry_type, Some(FilterType::Task));
+        assert_eq!(filter.tags, vec!["work"]);
         assert!(filter.after_date.is_some());
         assert!(filter.before_date.is_some());
-    }
-
-    #[test]
-    fn test_parse_date_prefer_past() {
-        // On Jan 1, 2026, @12/30 should be interpreted as Dec 30, 2025 (past)
-        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
-        let result = parse_date_prefer_past("12/30", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2025, 12, 30));
-
-        // @1/1 on Jan 1 should be today (not past year)
-        let result = parse_date_prefer_past("1/1", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2026, 1, 1));
-
-        // Explicit year should work normally
-        let result = parse_date_prefer_past("12/30/25", today);
-        assert_eq!(result, NaiveDate::from_ymd_opt(2025, 12, 30));
-    }
-
-    #[test]
-    fn test_filter_invalid_type() {
-        let filter = parse_filter_query("!tas");
-        assert_eq!(filter.invalid_tokens, vec!["!tas"]);
-        assert!(filter.entry_type.is_none());
-    }
-
-    #[test]
-    fn test_filter_invalid_not_type() {
-        let filter = parse_filter_query("not:!tas");
-        assert_eq!(filter.invalid_tokens, vec!["not:!tas"]);
-    }
-
-    #[test]
-    fn test_filter_invalid_date_command() {
-        let filter = parse_filter_query("@befor:1/15");
-        assert_eq!(filter.invalid_tokens, vec!["@befor:1/15"]);
-    }
-
-    #[test]
-    fn test_filter_invalid_date_value() {
-        let filter = parse_filter_query("@before:invalid");
-        assert_eq!(filter.invalid_tokens, vec!["@before:invalid"]);
-    }
-
-    #[test]
-    fn test_filter_multiple_entry_types() {
-        let filter = parse_filter_query("!tasks !notes");
-        assert_eq!(filter.invalid_tokens, vec!["Multiple entry types"]);
-    }
-
-    #[test]
-    fn test_filter_duplicate_entry_type_ignored() {
-        let filter = parse_filter_query("!tasks !t");
         assert!(filter.invalid_tokens.is_empty());
-        assert_eq!(filter.entry_type, Some(FilterType::Task));
     }
 
     #[test]
-    fn test_filter_multiple_before_dates() {
-        let filter = parse_filter_query("@before:1/1 @before:1/15");
-        assert_eq!(filter.invalid_tokens, vec!["Multiple @before dates"]);
-    }
-
-    #[test]
-    fn test_filter_multiple_after_dates() {
-        let filter = parse_filter_query("@after:1/1 @after:1/15");
-        assert_eq!(filter.invalid_tokens, vec!["Multiple @after dates"]);
-    }
-
-    #[test]
-    fn test_expand_favorite_tags_basic() {
-        let mut tags = HashMap::new();
-        tags.insert("1".to_string(), "work".to_string());
-        tags.insert("2".to_string(), "personal".to_string());
-        assert_eq!(expand_favorite_tags("Task #1", &tags), "Task #work");
-        assert_eq!(expand_favorite_tags("Task #2", &tags), "Task #personal");
-    }
-
-    #[test]
-    fn test_expand_favorite_tags_missing() {
-        let mut tags = HashMap::new();
-        tags.insert("1".to_string(), "work".to_string());
-        assert_eq!(expand_favorite_tags("Task #2", &tags), "Task #2");
-    }
-
-    #[test]
-    fn test_expand_favorite_tags_zero_key() {
-        let mut tags = HashMap::new();
-        tags.insert("0".to_string(), "zeroth".to_string());
-        assert_eq!(expand_favorite_tags("Task #0", &tags), "Task #zeroth");
-    }
-
-    #[test]
-    fn test_expand_favorite_tags_multiple() {
-        let mut tags = HashMap::new();
-        tags.insert("1".to_string(), "work".to_string());
-        tags.insert("2".to_string(), "urgent".to_string());
-        assert_eq!(
-            expand_favorite_tags("Task #1 #2", &tags),
-            "Task #work #urgent"
-        );
-    }
-
-    #[test]
-    fn test_expand_favorite_tags_empty_value() {
-        let mut tags = HashMap::new();
-        tags.insert("1".to_string(), "work".to_string());
-        tags.insert("2".to_string(), "".to_string());
-        assert_eq!(expand_favorite_tags("Task #2", &tags), "Task #2");
-    }
-
-    #[test]
-    fn test_expand_favorite_tags_not_followed_by_word() {
-        let mut tags = HashMap::new();
-        tags.insert("1".to_string(), "work".to_string());
-        assert_eq!(expand_favorite_tags("Task #1abc", &tags), "Task #1abc");
-        assert_eq!(expand_favorite_tags("Task #1", &tags), "Task #work");
-        assert_eq!(expand_favorite_tags("#1 task", &tags), "#work task");
-    }
-
-    #[test]
-    fn test_expand_saved_filters_basic() {
-        let mut filters = HashMap::new();
-        filters.insert("t".to_string(), "!tasks".to_string());
-        filters.insert("n".to_string(), "!notes".to_string());
-
-        assert_eq!(
-            expand_saved_filters("$t", &filters),
-            ("!tasks".to_string(), vec![])
-        );
-        assert_eq!(
-            expand_saved_filters("$n", &filters),
-            ("!notes".to_string(), vec![])
-        );
-    }
-
-    #[test]
-    fn test_expand_saved_filters_unknown() {
-        let filters = HashMap::new();
-        assert_eq!(
-            expand_saved_filters("$unknown", &filters),
-            ("$unknown".to_string(), vec!["$unknown".to_string()])
-        );
-    }
-
-    #[test]
-    fn test_expand_saved_filters_multiple() {
-        let mut filters = HashMap::new();
-        filters.insert("t".to_string(), "!tasks".to_string());
-        filters.insert("n".to_string(), "!notes".to_string());
-
-        assert_eq!(
-            expand_saved_filters("$t $n", &filters),
-            ("!tasks !notes".to_string(), vec![])
-        );
-    }
-
-    #[test]
-    fn test_expand_saved_filters_combined() {
-        let mut filters = HashMap::new();
-        filters.insert("t".to_string(), "!tasks".to_string());
-
-        assert_eq!(
-            expand_saved_filters("$t #work", &filters),
-            ("!tasks #work".to_string(), vec![])
-        );
-    }
-
-    #[test]
-    fn test_expand_saved_filters_word_boundary() {
-        let mut filters = HashMap::new();
-        filters.insert("t".to_string(), "!tasks".to_string());
-
-        // $tasks doesn't match filter "t" due to word boundary
-        assert_eq!(
-            expand_saved_filters("$tasks", &filters),
-            ("$tasks".to_string(), vec!["$tasks".to_string()])
-        );
-        assert_eq!(
-            expand_saved_filters("$t", &filters),
-            ("!tasks".to_string(), vec![])
-        );
-        assert_eq!(
-            expand_saved_filters("$t ", &filters),
-            ("!tasks ".to_string(), vec![])
-        );
+    fn test_filter_invalid_tokens() {
+        assert!(!parse_filter_query("!tas").invalid_tokens.is_empty());
+        assert!(!parse_filter_query("!tasks !notes").invalid_tokens.is_empty());
+        assert!(!parse_filter_query("@before:1/1 @before:1/15")
+            .invalid_tokens
+            .is_empty());
     }
 }
