@@ -213,6 +213,36 @@ impl App {
         })
     }
 
+    /// Creates a new App with a specific date (for testing)
+    pub fn new_with_date(config: Config, date: NaiveDate) -> io::Result<Self> {
+        let lines = storage::load_day_lines(date)?;
+        let entry_indices = Self::compute_entry_indices(&lines);
+        let later_entries = storage::collect_later_entries_for_date(date)?;
+        let active_journal = storage::get_active_slot();
+        let in_git_repo = storage::find_git_root().is_some();
+
+        Ok(Self {
+            current_date: date,
+            lines,
+            entry_indices: entry_indices.clone(),
+            view: ViewMode::Daily(DailyState::new(entry_indices.len(), later_entries)),
+            input_mode: InputMode::Normal,
+            edit_buffer: None,
+            command_buffer: CursorBuffer::empty(),
+            should_quit: false,
+            status_message: None,
+            show_help: false,
+            help_scroll: 0,
+            help_visible_height: 0,
+            last_deleted: None,
+            last_filter_query: None,
+            config,
+            active_journal,
+            in_git_repo,
+            hide_completed: false,
+        })
+    }
+
     #[must_use]
     pub fn compute_entry_indices(lines: &[Line]) -> Vec<usize> {
         lines

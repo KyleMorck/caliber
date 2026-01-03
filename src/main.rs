@@ -1,10 +1,3 @@
-mod app;
-mod config;
-mod cursor;
-mod handlers;
-mod storage;
-mod ui;
-
 use std::io;
 use std::path::PathBuf;
 
@@ -23,13 +16,14 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-use app::{
+use caliber::app::{
     App, ConfirmContext, DAILY_HEADER_LINES, DATE_SUFFIX_WIDTH, EditContext, FILTER_HEADER_LINES,
     InputMode, ViewMode,
 };
-use config::{Config, resolve_path};
-use cursor::cursor_position_in_wrap;
-use storage::{EntryType, Line};
+use caliber::config::{self, Config, resolve_path};
+use caliber::cursor::cursor_position_in_wrap;
+use caliber::storage::{EntryType, Line};
+use caliber::{handlers, storage, ui};
 
 fn ensure_selected_visible(
     scroll_offset: &mut usize,
@@ -120,7 +114,7 @@ fn main() -> Result<(), io::Error> {
 
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
-    config: config::Config,
+    config: Config,
 ) -> io::Result<()> {
     let mut app = App::new(config)?;
 

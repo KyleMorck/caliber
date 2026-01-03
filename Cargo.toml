@@ -19,3 +19,6 @@ serde = { version = "1.0", features = ["derive"] }
 unicode-width = "0.2"
 regex = "1"
 arboard = "3.6.1"
+
+[dev-dependencies]
+tempfile = "3"

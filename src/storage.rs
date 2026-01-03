@@ -64,6 +64,13 @@ pub fn set_project_path(path: PathBuf) {
     }
 }
 
+/// Resets the journal context (for testing only)
+pub fn reset_journal_context() {
+    if let Ok(mut guard) = JOURNAL_CONTEXT.write() {
+        *guard = None;
+    }
+}
+
 #[must_use]
 pub fn get_active_journal_path() -> PathBuf {
     JOURNAL_CONTEXT
