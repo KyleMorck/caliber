@@ -50,7 +50,7 @@ Your home base. View and manage entries for a single day with vim-style navigati
 - Navigate between days with `h/l` or `[/]`
 - Jump to today with `t`
 - Create entries with `Enter` (at end) or `o` (below current)
-- Edit with `e`, delete with `d`, toggle task completion with `x`
+- Edit with `i`, delete with `x`, toggle task completion with `c`
 
 **Later entries** appear at the top - these are incomplete entries from other days that target the current date using `@date` syntax. They bubble up so you don't lose track of scheduled tasks.
 
@@ -109,17 +109,17 @@ The entry will appear in the "Later" section when you view that date.
 |-----|--------|
 | `Enter` | New entry at end |
 | `o/O` | New entry below/above current |
-| `e` | Edit selected entry |
+| `i` | Edit selected entry |
 | `j/k` or `↓/↑` | Navigate down/up |
 | `g/G` | Jump to first/last entry |
-| `x` | Toggle task complete |
-| `d` | Delete entry |
+| `c` | Toggle task complete |
+| `x` | Delete entry |
 | `y` | Yank to clipboard |
 | `u` | Undo delete |
 | `h/l` or `[/]` | Previous/next day |
 | `t` | Go to today |
 | `s` | Sort entries |
-| `m` | Move mode (reorder entries) |
+| `r` | Reorder mode |
 | `0-9` | Filter by favorite tag |
 | `/` | Open filter mode |
 | `Tab` | Return to last filter |
@@ -129,14 +129,14 @@ The entry will appear in the "Later" section when you view that date.
 | `:config-reload` | Reload config file |
 | `:[q]uit` | Quit |
 
-### Move Mode
+### Reorder Mode
 
 Reorder entries within a day.
 
 | Key | Action |
 |-----|--------|
 | `j/k` or `↓/↑` | Move entry down/up |
-| `m` or `Enter` | Save new order |
+| `r` or `Enter` | Save new order |
 | `Esc` | Cancel |
 
 ### Edit Mode
@@ -172,9 +172,9 @@ These shortcuts work in all text input modes (Edit, Command, and Filter query):
 |-----|--------|
 | `j/k` or `↓/↑` | Navigate down/up |
 | `g/G` | Jump to first/last |
-| `e` | Edit entry |
-| `x` | Toggle task |
-| `d` | Delete entry |
+| `i` | Edit entry |
+| `c` | Toggle task |
+| `x` | Delete entry |
 | `y` | Yank to clipboard |
 | `r` | Refresh results |
 | `v` | Jump to entry's source day |
