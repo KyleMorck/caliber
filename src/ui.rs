@@ -369,7 +369,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 }
             } else if is_selected {
                 let rest_of_prefix = prefix.chars().skip(1).collect::<String>();
-                let indicator = if app.input_mode == InputMode::Order {
+                let indicator = if app.input_mode == InputMode::Reorder {
                     Span::styled("↕", Style::default().fg(Color::Yellow))
                 } else {
                     Span::styled("→", Style::default().fg(Color::Cyan))
@@ -495,14 +495,14 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled("Esc", Style::default().fg(Color::Gray)),
             Span::styled(" Cancel", Style::default().fg(Color::DarkGray)),
         ]),
-        (_, InputMode::Order) => RatatuiLine::from(vec![
+        (_, InputMode::Reorder) => RatatuiLine::from(vec![
             Span::styled(
-                " MOVE ",
+                " REORDER ",
                 Style::default().fg(Color::Black).bg(Color::Yellow),
             ),
             Span::styled("  j/k|↕", Style::default().fg(Color::Gray)),
             Span::styled(" Move down/up  ", Style::default().fg(Color::DarkGray)),
-            Span::styled("m/Enter", Style::default().fg(Color::Gray)),
+            Span::styled("r/Enter", Style::default().fg(Color::Gray)),
             Span::styled(" Save  ", Style::default().fg(Color::DarkGray)),
             Span::styled("Esc", Style::default().fg(Color::Gray)),
             Span::styled(" Cancel", Style::default().fg(Color::DarkGray)),
@@ -511,9 +511,9 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled(" DAILY ", Style::default().fg(Color::Black).bg(Color::Cyan)),
             Span::styled("  Enter", Style::default().fg(Color::Gray)),
             Span::styled(" New entry  ", Style::default().fg(Color::DarkGray)),
-            Span::styled("e", Style::default().fg(Color::Gray)),
+            Span::styled("i", Style::default().fg(Color::Gray)),
             Span::styled(" Edit entry  ", Style::default().fg(Color::DarkGray)),
-            Span::styled("x", Style::default().fg(Color::Gray)),
+            Span::styled("c", Style::default().fg(Color::Gray)),
             Span::styled(" Toggle task  ", Style::default().fg(Color::DarkGray)),
             Span::styled("/", Style::default().fg(Color::Gray)),
             Span::styled(" Filter  ", Style::default().fg(Color::DarkGray)),
@@ -525,9 +525,9 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 " FILTER ",
                 Style::default().fg(Color::Black).bg(Color::Magenta),
             ),
-            Span::styled("  x", Style::default().fg(Color::Gray)),
+            Span::styled("  c", Style::default().fg(Color::Gray)),
             Span::styled(" Toggle  ", Style::default().fg(Color::DarkGray)),
-            Span::styled("d", Style::default().fg(Color::Gray)),
+            Span::styled("x", Style::default().fg(Color::Gray)),
             Span::styled(" Delete  ", Style::default().fg(Color::DarkGray)),
             Span::styled("r", Style::default().fg(Color::Gray)),
             Span::styled(" Refresh  ", Style::default().fg(Color::DarkGray)),
@@ -578,9 +578,9 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
             &[
                 ("Enter", "New entry at end"),
                 ("o/O", "New entry below/above"),
-                ("e", "Edit selected"),
-                ("x", "Toggle task complete"),
-                ("d", "Delete entry"),
+                ("i", "Edit selected"),
+                ("c", "Toggle task complete"),
+                ("x", "Delete entry"),
                 ("y", "Yank to clipboard"),
                 ("u", "Undo delete"),
                 ("j/k", "Navigate down/up"),
@@ -588,7 +588,7 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
                 ("h/l|[]", "Previous/next day"),
                 ("t", "Go to today"),
                 ("s", "Sort entries"),
-                ("m", "Move mode"),
+                ("r", "Reorder mode"),
                 ("/", "Filter mode"),
                 ("Tab", "Return to filter"),
                 ("0-9", "Filter favorite tag"),
@@ -596,10 +596,10 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
             ],
         ),
         (
-            "[Move]",
+            "[Reorder]",
             &[
                 ("j/k|↕", "Move entry down/up"),
-                ("m/Enter", "Save"),
+                ("r/Enter", "Save"),
                 ("Esc", "Cancel"),
             ],
         ),
@@ -632,9 +632,9 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
                 ("j/k|↕", "Navigate down/up"),
                 ("g/G", "Jump first/last"),
                 ("Enter", "Quick add to today"),
-                ("e", "Edit entry"),
-                ("x", "Toggle task"),
-                ("d", "Delete entry"),
+                ("i", "Edit entry"),
+                ("c", "Toggle task"),
+                ("x", "Delete entry"),
                 ("y", "Yank to clipboard"),
                 ("r", "Refresh results"),
                 ("v", "View day"),

@@ -59,15 +59,15 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             app.enter_filter_input();
             return Ok(());
         }
-        KeyCode::Char('e') => {
+        KeyCode::Char('i') => {
             app.edit_current_entry();
             return Ok(());
         }
-        KeyCode::Char('x') => {
+        KeyCode::Char('c') => {
             app.toggle_current_entry()?;
             return Ok(());
         }
-        KeyCode::Char('d') => {
+        KeyCode::Char('x') => {
             app.delete_current_entry()?;
             return Ok(());
         }
@@ -118,7 +118,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             KeyCode::Char('l' | ']') => app.next_day()?,
             KeyCode::Char('t') => app.goto_today()?,
             KeyCode::Char('s') => app.sort_entries(),
-            KeyCode::Char('m') => app.enter_order_mode(),
+            KeyCode::Char('r') => app.enter_reorder_mode(),
             KeyCode::Tab => app.return_to_filter()?,
             _ => {}
         },
@@ -210,12 +210,12 @@ pub fn handle_query_input_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     Ok(())
 }
 
-pub fn handle_order_key(app: &mut App, key: KeyCode) {
+pub fn handle_reorder_key(app: &mut App, key: KeyCode) {
     match key {
-        KeyCode::Char('m') | KeyCode::Enter => app.exit_order_mode(true),
-        KeyCode::Esc => app.exit_order_mode(false),
-        KeyCode::Up | KeyCode::Char('k') => app.order_move_up(),
-        KeyCode::Down | KeyCode::Char('j') => app.order_move_down(),
+        KeyCode::Char('r') | KeyCode::Enter => app.exit_reorder_mode(true),
+        KeyCode::Esc => app.exit_reorder_mode(false),
+        KeyCode::Up | KeyCode::Char('k') => app.reorder_move_up(),
+        KeyCode::Down | KeyCode::Char('j') => app.reorder_move_down(),
         _ => {}
     }
 }

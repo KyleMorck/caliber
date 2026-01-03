@@ -481,7 +481,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     InputMode::Normal => handlers::handle_normal_key(&mut app, key.code)?,
                     InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
                     InputMode::QueryInput => handlers::handle_query_input_key(&mut app, key)?,
-                    InputMode::Order => handlers::handle_order_key(&mut app, key.code),
+                    InputMode::Reorder => handlers::handle_reorder_key(&mut app, key.code),
                 }
             }
         }

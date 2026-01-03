@@ -105,7 +105,7 @@ pub enum InputMode {
     Normal,
     Edit(EditContext),
     Command,
-    Order,
+    Reorder,
     QueryInput,
 }
 
@@ -885,7 +885,7 @@ impl App {
         self.save();
     }
 
-    pub fn enter_order_mode(&mut self) {
+    pub fn enter_reorder_mode(&mut self) {
         let ViewMode::Daily(state) = &mut self.view else {
             return;
         };
@@ -898,11 +898,11 @@ impl App {
 
         if !self.entry_indices.is_empty() {
             state.original_lines = Some(self.lines.clone());
-            self.input_mode = InputMode::Order;
+            self.input_mode = InputMode::Reorder;
         }
     }
 
-    pub fn exit_order_mode(&mut self, save: bool) {
+    pub fn exit_reorder_mode(&mut self, save: bool) {
         if !matches!(self.view, ViewMode::Daily(_)) {
             return;
         }
@@ -920,7 +920,7 @@ impl App {
         self.input_mode = InputMode::Normal;
     }
 
-    pub fn order_move_up(&mut self) {
+    pub fn reorder_move_up(&mut self) {
         let ViewMode::Daily(state) = &mut self.view else {
             return;
         };
@@ -943,7 +943,7 @@ impl App {
         state.selected -= 1;
     }
 
-    pub fn order_move_down(&mut self) {
+    pub fn reorder_move_down(&mut self) {
         let ViewMode::Daily(state) = &mut self.view else {
             return;
         };
