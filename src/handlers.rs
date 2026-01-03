@@ -1,8 +1,9 @@
 use std::io;
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::app::{App, InputMode, InsertPosition, ViewMode};
+use crate::cursor::CursorBuffer;
 use crate::ui;
 
 pub fn handle_help_key(app: &mut App, key: KeyCode) {
@@ -26,22 +27,19 @@ pub fn handle_help_key(app: &mut App, key: KeyCode) {
     }
 }
 
-pub fn handle_command_key(app: &mut App, key: KeyCode) -> io::Result<()> {
-    match key {
+pub fn handle_command_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
+    match key.code {
         KeyCode::Enter => app.execute_command()?,
         KeyCode::Esc => {
             app.command_buffer.clear();
             app.input_mode = InputMode::Normal;
         }
-        KeyCode::Backspace => {
-            if app.command_buffer.is_empty() {
-                app.input_mode = InputMode::Normal;
-            } else {
-                app.command_buffer.pop();
-            }
+        KeyCode::Backspace if app.command_buffer.is_empty() => {
+            app.input_mode = InputMode::Normal;
         }
-        KeyCode::Char(c) => app.command_buffer.push(c),
-        _ => {}
+        _ => {
+            handle_text_input(&mut app.command_buffer, key);
+        }
     }
     Ok(())
 }
@@ -134,58 +132,61 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
     Ok(())
 }
 
-pub fn handle_edit_key(app: &mut App, key: KeyCode) {
-    match key {
-        KeyCode::BackTab => app.cycle_edit_entry_type(),
-        KeyCode::Tab => app.commit_and_add_new(),
-        KeyCode::Enter => app.exit_edit(),
-        KeyCode::Esc => app.cancel_edit(),
-        KeyCode::Backspace => {
-            if let Some(ref mut buffer) = app.edit_buffer
-                && !buffer.delete_char_before()
-                && buffer.is_empty()
-            {
-                // Empty buffer backspace = cancel and delete the empty entry
-                // Delegate to exit_edit which handles this correctly
-                app.exit_edit();
-            }
+pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
+    // Edit-specific keys first
+    match key.code {
+        KeyCode::BackTab => {
+            app.cycle_edit_entry_type();
+            return;
         }
-        KeyCode::Left => {
-            if let Some(ref mut buffer) = app.edit_buffer {
-                buffer.move_left();
-            }
+        KeyCode::Tab => {
+            app.commit_and_add_new();
+            return;
         }
-        KeyCode::Right => {
-            if let Some(ref mut buffer) = app.edit_buffer {
-                buffer.move_right();
-            }
+        KeyCode::Enter => {
+            app.exit_edit();
+            return;
         }
-        KeyCode::Char(c) => {
-            if let Some(ref mut buffer) = app.edit_buffer {
-                buffer.insert_char(c);
-            }
+        KeyCode::Esc => {
+            app.cancel_edit();
+            return;
         }
         _ => {}
     }
+
+    if let Some(ref mut buffer) = app.edit_buffer {
+        // Special case: empty buffer backspace cancels edit
+        if key.code == KeyCode::Backspace
+            && key.modifiers.is_empty()
+            && !buffer.delete_char_before()
+            && buffer.is_empty()
+        {
+            app.exit_edit();
+            return;
+        }
+
+        if key.code != KeyCode::Backspace {
+            handle_text_input(buffer, key);
+        }
+    }
 }
 
-pub fn handle_query_input_key(app: &mut App, key: KeyCode) -> io::Result<()> {
-    // Get query buffer from filter state or use command buffer as temp storage
-    let query_buffer = match &app.view {
-        ViewMode::Filter(state) => state.query_buffer.clone(),
-        ViewMode::Daily(_) => app.command_buffer.clone(),
+pub fn handle_query_input_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
+    let is_empty = match &app.view {
+        ViewMode::Filter(state) => state.query_buffer.is_empty(),
+        ViewMode::Daily(_) => app.command_buffer.is_empty(),
     };
 
-    match key {
+    match key.code {
         KeyCode::Enter => {
-            if query_buffer.is_empty() {
+            if is_empty {
                 app.cancel_filter_input();
             } else {
                 app.execute_filter()?;
             }
         }
         KeyCode::Esc => {
-            if query_buffer.is_empty() {
+            if is_empty {
                 app.cancel_filter_input();
             } else {
                 match &mut app.view {
@@ -194,25 +195,17 @@ pub fn handle_query_input_key(app: &mut App, key: KeyCode) -> io::Result<()> {
                 }
             }
         }
-        KeyCode::Backspace => {
-            if query_buffer.is_empty() {
-                app.cancel_filter_input();
-            } else {
-                match &mut app.view {
-                    ViewMode::Filter(state) => {
-                        state.query_buffer.pop();
-                    }
-                    ViewMode::Daily(_) => {
-                        app.command_buffer.pop();
-                    }
-                }
-            }
+        KeyCode::Backspace if is_empty && key.modifiers.is_empty() => {
+            app.cancel_filter_input();
         }
-        KeyCode::Char(c) => match &mut app.view {
-            ViewMode::Filter(state) => state.query_buffer.push(c),
-            ViewMode::Daily(_) => app.command_buffer.push(c),
+        _ => match &mut app.view {
+            ViewMode::Filter(state) => {
+                handle_text_input(&mut state.query_buffer, key);
+            }
+            ViewMode::Daily(_) => {
+                handle_text_input(&mut app.command_buffer, key);
+            }
         },
-        _ => {}
     }
     Ok(())
 }
@@ -225,4 +218,56 @@ pub fn handle_order_key(app: &mut App, key: KeyCode) {
         KeyCode::Down | KeyCode::Char('j') => app.order_move_down(),
         _ => {}
     }
+}
+
+/// Shared text input handler for CursorBuffer
+/// Returns true if the key was handled
+fn handle_text_input(buffer: &mut CursorBuffer, key: KeyEvent) -> bool {
+    let KeyEvent {
+        code, modifiers, ..
+    } = key;
+
+    // Ctrl modifiers
+    if modifiers.contains(KeyModifiers::CONTROL) {
+        match code {
+            KeyCode::Char('a') => buffer.move_to_start(),
+            KeyCode::Char('e') => buffer.move_to_end(),
+            KeyCode::Char('w') => buffer.delete_word_before(),
+            KeyCode::Char('u') => buffer.delete_to_start(),
+            KeyCode::Char('k') => buffer.delete_to_end(),
+            KeyCode::Left => buffer.move_word_left(),
+            KeyCode::Right => buffer.move_word_right(),
+            _ => return false,
+        }
+        return true;
+    }
+
+    // Alt modifiers
+    if modifiers.contains(KeyModifiers::ALT) {
+        match code {
+            KeyCode::Char('b') => buffer.move_word_left(),
+            KeyCode::Char('f') => buffer.move_word_right(),
+            KeyCode::Char('d') => buffer.delete_word_after(),
+            KeyCode::Backspace => buffer.delete_word_before(),
+            _ => return false,
+        }
+        return true;
+    }
+
+    // No modifiers (or shift only for chars)
+    match code {
+        KeyCode::Left => buffer.move_left(),
+        KeyCode::Right => buffer.move_right(),
+        KeyCode::Home => buffer.move_to_start(),
+        KeyCode::End => buffer.move_to_end(),
+        KeyCode::Delete => {
+            buffer.delete_char_after();
+        }
+        KeyCode::Backspace => {
+            buffer.delete_char_before();
+        }
+        KeyCode::Char(c) => buffer.insert_char(c),
+        _ => return false,
+    }
+    true
 }

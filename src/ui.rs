@@ -472,18 +472,16 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
     match (&app.view, &app.input_mode) {
         (_, InputMode::Command) => RatatuiLine::from(vec![
             Span::styled(":", Style::default().fg(Color::Yellow)),
-            Span::raw(app.command_buffer.clone()),
-            Span::styled("█", Style::default().fg(Color::White)),
+            Span::raw(app.command_buffer.content().to_string()),
         ]),
         (_, InputMode::QueryInput) => {
             let buffer = match &app.view {
-                ViewMode::Filter(state) => state.query_buffer.clone(),
-                ViewMode::Daily(_) => app.command_buffer.clone(),
+                ViewMode::Filter(state) => state.query_buffer.content(),
+                ViewMode::Daily(_) => app.command_buffer.content(),
             };
             RatatuiLine::from(vec![
                 Span::styled("/", Style::default().fg(Color::Magenta)),
-                Span::raw(buffer),
-                Span::styled("█", Style::default().fg(Color::White)),
+                Span::raw(buffer.to_string()),
             ])
         }
         (_, InputMode::Edit(_)) => RatatuiLine::from(vec![
@@ -583,7 +581,12 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
         key_style,
         desc_style,
     ));
-    lines.push(help_line("o/O", "New entry below/above", key_style, desc_style));
+    lines.push(help_line(
+        "o/O",
+        "New entry below/above",
+        key_style,
+        desc_style,
+    ));
     lines.push(help_line("e", "Edit selected", key_style, desc_style));
     lines.push(help_line(
         "x",
@@ -645,8 +648,68 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
         key_style,
         desc_style,
     ));
-    lines.push(help_line("←/→", "Move cursor", key_style, desc_style));
     lines.push(help_line("Esc", "Cancel", key_style, desc_style));
+    lines.push(RatatuiLine::from(""));
+
+    // Text editing (shared)
+    lines.push(
+        RatatuiLine::from(Span::styled("[Text Editing]", header_style))
+            .alignment(Alignment::Center),
+    );
+    lines.push(help_line(
+        "←/→",
+        "Move cursor left/right",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Alt+B/F",
+        "Move cursor one word left/right",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Home/Ctrl+A",
+        "Move cursor to start",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "End/Ctrl+E",
+        "Move cursor to end",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Ctrl+W",
+        "Delete word before cursor",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Alt+D",
+        "Delete from cursor to end of word",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Ctrl+U",
+        "Delete from cursor to start",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Ctrl+K",
+        "Delete from cursor to end",
+        key_style,
+        desc_style,
+    ));
+    lines.push(help_line(
+        "Delete",
+        "Delete char after cursor",
+        key_style,
+        desc_style,
+    ));
     lines.push(RatatuiLine::from(""));
 
     // Filter mode

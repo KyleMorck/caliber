@@ -22,8 +22,11 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-use app::{App, EditContext, InputMode, ViewMode};
-use config::{resolve_path, Config};
+use app::{
+    App, DAILY_HEADER_LINES, DATE_SUFFIX_WIDTH, EditContext, FILTER_HEADER_LINES, InputMode,
+    ViewMode,
+};
+use config::{Config, resolve_path};
 use cursor::cursor_position_in_wrap;
 use storage::Line;
 
@@ -156,7 +159,6 @@ fn run_app<B: ratatui::backend::Backend>(
             let visible_height = content_area.height as usize;
             let content_width = content_area.width as usize;
 
-            // Compute values before mutable borrow
             let filter_visual_line = app.filter_visual_line();
             let filter_total_lines = app.filter_total_lines();
             let daily_entry_count = app.daily_entry_count();
@@ -173,11 +175,10 @@ fn run_app<B: ratatui::backend::Backend>(
                 ViewMode::Daily(state) => {
                     ensure_selected_visible(
                         &mut state.scroll_offset,
-                        state.selected + 1,    // +1 for date header line
-                        daily_entry_count + 1, // +1 for date header line
+                        state.selected + DAILY_HEADER_LINES,
+                        daily_entry_count + DAILY_HEADER_LINES,
                         visible_height,
                     );
-                    // Keep date header visible when first entry is selected
                     if state.selected == 0 {
                         state.scroll_offset = 0;
                     }
@@ -207,7 +208,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             text_width,
                         );
 
-                        let entry_start_line = state.entries.len() + 1; // +1 for header
+                        let entry_start_line = state.entries.len() + FILTER_HEADER_LINES;
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {
@@ -237,9 +238,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             return;
                         };
                         let prefix_width = filter_entry.entry_type.prefix().len();
-                        let date_suffix_width = 8;
                         let text_width =
-                            content_width.saturating_sub(prefix_width + date_suffix_width);
+                            content_width.saturating_sub(prefix_width + DATE_SUFFIX_WIDTH);
 
                         let (cursor_row, cursor_col) = cursor_position_in_wrap(
                             buffer.content(),
@@ -247,7 +247,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             text_width,
                         );
 
-                        let entry_start_line = *filter_index + 1;
+                        let entry_start_line = *filter_index + FILTER_HEADER_LINES;
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {
@@ -291,8 +291,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             text_width,
                         );
 
-                        // Account for later entries + date header
-                        let entry_start_line = state.later_entries.len() + *entry_index + 1;
+                        let entry_start_line =
+                            state.later_entries.len() + *entry_index + DAILY_HEADER_LINES;
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {
@@ -322,9 +322,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             return;
                         };
                         let prefix_width = later_entry.entry_type.prefix().width();
-                        let date_suffix_width = 8; // " (MM/DD)"
                         let text_width =
-                            content_width.saturating_sub(prefix_width + date_suffix_width);
+                            content_width.saturating_sub(prefix_width + DATE_SUFFIX_WIDTH);
 
                         let (cursor_row, cursor_col) = cursor_position_in_wrap(
                             buffer.content(),
@@ -332,8 +331,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             text_width,
                         );
 
-                        // +1 for date header
-                        let entry_start_line = *later_index + 1;
+                        let entry_start_line = *later_index + DAILY_HEADER_LINES;
                         let cursor_line = entry_start_line + cursor_row;
 
                         if cursor_line >= state.scroll_offset + visible_height {
@@ -383,6 +381,27 @@ fn run_app<B: ratatui::backend::Backend>(
 
             let footer = Paragraph::new(ui::render_footer(&app));
             f.render_widget(footer, chunks[1]);
+
+            match &app.input_mode {
+                InputMode::Command => {
+                    let prefix_width = 1;
+                    let cursor_x =
+                        chunks[1].x + prefix_width + app.command_buffer.cursor_display_pos() as u16;
+                    let cursor_y = chunks[1].y;
+                    f.set_cursor_position((cursor_x, cursor_y));
+                }
+                InputMode::QueryInput => {
+                    let prefix_width = 1;
+                    let cursor_pos = match &app.view {
+                        ViewMode::Filter(state) => state.query_buffer.cursor_display_pos(),
+                        ViewMode::Daily(_) => app.command_buffer.cursor_display_pos(),
+                    };
+                    let cursor_x = chunks[1].x + prefix_width + cursor_pos as u16;
+                    let cursor_y = chunks[1].y;
+                    f.set_cursor_position((cursor_x, cursor_y));
+                }
+                _ => {}
+            }
 
             if app.show_help {
                 let popup_area = ui::centered_rect(50, 70, size);
@@ -458,10 +477,10 @@ fn run_app<B: ratatui::backend::Backend>(
                 handlers::handle_help_key(&mut app, key.code);
             } else {
                 match &app.input_mode {
-                    InputMode::Command => handlers::handle_command_key(&mut app, key.code)?,
+                    InputMode::Command => handlers::handle_command_key(&mut app, key)?,
                     InputMode::Normal => handlers::handle_normal_key(&mut app, key.code)?,
-                    InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key.code),
-                    InputMode::QueryInput => handlers::handle_query_input_key(&mut app, key.code)?,
+                    InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
+                    InputMode::QueryInput => handlers::handle_query_input_key(&mut app, key)?,
                     InputMode::Order => handlers::handle_order_key(&mut app, key.code),
                 }
             }

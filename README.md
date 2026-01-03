@@ -146,8 +146,25 @@ Reorder entries within a day.
 | `Enter` | Save and exit |
 | `Tab` | Save and add new entry below |
 | `Shift+Tab` | Cycle entry type (task/note/event) |
-| `←/→` | Move cursor |
 | `Esc` | Cancel (discard changes) |
+
+### Text Editing
+
+These shortcuts work in all text input modes (Edit, Command, and Filter query):
+
+| Key | Action |
+|-----|--------|
+| `←/→` | Move cursor left/right |
+| `Home` or `Ctrl+A` | Move cursor to start of line |
+| `End` or `Ctrl+E` | Move cursor to end of line |
+| `Alt+B` | Move cursor one word left |
+| `Alt+F` | Move cursor one word right |
+| `Backspace` | Delete character before cursor |
+| `Delete` | Delete character after cursor |
+| `Ctrl+W` | Delete word before cursor |
+| `Alt+D` | Delete from cursor to end of word |
+| `Ctrl+U` | Delete from cursor to start |
+| `Ctrl+K` | Delete from cursor to end |
 
 ### Filter View
 

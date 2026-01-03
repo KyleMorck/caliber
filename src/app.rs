@@ -2,9 +2,13 @@ use std::io;
 
 use chrono::{Datelike, Days, Local, NaiveDate};
 
-use crate::config::{resolve_path, Config};
+use crate::config::{Config, resolve_path};
 use crate::cursor::CursorBuffer;
 use crate::storage::{self, Entry, EntryType, FilterEntry, LaterEntry, Line};
+
+pub const DAILY_HEADER_LINES: usize = 1;
+pub const FILTER_HEADER_LINES: usize = 1;
+pub const DATE_SUFFIX_WIDTH: usize = " (MM/DD)".len();
 
 /// State specific to the Daily view
 #[derive(Clone)]
@@ -39,7 +43,7 @@ impl DailyState {
 #[derive(Clone)]
 pub struct FilterState {
     pub query: String,
-    pub query_buffer: String,
+    pub query_buffer: CursorBuffer,
     pub entries: Vec<FilterEntry>,
     pub selected: usize,
     pub scroll_offset: usize,
@@ -94,35 +98,20 @@ pub enum InsertPosition {
 }
 
 pub struct App {
-    // Core data (always loaded)
     pub current_date: NaiveDate,
     pub lines: Vec<Line>,
     pub entry_indices: Vec<usize>,
-
-    // View & Input state
     pub view: ViewMode,
     pub input_mode: InputMode,
-
-    // Edit buffer
     pub edit_buffer: Option<CursorBuffer>,
-
-    // Command mode
-    pub command_buffer: String,
-
-    // UI state
+    pub command_buffer: CursorBuffer,
     pub should_quit: bool,
     pub status_message: Option<String>,
     pub show_help: bool,
     pub help_scroll: usize,
     pub help_visible_height: usize,
-
-    // Undo
     pub last_deleted: Option<(NaiveDate, usize, Entry)>,
-
-    // Filter history
     pub last_filter_query: Option<String>,
-
-    // Config
     pub config: Config,
 }
 
@@ -140,7 +129,7 @@ impl App {
             view: ViewMode::Daily(DailyState::new(entry_indices.len(), later_entries)),
             input_mode: InputMode::Normal,
             edit_buffer: None,
-            command_buffer: String::new(),
+            command_buffer: CursorBuffer::empty(),
             should_quit: false,
             status_message: None,
             show_help: false,
@@ -263,12 +252,9 @@ impl App {
     pub fn delete_current_entry(&mut self) -> io::Result<()> {
         match &mut self.view {
             ViewMode::Daily(state) => {
-                // Check if a later entry is selected
                 if let Some(later_entry) = state.later_entries.get(state.selected).cloned() {
-                    // Delete from source day
                     storage::delete_entry(later_entry.source_date, later_entry.line_index)?;
 
-                    // Store for undo
                     let entry = Entry {
                         entry_type: later_entry.entry_type,
                         content: later_entry.content,
@@ -276,11 +262,9 @@ impl App {
                     self.last_deleted =
                         Some((later_entry.source_date, later_entry.line_index, entry));
 
-                    // Refresh later entries
                     state.later_entries =
                         storage::collect_later_entries_for_date(self.current_date)?;
 
-                    // Adjust selection
                     let total = state.later_entries.len() + self.entry_indices.len();
                     if total > 0 && state.selected >= total {
                         state.selected = total - 1;
@@ -288,7 +272,6 @@ impl App {
                     return Ok(());
                 }
 
-                // Regular entry deletion
                 let entry_index = state.selected - state.later_entries.len();
                 if entry_index >= self.entry_indices.len() {
                     return Ok(());
@@ -343,7 +326,6 @@ impl App {
     pub fn toggle_current_entry(&mut self) -> io::Result<()> {
         match &mut self.view {
             ViewMode::Daily(state) => {
-                // Check if a later entry is selected
                 if let Some(later_entry) = state.later_entries.get(state.selected).cloned() {
                     if !matches!(later_entry.entry_type, EntryType::Task { .. }) {
                         return Ok(());
@@ -352,13 +334,11 @@ impl App {
                         later_entry.source_date,
                         later_entry.line_index,
                     )?;
-                    // Refresh later entries
                     state.later_entries =
                         storage::collect_later_entries_for_date(self.current_date)?;
                     return Ok(());
                 }
 
-                // Regular entry toggle
                 let entry_index = state.selected - state.later_entries.len();
                 let line_idx = match self.entry_indices.get(entry_index) {
                     Some(&idx) => idx,
@@ -399,7 +379,6 @@ impl App {
     pub fn edit_current_entry(&mut self) {
         match &self.view {
             ViewMode::Daily(state) => {
-                // Check if a later entry is selected
                 if let Some(later_entry) = state.later_entries.get(state.selected) {
                     let ctx = EditContext::LaterEdit {
                         source_date: later_entry.source_date,
@@ -411,7 +390,6 @@ impl App {
                     return;
                 }
 
-                // Regular entry editing
                 let entry_index = state.selected - state.later_entries.len();
                 let content = self.get_daily_entry(entry_index).map(|e| e.content.clone());
                 if let Some(content) = content {
@@ -617,7 +595,6 @@ impl App {
                         Ok(true) => {}
                     }
                 }
-                // Refresh later entries
                 if let ViewMode::Daily(state) = &mut self.view {
                     state.later_entries =
                         storage::collect_later_entries_for_date(self.current_date)
@@ -762,21 +739,21 @@ impl App {
 
         let later_count = state.later_entries.len();
 
-        let insert_pos = if matches!(position, InsertPosition::Bottom) || self.entry_indices.is_empty() {
-            self.lines.len()
-        } else {
-            // Convert visual selection to entry index (skip later entries)
-            let entry_index = state.selected.saturating_sub(later_count);
-            if entry_index < self.entry_indices.len() {
-                match position {
-                    InsertPosition::Below => self.entry_indices[entry_index] + 1,
-                    InsertPosition::Above => self.entry_indices[entry_index],
-                    InsertPosition::Bottom => unreachable!(),
-                }
-            } else {
+        let insert_pos =
+            if matches!(position, InsertPosition::Bottom) || self.entry_indices.is_empty() {
                 self.lines.len()
-            }
-        };
+            } else {
+                let entry_index = state.selected.saturating_sub(later_count);
+                if entry_index < self.entry_indices.len() {
+                    match position {
+                        InsertPosition::Below => self.entry_indices[entry_index] + 1,
+                        InsertPosition::Above => self.entry_indices[entry_index],
+                        InsertPosition::Bottom => unreachable!(),
+                    }
+                } else {
+                    self.lines.len()
+                }
+            };
 
         self.lines.insert(insert_pos, Line::Entry(entry));
         self.entry_indices = Self::compute_entry_indices(&self.lines);
@@ -787,7 +764,6 @@ impl App {
             .position(|&idx| idx == insert_pos)
             .unwrap_or(self.entry_indices.len().saturating_sub(1));
 
-        // Visual selection includes later entries offset
         state.selected = later_count + entry_index;
 
         self.edit_buffer = Some(CursorBuffer::empty());
@@ -930,14 +906,12 @@ impl App {
             return;
         };
 
-        // Convert to entry index (skip later entries)
         let later_count = state.later_entries.len();
         if state.selected < later_count {
-            return; // Shouldn't happen, but protect against it
+            return;
         }
         let entry_index = state.selected - later_count;
 
-        // Can't move above first entry (but can be at first entry position)
         if entry_index == 0 {
             return;
         }
@@ -954,10 +928,9 @@ impl App {
             return;
         };
 
-        // Convert to entry index (skip later entries)
         let later_count = state.later_entries.len();
         if state.selected < later_count {
-            return; // Shouldn't happen, but protect against it
+            return;
         }
         let entry_index = state.selected - later_count;
 
@@ -1075,7 +1048,8 @@ impl App {
     // === Command Mode ===
 
     pub fn execute_command(&mut self) -> io::Result<()> {
-        let cmd = std::mem::take(&mut self.command_buffer);
+        let cmd = self.command_buffer.content().to_string();
+        self.command_buffer.clear();
         let parts: Vec<&str> = cmd.trim().splitn(2, ' ').collect();
         let command = parts.first().copied().unwrap_or("");
         let arg = parts.get(1).copied().unwrap_or("").trim();
@@ -1117,7 +1091,7 @@ impl App {
         match &mut self.view {
             ViewMode::Filter(state) => {
                 // Pre-fill with current query for modification
-                state.query_buffer = state.query.clone();
+                state.query_buffer.set_content(&state.query);
             }
             ViewMode::Daily(_) => {
                 // Use command_buffer temporarily, ensure it's clean
@@ -1131,9 +1105,17 @@ impl App {
     pub fn execute_filter(&mut self) -> io::Result<()> {
         self.save();
 
-        let query = match &self.view {
-            ViewMode::Filter(state) => state.query_buffer.clone(),
-            ViewMode::Daily(_) => std::mem::take(&mut self.command_buffer),
+        let query = match &mut self.view {
+            ViewMode::Filter(state) => {
+                let q = state.query_buffer.content().to_string();
+                state.query_buffer.clear();
+                q
+            }
+            ViewMode::Daily(_) => {
+                let q = self.command_buffer.content().to_string();
+                self.command_buffer.clear();
+                q
+            }
         };
 
         let (query, unknown_filters) = storage::expand_saved_filters(&query, &self.config.filters);
@@ -1152,7 +1134,7 @@ impl App {
 
         self.view = ViewMode::Filter(FilterState {
             query,
-            query_buffer: String::new(),
+            query_buffer: CursorBuffer::empty(),
             entries,
             selected,
             scroll_offset: 0,
@@ -1179,7 +1161,7 @@ impl App {
 
         self.view = ViewMode::Filter(FilterState {
             query,
-            query_buffer: String::new(),
+            query_buffer: CursorBuffer::empty(),
             entries,
             selected,
             scroll_offset: 0,
@@ -1250,7 +1232,6 @@ impl App {
         let later_entries = self.load_day(date)?;
         let later_count = later_entries.len();
 
-        // Find entry position and add later_count offset
         let entry_pos = self
             .entry_indices
             .iter()
@@ -1308,8 +1289,7 @@ impl App {
         let ViewMode::Filter(state) = &self.view else {
             return 0;
         };
-        // +1 for the "Filter: {query}" header line
-        state.selected + 1
+        state.selected + FILTER_HEADER_LINES
     }
 
     #[must_use]
@@ -1317,8 +1297,7 @@ impl App {
         let ViewMode::Filter(state) = &self.view else {
             return 1;
         };
-        // +1 for the "Filter: {query}" header line
-        state.entries.len() + 1
+        state.entries.len() + FILTER_HEADER_LINES
     }
 
     fn reload_current_day(&mut self) -> io::Result<()> {

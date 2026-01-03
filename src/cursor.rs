@@ -1,5 +1,6 @@
 use unicode_width::UnicodeWidthStr;
 
+#[derive(Clone)]
 pub struct CursorBuffer {
     content: String,
     cursor_char_pos: usize,
@@ -84,6 +85,133 @@ impl CursorBuffer {
 
     pub fn into_content(self) -> String {
         self.content
+    }
+
+    pub fn move_to_start(&mut self) {
+        self.cursor_char_pos = 0;
+    }
+
+    pub fn move_to_end(&mut self) {
+        self.cursor_char_pos = self.content.chars().count();
+    }
+
+    pub fn move_word_left(&mut self) {
+        let chars: Vec<char> = self.content.chars().collect();
+        let mut pos = self.cursor_char_pos;
+
+        while pos > 0 && chars[pos - 1].is_whitespace() {
+            pos -= 1;
+        }
+        while pos > 0 && !chars[pos - 1].is_whitespace() {
+            pos -= 1;
+        }
+
+        self.cursor_char_pos = pos;
+    }
+
+    pub fn move_word_right(&mut self) {
+        let chars: Vec<char> = self.content.chars().collect();
+        let len = chars.len();
+        let mut pos = self.cursor_char_pos;
+
+        while pos < len && !chars[pos].is_whitespace() {
+            pos += 1;
+        }
+        while pos < len && chars[pos].is_whitespace() {
+            pos += 1;
+        }
+
+        self.cursor_char_pos = pos;
+    }
+
+    pub fn delete_char_after(&mut self) -> bool {
+        let char_count = self.content.chars().count();
+        if self.cursor_char_pos >= char_count {
+            return false;
+        }
+        let byte_pos = self.cursor_byte_pos();
+        self.content.remove(byte_pos);
+        true
+    }
+
+    pub fn delete_word_before(&mut self) {
+        let start_pos = self.cursor_char_pos;
+        self.move_word_left();
+        let end_pos = self.cursor_char_pos;
+
+        if start_pos > end_pos {
+            let start_byte = self.cursor_byte_pos();
+            let end_byte = self
+                .content
+                .char_indices()
+                .nth(start_pos)
+                .map_or(self.content.len(), |(i, _)| i);
+            self.content.replace_range(start_byte..end_byte, "");
+        }
+    }
+
+    pub fn delete_word_after(&mut self) {
+        let start_pos = self.cursor_char_pos;
+        let start_byte = self.cursor_byte_pos();
+
+        let chars: Vec<char> = self.content.chars().collect();
+        let len = chars.len();
+        let mut end_pos = start_pos;
+
+        while end_pos < len && !chars[end_pos].is_whitespace() {
+            end_pos += 1;
+        }
+        while end_pos < len && chars[end_pos].is_whitespace() {
+            end_pos += 1;
+        }
+
+        if end_pos > start_pos {
+            let end_byte = self
+                .content
+                .char_indices()
+                .nth(end_pos)
+                .map_or(self.content.len(), |(i, _)| i);
+            self.content.replace_range(start_byte..end_byte, "");
+        }
+    }
+
+    pub fn delete_to_start(&mut self) {
+        if self.cursor_char_pos == 0 {
+            return;
+        }
+        let byte_pos = self.cursor_byte_pos();
+        self.content.replace_range(..byte_pos, "");
+        self.cursor_char_pos = 0;
+    }
+
+    pub fn delete_to_end(&mut self) {
+        let byte_pos = self.cursor_byte_pos();
+        self.content.truncate(byte_pos);
+    }
+
+    pub fn clear(&mut self) {
+        self.content.clear();
+        self.cursor_char_pos = 0;
+    }
+
+    pub fn set_content(&mut self, content: &str) {
+        self.content = content.to_string();
+        self.cursor_char_pos = self.content.chars().count();
+    }
+
+    #[allow(dead_code)]
+    pub fn push(&mut self, c: char) {
+        self.content.push(c);
+        self.cursor_char_pos = self.content.chars().count();
+    }
+
+    #[allow(dead_code)]
+    pub fn pop(&mut self) -> Option<char> {
+        let c = self.content.pop();
+        if c.is_some() {
+            self.cursor_char_pos = self.content.chars().count();
+        }
+        c
     }
 }
 
@@ -336,5 +464,244 @@ mod tests {
         let buf = CursorBuffer::new("test".to_string());
         let content = buf.into_content();
         assert_eq!(content, "test");
+    }
+
+    // Tests for new movement methods
+
+    #[test]
+    fn test_move_to_start() {
+        let mut buf = CursorBuffer::new("hello".to_string());
+        assert_eq!(buf.cursor_char_pos(), 5);
+        buf.move_to_start();
+        assert_eq!(buf.cursor_char_pos(), 0);
+    }
+
+    #[test]
+    fn test_move_to_end() {
+        let mut buf = CursorBuffer::new("hello".to_string());
+        buf.move_to_start();
+        assert_eq!(buf.cursor_char_pos(), 0);
+        buf.move_to_end();
+        assert_eq!(buf.cursor_char_pos(), 5);
+    }
+
+    #[test]
+    fn test_move_word_left() {
+        let mut buf = CursorBuffer::new("hello world test".to_string());
+        // Cursor at end
+        buf.move_word_left();
+        assert_eq!(buf.cursor_char_pos(), 12); // Before "test"
+
+        buf.move_word_left();
+        assert_eq!(buf.cursor_char_pos(), 6); // Before "world"
+
+        buf.move_word_left();
+        assert_eq!(buf.cursor_char_pos(), 0); // Before "hello"
+
+        buf.move_word_left();
+        assert_eq!(buf.cursor_char_pos(), 0); // Still at start
+    }
+
+    #[test]
+    fn test_move_word_left_with_multiple_spaces() {
+        let mut buf = CursorBuffer::new("hello   world".to_string());
+        buf.move_word_left();
+        assert_eq!(buf.cursor_char_pos(), 8); // Before "world"
+
+        buf.move_word_left();
+        assert_eq!(buf.cursor_char_pos(), 0); // Before "hello"
+    }
+
+    #[test]
+    fn test_move_word_right() {
+        let mut buf = CursorBuffer::new("hello world test".to_string());
+        buf.move_to_start();
+
+        buf.move_word_right();
+        assert_eq!(buf.cursor_char_pos(), 6); // After "hello "
+
+        buf.move_word_right();
+        assert_eq!(buf.cursor_char_pos(), 12); // After "world "
+
+        buf.move_word_right();
+        assert_eq!(buf.cursor_char_pos(), 16); // At end
+
+        buf.move_word_right();
+        assert_eq!(buf.cursor_char_pos(), 16); // Still at end
+    }
+
+    #[test]
+    fn test_move_word_right_with_multiple_spaces() {
+        let mut buf = CursorBuffer::new("hello   world".to_string());
+        buf.move_to_start();
+
+        buf.move_word_right();
+        assert_eq!(buf.cursor_char_pos(), 8); // After "hello   "
+    }
+
+    // Tests for new deletion methods
+
+    #[test]
+    fn test_delete_char_after() {
+        let mut buf = CursorBuffer::new("abc".to_string());
+        buf.move_to_start();
+
+        assert!(buf.delete_char_after());
+        assert_eq!(buf.content(), "bc");
+        assert_eq!(buf.cursor_char_pos(), 0);
+
+        assert!(buf.delete_char_after());
+        assert_eq!(buf.content(), "c");
+
+        assert!(buf.delete_char_after());
+        assert_eq!(buf.content(), "");
+
+        assert!(!buf.delete_char_after()); // Nothing to delete
+    }
+
+    #[test]
+    fn test_delete_char_after_at_end() {
+        let mut buf = CursorBuffer::new("abc".to_string());
+        assert!(!buf.delete_char_after()); // Cursor at end
+        assert_eq!(buf.content(), "abc");
+    }
+
+    #[test]
+    fn test_delete_word_before() {
+        let mut buf = CursorBuffer::new("hello world".to_string());
+        buf.delete_word_before();
+        assert_eq!(buf.content(), "hello ");
+        assert_eq!(buf.cursor_char_pos(), 6);
+
+        buf.delete_word_before();
+        assert_eq!(buf.content(), "");
+        assert_eq!(buf.cursor_char_pos(), 0);
+    }
+
+    #[test]
+    fn test_delete_word_before_mid_word() {
+        let mut buf = CursorBuffer::new("hello world".to_string());
+        buf.move_left();
+        buf.move_left(); // Cursor before "ld"
+        buf.delete_word_before();
+        assert_eq!(buf.content(), "hello ld");
+    }
+
+    #[test]
+    fn test_delete_word_after() {
+        let mut buf = CursorBuffer::new("hello world test".to_string());
+        buf.move_to_start();
+
+        buf.delete_word_after();
+        assert_eq!(buf.content(), "world test");
+        assert_eq!(buf.cursor_char_pos(), 0);
+
+        buf.delete_word_after();
+        assert_eq!(buf.content(), "test");
+
+        buf.delete_word_after();
+        assert_eq!(buf.content(), "");
+    }
+
+    #[test]
+    fn test_delete_to_start() {
+        let mut buf = CursorBuffer::new("hello world".to_string());
+        buf.move_left();
+        buf.move_left();
+        buf.move_left();
+        buf.move_left();
+        buf.move_left(); // Cursor before "world"
+
+        buf.delete_to_start();
+        assert_eq!(buf.content(), "world");
+        assert_eq!(buf.cursor_char_pos(), 0);
+    }
+
+    #[test]
+    fn test_delete_to_start_at_start() {
+        let mut buf = CursorBuffer::new("hello".to_string());
+        buf.move_to_start();
+        buf.delete_to_start();
+        assert_eq!(buf.content(), "hello"); // Unchanged
+    }
+
+    #[test]
+    fn test_delete_to_end() {
+        let mut buf = CursorBuffer::new("hello world".to_string());
+        buf.move_to_start();
+        buf.move_right();
+        buf.move_right();
+        buf.move_right();
+        buf.move_right();
+        buf.move_right();
+        buf.move_right(); // After "hello "
+
+        buf.delete_to_end();
+        assert_eq!(buf.content(), "hello ");
+        assert_eq!(buf.cursor_char_pos(), 6);
+    }
+
+    #[test]
+    fn test_delete_to_end_at_end() {
+        let mut buf = CursorBuffer::new("hello".to_string());
+        buf.delete_to_end();
+        assert_eq!(buf.content(), "hello"); // Unchanged
+    }
+
+    // Tests for utility methods
+
+    #[test]
+    fn test_clear() {
+        let mut buf = CursorBuffer::new("hello".to_string());
+        buf.clear();
+        assert_eq!(buf.content(), "");
+        assert_eq!(buf.cursor_char_pos(), 0);
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn test_set_content() {
+        let mut buf = CursorBuffer::new("hello".to_string());
+        buf.set_content("world");
+        assert_eq!(buf.content(), "world");
+        assert_eq!(buf.cursor_char_pos(), 5); // At end
+    }
+
+    #[test]
+    fn test_push() {
+        let mut buf = CursorBuffer::empty();
+        buf.push('a');
+        buf.push('b');
+        buf.push('c');
+        assert_eq!(buf.content(), "abc");
+        assert_eq!(buf.cursor_char_pos(), 3);
+    }
+
+    #[test]
+    fn test_pop() {
+        let mut buf = CursorBuffer::new("abc".to_string());
+        assert_eq!(buf.pop(), Some('c'));
+        assert_eq!(buf.content(), "ab");
+        assert_eq!(buf.cursor_char_pos(), 2);
+
+        assert_eq!(buf.pop(), Some('b'));
+        assert_eq!(buf.pop(), Some('a'));
+        assert_eq!(buf.pop(), None);
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn test_push_pop_with_cursor_in_middle() {
+        let mut buf = CursorBuffer::new("abc".to_string());
+        buf.move_left(); // Cursor before 'c'
+
+        buf.push('d');
+        assert_eq!(buf.content(), "abcd");
+        assert_eq!(buf.cursor_char_pos(), 4); // push moves cursor to end
+
+        buf.move_to_start();
+        buf.pop();
+        assert_eq!(buf.content(), "abc");
+        assert_eq!(buf.cursor_char_pos(), 3); // pop moves cursor to end
     }
 }
