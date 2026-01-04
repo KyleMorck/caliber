@@ -7,7 +7,7 @@ use unicode_width::UnicodeWidthStr;
 use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::EntryType;
 
-use super::shared::{style_content, truncate_text, wrap_text};
+use super::shared::{style_content, truncate_with_tags, wrap_text};
 
 pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     let ViewMode::Filter(state) = &app.view else {
@@ -86,7 +86,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                     EntryType::Event => " ",
                 };
                 let available = width.saturating_sub(prefix_width + date_suffix_width);
-                let display_text = truncate_text(&text, available);
+                let display_text = truncate_with_tags(&text, available);
                 let mut spans = vec![Span::styled("→", Style::default().fg(Color::Cyan))];
                 spans.push(Span::styled(sel_prefix.to_string(), content_style));
                 spans.extend(style_content(
@@ -102,7 +102,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
             }
         } else {
             let available = width.saturating_sub(prefix_width + date_suffix_width);
-            let display_text = truncate_text(&text, available);
+            let display_text = truncate_with_tags(&text, available);
             let mut spans = vec![Span::styled(prefix.to_string(), content_style)];
             spans.extend(style_content(
                 &display_text,

@@ -7,7 +7,7 @@ use unicode_width::UnicodeWidthStr;
 use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::{EntryType, Line};
 
-use super::shared::{style_content, truncate_text, wrap_text};
+use super::shared::{style_content, truncate_with_tags, wrap_text};
 
 pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     let ViewMode::Daily(state) = &app.view else {
@@ -95,7 +95,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
             }
         } else if is_selected {
             let available = width.saturating_sub(prefix_width + source_suffix_width);
-            let display_text = truncate_text(&text, available);
+            let display_text = truncate_with_tags(&text, available);
             let rest_of_prefix: String = prefix.chars().skip(1).collect();
             let mut spans = vec![
                 Span::styled("→", Style::default().fg(Color::Red)),
@@ -113,7 +113,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
             lines.push(RatatuiLine::from(spans));
         } else {
             let available = width.saturating_sub(prefix_width + source_suffix_width);
-            let display_text = truncate_text(&text, available);
+            let display_text = truncate_with_tags(&text, available);
             let first_char = prefix.chars().next().unwrap_or('-').to_string();
             let rest_of_prefix: String = prefix.chars().skip(1).collect();
             let mut spans = vec![
@@ -192,13 +192,13 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                     Span::styled("→", Style::default().fg(Color::Cyan))
                 };
                 let available = width.saturating_sub(prefix_width);
-                let display_text = truncate_text(&text, available);
+                let display_text = truncate_with_tags(&text, available);
                 let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
                 spans.extend(style_content(&display_text, content_style, is_completed));
                 lines.push(RatatuiLine::from(spans));
             } else {
                 let available = width.saturating_sub(prefix_width);
-                let display_text = truncate_text(&text, available);
+                let display_text = truncate_with_tags(&text, available);
                 let mut spans = vec![Span::styled(prefix.to_string(), content_style)];
                 spans.extend(style_content(&display_text, content_style, is_completed));
                 lines.push(RatatuiLine::from(spans));

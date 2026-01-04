@@ -1,3 +1,6 @@
+use std::sync::LazyLock;
+
+use regex::Regex;
 use ratatui::{
     style::{Color, Style},
     text::Span,
@@ -5,6 +8,10 @@ use ratatui::{
 use unicode_width::UnicodeWidthStr;
 
 use crate::storage::{LATER_DATE_REGEX, NATURAL_DATE_REGEX, TAG_REGEX};
+
+/// Matches one or more trailing tags at end of line
+static TRAILING_TAGS_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\s+#[a-zA-Z][a-zA-Z0-9_-]*)+\s*$").unwrap());
 
 pub fn style_content(text: &str, base_style: Style, muted: bool) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
@@ -82,6 +89,38 @@ pub fn truncate_text(text: &str, max_width: usize) -> String {
     }
 
     format!("{result}{ellipsis}")
+}
+
+/// Split text into (content, trailing_tags) if tags exist at end
+#[must_use]
+pub fn split_trailing_tags(text: &str) -> (&str, Option<&str>) {
+    if let Some(m) = TRAILING_TAGS_REGEX.find(text) {
+        (&text[..m.start()], Some(m.as_str().trim()))
+    } else {
+        (text, None)
+    }
+}
+
+/// Truncate text while preserving trailing tags when possible
+#[must_use]
+pub fn truncate_with_tags(text: &str, max_width: usize) -> String {
+    let (content, tags) = split_trailing_tags(text);
+
+    let Some(tags) = tags else {
+        return truncate_text(text, max_width);
+    };
+
+    let tag_width = tags.width() + 1; // +1 for space before tags
+    if tag_width >= max_width {
+        return truncate_text(text, max_width);
+    }
+
+    let content_width = max_width - tag_width;
+    if content.width() <= content_width {
+        text.to_string()
+    } else {
+        format!("{} {}", truncate_text(content, content_width), tags)
+    }
 }
 
 pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
