@@ -66,7 +66,7 @@ impl HintContext {
             let exact_match: Vec<&'static Command> = COMMANDS
                 .iter()
                 .filter(|c| {
-                    c.name == first_word || c.aliases.iter().any(|a| *a == first_word)
+                    c.name == first_word || c.aliases.contains(&first_word)
                 })
                 .collect();
 

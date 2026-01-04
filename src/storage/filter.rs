@@ -42,9 +42,9 @@ pub static TAG_REGEX: LazyLock<Regex> =
 pub static LATER_DATE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"@(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)").unwrap());
 
-/// Matches natural date patterns: @tomorrow, @yesterday, @next-monday, @last-monday, @3d, @-3d
+/// Matches natural date patterns: @today, @tomorrow, @yesterday, @next-monday, @last-monday, @3d, @-3d
 pub static NATURAL_DATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)@(tomorrow|yesterday|(?:next|last)-(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|-?[1-9]\d*d)").unwrap()
+    Regex::new(r"(?i)@(today|tomorrow|yesterday|(?:next|last)-(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|-?[1-9]\d*d)").unwrap()
 });
 
 /// Matches favorite tag shortcuts: #1 through #9 and #0
@@ -180,11 +180,15 @@ fn prev_weekday_from(today: NaiveDate, target: chrono::Weekday) -> Option<NaiveD
     today.checked_sub_days(Days::new(u64::from(days_back)))
 }
 
-/// Parses natural language date expressions: tomorrow, yesterday, next-monday, last-monday, 3d, -3d.
+/// Parses natural language date expressions: today, tomorrow, yesterday, next-monday, last-monday, 3d, -3d.
 /// Falls back to parse_later_date for standard formats.
 #[must_use]
 pub fn parse_natural_date(input: &str, today: NaiveDate) -> Option<NaiveDate> {
     let input_lower = input.to_lowercase();
+
+    if input_lower == "today" {
+        return Some(today);
+    }
 
     if input_lower == "tomorrow" {
         return today.checked_add_days(Days::new(1));
@@ -224,7 +228,7 @@ pub fn parse_natural_date(input: &str, today: NaiveDate) -> Option<NaiveDate> {
     parse_later_date(input, today)
 }
 
-/// Replaces natural date patterns (@tomorrow, @yesterday, @next-mon, @last-mon, @3d, @-3d) with @MM/DD format.
+/// Replaces natural date patterns (@today, @tomorrow, @yesterday, @next-mon, @last-mon, @3d, @-3d) with @MM/DD format.
 #[must_use]
 pub fn normalize_natural_dates(content: &str, today: NaiveDate) -> String {
     let mut result = content.to_string();
@@ -233,7 +237,12 @@ pub fn normalize_natural_dates(content: &str, today: NaiveDate) -> String {
         if let Some(m) = cap.get(0) {
             let natural_str = &cap[1];
             if let Some(date) = parse_natural_date(natural_str, today) {
-                let normalized = format!("@{}/{}", date.format("%m"), date.format("%d"));
+                // Only @today needs the year to avoid "always future" misinterpretation
+                let normalized = if natural_str.eq_ignore_ascii_case("today") {
+                    format!("@{}/{}/{}", date.format("%m"), date.format("%d"), date.format("%y"))
+                } else {
+                    format!("@{}/{}", date.format("%m"), date.format("%d"))
+                };
                 result = result.replacen(m.as_str(), &normalized, 1);
             }
         }

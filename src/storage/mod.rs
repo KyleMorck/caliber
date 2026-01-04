@@ -78,7 +78,11 @@ mod tests {
     fn test_parse_natural_date_all_formats() {
         let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap(); // Monday
 
-        // tomorrow/yesterday
+        // today/tomorrow/yesterday
+        assert_eq!(
+            parse_natural_date("today", today),
+            NaiveDate::from_ymd_opt(2026, 1, 5)
+        );
         assert_eq!(
             parse_natural_date("tomorrow", today),
             NaiveDate::from_ymd_opt(2026, 1, 6)
@@ -119,6 +123,12 @@ mod tests {
     fn test_normalize_natural_dates() {
         let today = NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
 
+        // @today includes year to avoid "always future" misinterpretation
+        assert_eq!(
+            normalize_natural_dates("Do it @today", today),
+            "Do it @01/05/26"
+        );
+        // Other natural dates use MM/DD format
         assert_eq!(
             normalize_natural_dates("Call dentist @tomorrow", today),
             "Call dentist @01/06"
@@ -145,6 +155,20 @@ mod tests {
         // Multiple entry types use OR logic
         let filter = parse_filter_query("!tasks !notes");
         assert_eq!(filter.entry_types, vec![FilterType::Task, FilterType::Note]);
+        assert!(filter.invalid_tokens.is_empty());
+    }
+
+    #[test]
+    fn test_filter_date_today() {
+        // @before:today and @after:today should parse to today's date
+        let today = chrono::Local::now().date_naive();
+
+        let filter = parse_filter_query("@before:today");
+        assert_eq!(filter.before_date, Some(today));
+        assert!(filter.invalid_tokens.is_empty());
+
+        let filter = parse_filter_query("@after:today");
+        assert_eq!(filter.after_date, Some(today));
         assert!(filter.invalid_tokens.is_empty());
     }
 
