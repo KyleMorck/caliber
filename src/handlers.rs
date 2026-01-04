@@ -2,7 +2,7 @@ use std::io;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::app::{App, ConfirmContext, InputMode, InsertPosition, ViewMode};
+use crate::app::{App, ConfirmContext, HintContext, InputMode, InsertPosition, ViewMode};
 use crate::cursor::CursorBuffer;
 use crate::storage;
 use crate::ui;
@@ -30,16 +30,28 @@ pub fn handle_help_key(app: &mut App, key: KeyCode) {
 
 pub fn handle_command_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match key.code {
-        KeyCode::Enter => app.execute_command()?,
+        KeyCode::Enter => {
+            app.clear_hints();
+            app.execute_command()?;
+        }
         KeyCode::Esc => {
             app.command_buffer.clear();
+            app.clear_hints();
             app.input_mode = InputMode::Normal;
         }
         KeyCode::Backspace if app.command_buffer.is_empty() => {
+            app.clear_hints();
             app.input_mode = InputMode::Normal;
+        }
+        KeyCode::Right if !matches!(app.hint_state, HintContext::Inactive) => {
+            if !app.accept_hint() {
+                handle_text_input(&mut app.command_buffer, key);
+                app.update_hints();
+            }
         }
         _ => {
             handle_text_input(&mut app.command_buffer, key);
+            app.update_hints();
         }
     }
     Ok(())
@@ -54,6 +66,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         }
         KeyCode::Char(':') => {
             app.input_mode = InputMode::Command;
+            app.update_hints(); // Show all commands immediately
             return Ok(());
         }
         KeyCode::Char('/') => {
@@ -146,15 +159,27 @@ pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
             return;
         }
         KeyCode::Tab => {
+            app.clear_hints();
             app.commit_and_add_new();
             return;
         }
         KeyCode::Enter => {
+            app.clear_hints();
             app.exit_edit();
             return;
         }
         KeyCode::Esc => {
+            app.clear_hints();
             app.cancel_edit();
+            return;
+        }
+        KeyCode::Right if !matches!(app.hint_state, HintContext::Inactive) => {
+            if !app.accept_hint()
+                && let Some(ref mut buffer) = app.edit_buffer
+            {
+                handle_text_input(buffer, key);
+                app.update_hints();
+            }
             return;
         }
         _ => {}
@@ -167,6 +192,7 @@ pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
             && !buffer.delete_char_before()
             && buffer.is_empty()
         {
+            app.clear_hints();
             app.exit_edit();
             return;
         }
@@ -174,6 +200,7 @@ pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
         if key.code != KeyCode::Backspace {
             handle_text_input(buffer, key);
         }
+        app.update_hints();
     }
 }
 
@@ -185,6 +212,7 @@ pub fn handle_query_input_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 
     match key.code {
         KeyCode::Enter => {
+            app.clear_hints();
             if is_empty {
                 app.cancel_filter_input();
             } else {
@@ -192,6 +220,7 @@ pub fn handle_query_input_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
             }
         }
         KeyCode::Esc => {
+            app.clear_hints();
             if is_empty {
                 app.cancel_filter_input();
             } else {
@@ -202,16 +231,33 @@ pub fn handle_query_input_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
             }
         }
         KeyCode::Backspace if is_empty && key.modifiers.is_empty() => {
+            app.clear_hints();
             app.cancel_filter_input();
         }
-        _ => match &mut app.view {
-            ViewMode::Filter(state) => {
-                handle_text_input(&mut state.query_buffer, key);
+        KeyCode::Right if !matches!(app.hint_state, HintContext::Inactive) => {
+            if !app.accept_hint() {
+                match &mut app.view {
+                    ViewMode::Filter(state) => {
+                        handle_text_input(&mut state.query_buffer, key);
+                    }
+                    ViewMode::Daily(_) => {
+                        handle_text_input(&mut app.command_buffer, key);
+                    }
+                }
+                app.update_hints();
             }
-            ViewMode::Daily(_) => {
-                handle_text_input(&mut app.command_buffer, key);
+        }
+        _ => {
+            match &mut app.view {
+                ViewMode::Filter(state) => {
+                    handle_text_input(&mut state.query_buffer, key);
+                }
+                ViewMode::Daily(_) => {
+                    handle_text_input(&mut app.command_buffer, key);
+                }
             }
-        },
+            app.update_hints();
+        }
     }
     Ok(())
 }

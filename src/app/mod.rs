@@ -2,9 +2,12 @@ mod command;
 mod edit_mode;
 mod entry_ops;
 mod filter_ops;
+pub mod hints;
 mod journal;
 mod navigation;
 mod reorder;
+
+pub use hints::{HintContext, HintMode};
 
 use std::io;
 
@@ -148,6 +151,8 @@ pub struct App {
     pub active_journal: JournalSlot,
     pub in_git_repo: bool,
     pub hide_completed: bool,
+    pub hint_state: HintContext,
+    pub cached_journal_tags: Vec<String>,
 }
 
 impl App {
@@ -178,6 +183,8 @@ impl App {
             active_journal,
             in_git_repo,
             hide_completed: false,
+            hint_state: HintContext::Inactive,
+            cached_journal_tags: storage::collect_journal_tags().unwrap_or_default(),
         })
     }
 
@@ -208,6 +215,8 @@ impl App {
             active_journal,
             in_git_repo,
             hide_completed: false,
+            hint_state: HintContext::Inactive,
+            cached_journal_tags: storage::collect_journal_tags().unwrap_or_default(),
         })
     }
 
@@ -367,5 +376,89 @@ impl App {
         self.lines = storage::load_day_lines(self.current_date)?;
         self.entry_indices = Self::compute_entry_indices(&self.lines);
         Ok(())
+    }
+
+    /// Update hints based on current input buffer and mode.
+    pub fn update_hints(&mut self) {
+        let (input, mode) = match &self.input_mode {
+            InputMode::Command => (self.command_buffer.content(), HintMode::Command),
+            InputMode::QueryInput => {
+                let buffer = match &self.view {
+                    ViewMode::Filter(state) => state.query_buffer.content(),
+                    ViewMode::Daily(_) => self.command_buffer.content(),
+                };
+                (buffer, HintMode::Filter)
+            }
+            InputMode::Edit(_) => {
+                if let Some(ref buffer) = self.edit_buffer {
+                    (buffer.content(), HintMode::Entry)
+                } else {
+                    self.hint_state = HintContext::Inactive;
+                    return;
+                }
+            }
+            _ => {
+                self.hint_state = HintContext::Inactive;
+                return;
+            }
+        };
+
+        self.hint_state = HintContext::compute(input, mode, &self.cached_journal_tags);
+    }
+
+    /// Clear any active hints.
+    pub fn clear_hints(&mut self) {
+        self.hint_state = HintContext::Inactive;
+    }
+
+    /// Refresh the tag cache from the current journal.
+    pub fn refresh_tag_cache(&mut self) {
+        self.cached_journal_tags = storage::collect_journal_tags().unwrap_or_default();
+    }
+
+    /// Accept the first hint completion, inserting the remaining text into the buffer.
+    /// Returns true if a completion was applied.
+    pub fn accept_hint(&mut self) -> bool {
+        let Some(completion) = self.hint_state.first_completion() else {
+            return false;
+        };
+
+        // Don't complete if nothing to add
+        if completion.is_empty() {
+            return false;
+        }
+
+        // Insert completion into the appropriate buffer
+        match &self.input_mode {
+            InputMode::Command => {
+                for c in completion.chars() {
+                    self.command_buffer.insert_char(c);
+                }
+            }
+            InputMode::QueryInput => match &mut self.view {
+                ViewMode::Filter(state) => {
+                    for c in completion.chars() {
+                        state.query_buffer.insert_char(c);
+                    }
+                }
+                ViewMode::Daily(_) => {
+                    for c in completion.chars() {
+                        self.command_buffer.insert_char(c);
+                    }
+                }
+            },
+            InputMode::Edit(_) => {
+                if let Some(ref mut buffer) = self.edit_buffer {
+                    for c in completion.chars() {
+                        buffer.insert_char(c);
+                    }
+                }
+            }
+            _ => return false,
+        }
+
+        // Clear hints after completion
+        self.clear_hints();
+        true
     }
 }

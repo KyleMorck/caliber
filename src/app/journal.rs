@@ -17,6 +17,7 @@ impl App {
         self.active_journal = JournalSlot::Project;
         let later_entries = self.load_day(Local::now().date_naive())?;
         self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), later_entries));
+        self.refresh_tag_cache();
         self.set_status(format!("Opened: {}", path.display()));
         Ok(())
     }
@@ -30,6 +31,7 @@ impl App {
         self.active_journal = slot;
         let later_entries = self.load_day(Local::now().date_naive())?;
         self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), later_entries));
+        self.refresh_tag_cache();
         self.set_status(match slot {
             JournalSlot::Global => "Switched to Global journal",
             JournalSlot::Project => "Switched to Project journal",

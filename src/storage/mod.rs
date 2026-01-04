@@ -25,9 +25,10 @@ pub use persistence::{
 // Re-export filter types and functions
 pub use filter::{
     FAVORITE_TAG_REGEX, Filter, FilterType, LATER_DATE_REGEX, NATURAL_DATE_REGEX,
-    SAVED_FILTER_REGEX, TAG_REGEX, collect_filtered_entries, collect_later_entries_for_date,
-    expand_favorite_tags, expand_saved_filters, extract_tags, extract_target_date,
-    normalize_natural_dates, parse_filter_query, parse_later_date, parse_natural_date,
+    SAVED_FILTER_REGEX, TAG_REGEX, collect_filtered_entries, collect_journal_tags,
+    collect_later_entries_for_date, expand_favorite_tags, expand_saved_filters, extract_tags,
+    extract_target_date, normalize_natural_dates, parse_filter_query, parse_later_date,
+    parse_natural_date,
 };
 
 #[cfg(test)]

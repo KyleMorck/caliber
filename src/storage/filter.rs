@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::sync::LazyLock;
 
@@ -60,6 +60,25 @@ pub fn extract_tags(content: &str) -> Vec<String> {
         .captures_iter(content)
         .map(|cap| cap[1].to_string())
         .collect()
+}
+
+/// Collects all unique tags from the current journal.
+/// Returns tags sorted alphabetically, deduplicated (case-insensitive, first occurrence preserved).
+pub fn collect_journal_tags() -> io::Result<Vec<String>> {
+    let journal = load_journal()?;
+    let mut seen_lower: HashSet<String> = HashSet::new();
+    let mut tags: Vec<String> = Vec::new();
+
+    for cap in TAG_REGEX.captures_iter(&journal) {
+        let tag = cap[1].to_string();
+        let lower = tag.to_lowercase();
+        if seen_lower.insert(lower) {
+            tags.push(tag);
+        }
+    }
+
+    tags.sort_by_key(|a| a.to_lowercase());
+    Ok(tags)
 }
 
 /// Parses a date string (without @) into a NaiveDate.

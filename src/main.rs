@@ -362,6 +362,9 @@ fn run_app<B: ratatui::backend::Backend>(
             let footer = Paragraph::new(ui::render_footer(&app));
             f.render_widget(footer, chunks[1]);
 
+            // Render hint overlay above footer (if active)
+            ui::render_hint_overlay(f, &app.hint_state, chunks[1]);
+
             let (indicator, indicator_color) = match app.active_journal {
                 storage::JournalSlot::Global => ("[GLOBAL]", Color::Green),
                 storage::JournalSlot::Project => ("[PROJECT]", Color::Blue),
