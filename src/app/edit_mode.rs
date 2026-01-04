@@ -125,7 +125,12 @@ impl App {
         }
     }
 
-    fn save_or_delete_entry(&mut self, date: chrono::NaiveDate, line_index: usize, content: String) {
+    fn save_or_delete_entry(
+        &mut self,
+        date: chrono::NaiveDate,
+        line_index: usize,
+        content: String,
+    ) {
         if content.trim().is_empty() {
             let _ = storage::delete_entry(date, line_index);
         } else {

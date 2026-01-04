@@ -5,7 +5,7 @@ use ratatui::{
 };
 
 use crate::app::{App, InputMode, ViewMode};
-use crate::registry::{get_key_action, KeyActionId};
+use crate::registry::{KeyActionId, get_key_action};
 
 pub fn render_footer(app: &App) -> RatatuiLine<'static> {
     match (&app.view, &app.input_mode) {
@@ -74,7 +74,11 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
     }
 }
 
-fn build_footer_line(mode_name: &str, color: Color, actions: &[KeyActionId]) -> RatatuiLine<'static> {
+fn build_footer_line(
+    mode_name: &str,
+    color: Color,
+    actions: &[KeyActionId],
+) -> RatatuiLine<'static> {
     let mut spans = vec![Span::styled(
         mode_name.to_string(),
         Style::default().fg(Color::Black).bg(color),

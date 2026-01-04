@@ -7,7 +7,9 @@ use unicode_width::UnicodeWidthStr;
 use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::EntryType;
 
-use super::shared::{style_content, truncate_with_tags, wrap_text};
+use super::shared::{
+    completed_style, format_date_suffix, style_content, truncate_with_tags, wrap_text,
+};
 
 pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     let ViewMode::Filter(state) = &app.view else {
@@ -35,11 +37,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
         let is_selected = idx == state.selected && !is_quick_adding;
         let is_editing_this = is_selected && is_editing;
 
-        let content_style = if filter_entry.completed {
-            Style::default().fg(Color::DarkGray)
-        } else {
-            Style::default()
-        };
+        let content_style = completed_style(filter_entry.completed);
 
         let text = if is_editing_this {
             if let Some(ref buffer) = app.edit_buffer {
@@ -54,8 +52,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
         let prefix = filter_entry.entry_type.prefix();
         let prefix_width = prefix.width();
 
-        let date_suffix = format!(" ({})", filter_entry.source_date.format("%m/%d"));
-        let date_suffix_width = date_suffix.width();
+        let (date_suffix, date_suffix_width) = format_date_suffix(filter_entry.source_date);
 
         if is_selected {
             if is_editing_this {

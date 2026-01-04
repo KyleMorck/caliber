@@ -80,7 +80,7 @@ impl App {
                 _ => {
                     self.set_status("Usage: :project [init|default|path.md]");
                 }
-            }
+            },
             _ => {}
         }
         self.input_mode = InputMode::Normal;

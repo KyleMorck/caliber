@@ -7,7 +7,9 @@ use unicode_width::UnicodeWidthStr;
 use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::{EntryType, Line};
 
-use super::shared::{style_content, truncate_with_tags, wrap_text};
+use super::shared::{
+    completed_style, format_date_suffix, style_content, truncate_with_tags, wrap_text,
+};
 
 pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     let ViewMode::Daily(state) = &app.view else {
@@ -49,11 +51,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 InputMode::Edit(EditContext::LaterEdit { .. })
             );
 
-        let content_style = if later_entry.completed {
-            Style::default().fg(Color::DarkGray)
-        } else {
-            Style::default()
-        };
+        let content_style = completed_style(later_entry.completed);
 
         let text = if is_editing {
             if let Some(ref buffer) = app.edit_buffer {
@@ -67,8 +65,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
 
         let prefix = later_entry.entry_type.prefix();
         let prefix_width = prefix.width();
-        let source_suffix = format!(" ({})", later_entry.source_date.format("%m/%d"));
-        let source_suffix_width = source_suffix.width();
+        let (source_suffix, source_suffix_width) = format_date_suffix(later_entry.source_date);
         let later_prefix_style = Style::default().fg(Color::Red);
 
         if is_editing {
@@ -149,11 +146,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
             let is_editing =
                 is_selected && matches!(app.input_mode, InputMode::Edit(EditContext::Daily { .. }));
 
-            let content_style = if is_completed {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default()
-            };
+            let content_style = completed_style(is_completed);
 
             let text = if is_editing {
                 if let Some(ref buffer) = app.edit_buffer {

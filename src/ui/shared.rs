@@ -1,13 +1,30 @@
 use std::sync::LazyLock;
 
-use regex::Regex;
+use chrono::NaiveDate;
 use ratatui::{
     style::{Color, Style},
     text::Span,
 };
+use regex::Regex;
 use unicode_width::UnicodeWidthStr;
 
 use crate::storage::{LATER_DATE_REGEX, NATURAL_DATE_REGEX, TAG_REGEX};
+
+#[must_use]
+pub fn completed_style(completed: bool) -> Style {
+    if completed {
+        Style::default().fg(Color::DarkGray)
+    } else {
+        Style::default()
+    }
+}
+
+#[must_use]
+pub fn format_date_suffix(date: NaiveDate) -> (String, usize) {
+    let suffix = format!(" ({})", date.format("%m/%d"));
+    let width = suffix.width();
+    (suffix, width)
+}
 
 /// Matches one or more trailing tags at end of line
 static TRAILING_TAGS_REGEX: LazyLock<Regex> =

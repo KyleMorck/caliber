@@ -68,7 +68,10 @@ fn generate_keys_code(keys: &[KeyDef]) -> String {
     let mut code = String::new();
 
     // Collect unique modes
-    let modes: HashSet<&str> = keys.iter().flat_map(|k| k.modes.iter().map(|s| s.as_str())).collect();
+    let modes: HashSet<&str> = keys
+        .iter()
+        .flat_map(|k| k.modes.iter().map(|s| s.as_str()))
+        .collect();
     let mut modes: Vec<_> = modes.into_iter().collect();
     modes.sort();
 
@@ -103,7 +106,11 @@ fn generate_keys_code(keys: &[KeyDef]) -> String {
     // Generate KEY_ACTIONS static
     code.push_str("pub static KEY_ACTIONS: &[KeyAction] = &[\n");
     for key in keys {
-        let modes_str: Vec<String> = key.modes.iter().map(|m| format!("KeyMode::{}", to_pascal_case(m))).collect();
+        let modes_str: Vec<String> = key
+            .modes
+            .iter()
+            .map(|m| format!("KeyMode::{}", to_pascal_case(m)))
+            .collect();
         let alt_key = match &key.alt_key {
             Some(ak) => format!("Some(\"{}\")", ak),
             None => "None".to_string(),
@@ -178,9 +185,13 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
     code.push_str("}\n\n");
 
     // Generate commands_matching function for autocomplete
-    code.push_str("pub fn commands_matching(prefix: &str) -> impl Iterator<Item = &'static Command> {\n");
+    code.push_str(
+        "pub fn commands_matching(prefix: &str) -> impl Iterator<Item = &'static Command> {\n",
+    );
     code.push_str("    COMMANDS.iter().filter(move |c| {\n");
-    code.push_str("        c.name.starts_with(prefix) || c.aliases.iter().any(|a| a.starts_with(prefix))\n");
+    code.push_str(
+        "        c.name.starts_with(prefix) || c.aliases.iter().any(|a| a.starts_with(prefix))\n",
+    );
     code.push_str("    })\n");
     code.push_str("}\n");
 
@@ -218,7 +229,11 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
     // Generate FILTER_SYNTAX static
     code.push_str("pub static FILTER_SYNTAX: &[FilterSyntax] = &[\n");
     for filter in filters {
-        let aliases_str: Vec<String> = filter.aliases.iter().map(|a| format!("\"{}\"", a)).collect();
+        let aliases_str: Vec<String> = filter
+            .aliases
+            .iter()
+            .map(|a| format!("\"{}\"", a))
+            .collect();
         let display = filter.display.as_deref().unwrap_or(&filter.syntax);
         code.push_str(&format!(
             "    FilterSyntax {{\n        syntax: \"{}\",\n        display: \"{}\",\n        aliases: &[{}],\n        category: FilterCategory::{},\n        short_text: \"{}\",\n        short_description: \"{}\",\n        long_description: \"{}\",\n    }},\n",
@@ -241,7 +256,9 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
     // Generate filter_syntax_matching function for autocomplete
     code.push_str("pub fn filter_syntax_matching(prefix: &str) -> impl Iterator<Item = &'static FilterSyntax> {\n");
     code.push_str("    FILTER_SYNTAX.iter().filter(move |f| {\n");
-    code.push_str("        f.syntax.starts_with(prefix) || f.aliases.iter().any(|a| a.starts_with(prefix))\n");
+    code.push_str(
+        "        f.syntax.starts_with(prefix) || f.aliases.iter().any(|a| a.starts_with(prefix))\n",
+    );
     code.push_str("    })\n");
     code.push_str("}\n");
 
@@ -267,14 +284,21 @@ fn format_key_display(key: &KeyDef) -> String {
 }
 
 fn generate_keys_table(keys: &[KeyDef], mode: &str) -> String {
-    let filtered: Vec<_> = keys.iter().filter(|k| k.modes.contains(&mode.to_string())).collect();
+    let filtered: Vec<_> = keys
+        .iter()
+        .filter(|k| k.modes.contains(&mode.to_string()))
+        .collect();
     if filtered.is_empty() {
         return String::new();
     }
 
     let mut table = String::from("| Key | Action |\n|-----|--------|\n");
     for key in filtered {
-        table.push_str(&format!("| {} | {} |\n", format_key_display(key), key.short_description));
+        table.push_str(&format!(
+            "| {} | {} |\n",
+            format_key_display(key),
+            key.short_description
+        ));
     }
     table
 }
@@ -283,20 +307,41 @@ fn generate_daily_keys_table(keys: &[KeyDef]) -> String {
     let mut table = String::from("| Key | Action |\n|-----|--------|\n");
 
     // Daily-specific keys
-    for key in keys.iter().filter(|k| k.modes.contains(&"daily_normal".to_string())) {
-        table.push_str(&format!("| {} | {} |\n", format_key_display(key), key.short_description));
+    for key in keys
+        .iter()
+        .filter(|k| k.modes.contains(&"daily_normal".to_string()))
+    {
+        table.push_str(&format!(
+            "| {} | {} |\n",
+            format_key_display(key),
+            key.short_description
+        ));
     }
 
     // Shared normal keys (relevant to daily view)
     let shared_keys = [
-        "edit_entry", "toggle_entry", "delete_entry", "yank_entry", "undo",
-        "move_down", "move_up", "jump_to_first", "jump_to_last",
-        "quick_filter_tag", "enter_filter_mode",
-        "toggle_journal", "show_help", "enter_command_mode",
+        "edit_entry",
+        "toggle_entry",
+        "delete_entry",
+        "yank_entry",
+        "undo",
+        "move_down",
+        "move_up",
+        "jump_to_first",
+        "jump_to_last",
+        "quick_filter_tag",
+        "enter_filter_mode",
+        "toggle_journal",
+        "show_help",
+        "enter_command_mode",
     ];
     for id in shared_keys {
         if let Some(key) = keys.iter().find(|k| k.id == id) {
-            table.push_str(&format!("| {} | {} |\n", format_key_display(key), key.short_description));
+            table.push_str(&format!(
+                "| {} | {} |\n",
+                format_key_display(key),
+                key.short_description
+            ));
         }
     }
 
@@ -310,20 +355,44 @@ fn generate_filter_view_table(keys: &[KeyDef]) -> String {
     let nav_keys = ["move_down", "move_up", "jump_to_first", "jump_to_last"];
     for id in nav_keys {
         if let Some(key) = keys.iter().find(|k| k.id == id) {
-            table.push_str(&format!("| {} | {} |\n", format_key_display(key), key.short_description));
+            table.push_str(&format!(
+                "| {} | {} |\n",
+                format_key_display(key),
+                key.short_description
+            ));
         }
     }
 
     // Filter-specific keys
-    for key in keys.iter().filter(|k| k.modes.contains(&"filter_normal".to_string())) {
-        table.push_str(&format!("| {} | {} |\n", format_key_display(key), key.short_description));
+    for key in keys
+        .iter()
+        .filter(|k| k.modes.contains(&"filter_normal".to_string()))
+    {
+        table.push_str(&format!(
+            "| {} | {} |\n",
+            format_key_display(key),
+            key.short_description
+        ));
     }
 
     // More shared keys
-    let shared_keys = ["edit_entry", "toggle_entry", "delete_entry", "yank_entry", "view_entry_source", "enter_filter_mode", "enter_command_mode", "show_help"];
+    let shared_keys = [
+        "edit_entry",
+        "toggle_entry",
+        "delete_entry",
+        "yank_entry",
+        "view_entry_source",
+        "enter_filter_mode",
+        "enter_command_mode",
+        "show_help",
+    ];
     for id in shared_keys {
         if let Some(key) = keys.iter().find(|k| k.id == id) {
-            table.push_str(&format!("| {} | {} |\n", format_key_display(key), key.short_description));
+            table.push_str(&format!(
+                "| {} | {} |\n",
+                format_key_display(key),
+                key.short_description
+            ));
         }
     }
 
@@ -335,7 +404,10 @@ fn generate_commands_table(commands: &[CommandDef]) -> String {
 
     for cmd in commands {
         let key_display = format_command_display(cmd);
-        table.push_str(&format!("| {} | {} |\n", key_display, cmd.short_description));
+        table.push_str(&format!(
+            "| {} | {} |\n",
+            key_display, cmd.short_description
+        ));
     }
 
     table
@@ -426,15 +498,16 @@ fn main() {
     println!("cargo:rerun-if-changed=src/registry/filters.toml");
 
     // Read and parse TOML files
-    let keys_toml = fs::read_to_string(registry_dir.join("keys.toml"))
-        .expect("Failed to read keys.toml");
+    let keys_toml =
+        fs::read_to_string(registry_dir.join("keys.toml")).expect("Failed to read keys.toml");
     let commands_toml = fs::read_to_string(registry_dir.join("commands.toml"))
         .expect("Failed to read commands.toml");
-    let filters_toml = fs::read_to_string(registry_dir.join("filters.toml"))
-        .expect("Failed to read filters.toml");
+    let filters_toml =
+        fs::read_to_string(registry_dir.join("filters.toml")).expect("Failed to read filters.toml");
 
     let keys: KeysFile = toml::from_str(&keys_toml).expect("Failed to parse keys.toml");
-    let commands: CommandsFile = toml::from_str(&commands_toml).expect("Failed to parse commands.toml");
+    let commands: CommandsFile =
+        toml::from_str(&commands_toml).expect("Failed to parse commands.toml");
     let filters: FiltersFile = toml::from_str(&filters_toml).expect("Failed to parse filters.toml");
 
     // Generate Rust code
@@ -451,5 +524,10 @@ fn main() {
     fs::write(&out_path, code).expect("Failed to write generated code");
 
     // Generate README
-    generate_readme(manifest_dir, &keys.keys, &commands.commands, &filters.filters);
+    generate_readme(
+        manifest_dir,
+        &keys.keys,
+        &commands.commands,
+        &filters.filters,
+    );
 }

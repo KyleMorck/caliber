@@ -6,8 +6,8 @@ use ratatui::{
 };
 
 use crate::registry::{
-    get_key_action, key_actions_for_mode, FilterCategory, KeyActionId, KeyMode, COMMANDS,
-    FILTER_SYNTAX,
+    COMMANDS, FILTER_SYNTAX, FilterCategory, KeyActionId, KeyMode, get_key_action,
+    key_actions_for_mode,
 };
 
 const KEY_WIDTH: usize = 14;
@@ -51,7 +51,11 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
     lines.push(RatatuiLine::from(""));
 
     // [Filter Mode] section
-    lines.push(section_header("[Filter Mode]", &header_indent, header_style));
+    lines.push(section_header(
+        "[Filter Mode]",
+        &header_indent,
+        header_style,
+    ));
     let filter_nav = [
         KeyActionId::MoveDown,
         KeyActionId::MoveUp,
@@ -89,14 +93,22 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
     lines.push(RatatuiLine::from(""));
 
     // [Reorder Mode] section
-    lines.push(section_header("[Reorder Mode]", &header_indent, header_style));
+    lines.push(section_header(
+        "[Reorder Mode]",
+        &header_indent,
+        header_style,
+    ));
     for action in key_actions_for_mode(KeyMode::Reorder) {
         lines.push(help_line_from_action(action, key_style, desc_style));
     }
     lines.push(RatatuiLine::from(""));
 
     // [Text Editing] section
-    lines.push(section_header("[Text Editing]", &header_indent, header_style));
+    lines.push(section_header(
+        "[Text Editing]",
+        &header_indent,
+        header_style,
+    ));
     for action in key_actions_for_mode(KeyMode::TextEditing) {
         lines.push(help_line_from_action(action, key_style, desc_style));
     }
@@ -106,17 +118,31 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
     lines.push(section_header("[Commands]", &header_indent, header_style));
     for cmd in COMMANDS.iter() {
         let key_display = format_command_key(cmd.name, cmd.aliases.first().copied());
-        lines.push(help_line(&key_display, cmd.short_description, key_style, desc_style));
+        lines.push(help_line(
+            &key_display,
+            cmd.short_description,
+            key_style,
+            desc_style,
+        ));
     }
     lines.push(RatatuiLine::from(""));
 
     // [Filter Syntax] section
-    lines.push(section_header("[Filter Syntax]", &header_indent, header_style));
+    lines.push(section_header(
+        "[Filter Syntax]",
+        &header_indent,
+        header_style,
+    ));
     for filter in FILTER_SYNTAX.iter() {
         if filter.category == FilterCategory::TextSearch {
             continue;
         }
-        lines.push(help_line(filter.display, filter.short_description, key_style, desc_style));
+        lines.push(help_line(
+            filter.display,
+            filter.short_description,
+            key_style,
+            desc_style,
+        ));
     }
     lines.push(help_line(
         "DATE:",
@@ -141,7 +167,12 @@ fn help_line_from_action(
         Some(alt) => format!("{}/{}", action.key, alt),
         None => action.key.to_string(),
     };
-    help_line(&key_display, action.short_description, key_style, desc_style)
+    help_line(
+        &key_display,
+        action.short_description,
+        key_style,
+        desc_style,
+    )
 }
 
 fn help_line(key: &str, desc: &str, key_style: Style, desc_style: Style) -> RatatuiLine<'static> {

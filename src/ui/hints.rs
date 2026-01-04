@@ -46,9 +46,7 @@ pub fn render_hint_overlay(f: &mut Frame, hint_state: &HintContext, footer_area:
 fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> Vec<Line<'static>> {
     let items: Vec<String> = match hint_state {
         HintContext::Inactive => return vec![],
-        HintContext::Tags { matches, .. } => {
-            matches.iter().map(|t| format!("#{t}")).collect()
-        }
+        HintContext::Tags { matches, .. } => matches.iter().map(|t| format!("#{t}")).collect(),
         HintContext::Commands { matches, .. } => {
             matches.iter().map(|cmd| format!(":{}", cmd.name)).collect()
         }

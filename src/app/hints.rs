@@ -1,4 +1,4 @@
-use crate::registry::{Command, FilterCategory, FilterSyntax, COMMANDS, FILTER_SYNTAX};
+use crate::registry::{COMMANDS, Command, FILTER_SYNTAX, FilterCategory, FilterSyntax};
 
 /// What kind of hints to display
 #[derive(Clone, Debug, PartialEq)]
@@ -170,18 +170,18 @@ impl HintContext {
             Self::Tags { prefix, matches } => {
                 matches.first().map(|tag| tag[prefix.len()..].to_string())
             }
-            Self::Commands { prefix, matches } => {
-                matches.first().map(|cmd| cmd.name[prefix.len()..].to_string())
-            }
-            Self::FilterTypes { prefix, matches } => {
-                matches.first().map(|f| f.syntax[1 + prefix.len()..].to_string())
-            }
-            Self::DateOps { prefix, matches } => {
-                matches.first().map(|f| f.syntax[1 + prefix.len()..].to_string())
-            }
-            Self::Negation { prefix, matches } => {
-                matches.first().map(|f| f.syntax[4 + prefix.len()..].to_string())
-            }
+            Self::Commands { prefix, matches } => matches
+                .first()
+                .map(|cmd| cmd.name[prefix.len()..].to_string()),
+            Self::FilterTypes { prefix, matches } => matches
+                .first()
+                .map(|f| f.syntax[1 + prefix.len()..].to_string()),
+            Self::DateOps { prefix, matches } => matches
+                .first()
+                .map(|f| f.syntax[1 + prefix.len()..].to_string()),
+            Self::Negation { prefix, matches } => matches
+                .first()
+                .map(|f| f.syntax[4 + prefix.len()..].to_string()),
         }
     }
 

@@ -103,8 +103,16 @@ fn test_exact_match_no_completion() {
     // Right arrow should move cursor, not complete (since exact match)
     ctx.press(KeyCode::Right);
 
-    let buffer = ctx.app.edit_buffer.as_ref().map(|b| b.content().to_string());
-    assert_eq!(buffer, Some("#bug".to_string()), "Should not add anything on exact match");
+    let buffer = ctx
+        .app
+        .edit_buffer
+        .as_ref()
+        .map(|b| b.content().to_string());
+    assert_eq!(
+        buffer,
+        Some("#bug".to_string()),
+        "Should not add anything on exact match"
+    );
 }
 
 /// HI-8: Escape clears command mode and hints
@@ -117,7 +125,10 @@ fn test_escape_clears_command_mode() {
     ctx.press(KeyCode::Esc);
 
     assert!(ctx.app.command_buffer.is_empty());
-    assert!(matches!(ctx.app.input_mode, caliber::app::InputMode::Normal));
+    assert!(matches!(
+        ctx.app.input_mode,
+        caliber::app::InputMode::Normal
+    ));
 }
 
 /// HI-9: Tags are collected from journal on load
