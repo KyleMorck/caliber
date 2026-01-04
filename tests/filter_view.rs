@@ -257,7 +257,7 @@ fn test_delete_from_filter() {
     ctx.press(KeyCode::Enter);
 
     // Delete
-    ctx.press(KeyCode::Char('x'));
+    ctx.press(KeyCode::Char('d'));
 
     // Exit and verify
     ctx.press(KeyCode::Tab);

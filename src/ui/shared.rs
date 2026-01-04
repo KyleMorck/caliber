@@ -30,6 +30,36 @@ pub fn format_date_suffix(date: NaiveDate) -> (String, usize) {
 static TRAILING_TAGS_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(\s+#[a-zA-Z][a-zA-Z0-9_-]*)+\s*$").unwrap());
 
+/// Matches the last trailing tag (space + tag at end)
+static LAST_TRAILING_TAG_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s+#[a-zA-Z][a-zA-Z0-9_-]*\s*$").unwrap());
+
+/// Remove the last trailing tag, returns None if no trailing tags or entry is only tags
+#[must_use]
+pub fn remove_last_trailing_tag(text: &str) -> Option<String> {
+    LAST_TRAILING_TAG_REGEX.find(text).and_then(|m| {
+        let before = &text[..m.start()];
+        if before.chars().any(|c| !c.is_whitespace()) {
+            Some(before.to_string())
+        } else {
+            None
+        }
+    })
+}
+
+/// Remove all trailing tags, returns None if no trailing tags or entry is only tags
+#[must_use]
+pub fn remove_all_trailing_tags(text: &str) -> Option<String> {
+    TRAILING_TAGS_REGEX.find(text).and_then(|m| {
+        let before = &text[..m.start()];
+        if before.chars().any(|c| !c.is_whitespace()) {
+            Some(before.to_string())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn style_content(text: &str, base_style: Style, muted: bool) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     let mut last_end = 0;

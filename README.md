@@ -128,7 +128,9 @@ The entry will appear in the "Later" section when you view that date.
 | `Tab` | Return to filter |
 | `i` | Edit selected |
 | `c` | Toggle task complete |
-| `x` | Delete entry |
+| `d` | Delete entry |
+| `x` | Remove last tag |
+| `X` | Remove all tags |
 | `y` | Yank to clipboard |
 | `u` | Undo delete |
 | `j`/`↓` | Navigate down |
@@ -155,7 +157,9 @@ The entry will appear in the "Later" section when you view that date.
 | `Enter` | Quick add to today |
 | `i` | Edit selected |
 | `c` | Toggle task complete |
-| `x` | Delete entry |
+| `d` | Delete entry |
+| `x` | Remove last tag |
+| `X` | Remove all tags |
 | `y` | Yank to clipboard |
 | `v` | View entry source |
 | `/` | Filter mode |

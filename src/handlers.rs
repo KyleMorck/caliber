@@ -81,8 +81,16 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             app.toggle_current_entry()?;
             return Ok(());
         }
-        KeyCode::Char('x') => {
+        KeyCode::Char('d') => {
             app.delete_current_entry()?;
+            return Ok(());
+        }
+        KeyCode::Char('x') => {
+            app.remove_last_tag_from_current_entry()?;
+            return Ok(());
+        }
+        KeyCode::Char('X') => {
+            app.remove_all_tags_from_current_entry()?;
             return Ok(());
         }
         KeyCode::Up | KeyCode::Char('k') => {

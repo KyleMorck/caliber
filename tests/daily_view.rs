@@ -72,7 +72,7 @@ fn test_delete_and_undo() {
     assert_eq!(ctx.selected_index(), 1, "Should be at Entry B");
 
     // Delete
-    ctx.press(KeyCode::Char('x'));
+    ctx.press(KeyCode::Char('d'));
     assert!(!ctx.screen_contains("Entry B"), "Entry B should be deleted");
     assert!(ctx.screen_contains("Entry A"), "Entry A should remain");
     assert!(ctx.screen_contains("Entry C"), "Entry C should remain");
@@ -248,7 +248,7 @@ fn test_selection_after_delete_last() {
     ctx.press(KeyCode::Char('G')); // Go to last (C)
     assert_eq!(ctx.selected_index(), 2, "Should be at last entry");
 
-    ctx.press(KeyCode::Char('x')); // Delete C
+    ctx.press(KeyCode::Char('d')); // Delete C
     assert_eq!(
         ctx.selected_index(),
         1,
@@ -269,7 +269,7 @@ fn test_selection_after_delete_middle() {
     ctx.press(KeyCode::Char('j')); // Move to B
     assert_eq!(ctx.selected_index(), 1, "Should be at middle entry B");
 
-    ctx.press(KeyCode::Char('x')); // Delete B
+    ctx.press(KeyCode::Char('d')); // Delete B
     assert!(
         ctx.selected_index() < ctx.entry_count(),
         "Selection must be within valid range"

@@ -43,7 +43,7 @@ fn smoke_test_core_workflow() {
     ctx.press(KeyCode::Tab);
 
     // 6. Delete entry
-    ctx.press(KeyCode::Char('x'));
+    ctx.press(KeyCode::Char('d'));
     assert!(
         !ctx.screen_contains("Smoke test entry"),
         "Entry should be deleted"

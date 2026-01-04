@@ -101,7 +101,7 @@ fn test_delete_later_entry() {
     let mut ctx = TestContext::with_journal_content(view_date, content);
 
     // Delete the later entry
-    ctx.press(KeyCode::Char('x'));
+    ctx.press(KeyCode::Char('d'));
 
     let journal = ctx.read_journal();
     assert!(

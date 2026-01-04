@@ -47,11 +47,27 @@ long_description = "Toggle task completion status"
 
 [[keys]]
 id = "delete_entry"
-key = "x"
+key = "d"
 modes = ["shared_normal"]
 short_text = "Delete"
 short_description = "Delete entry"
 long_description = "Delete the selected entry"
+
+[[keys]]
+id = "remove_last_tag"
+key = "x"
+modes = ["shared_normal"]
+short_text = "Detag"
+short_description = "Remove last tag"
+long_description = "Remove the last trailing tag from the selected entry"
+
+[[keys]]
+id = "remove_all_tags"
+key = "X"
+modes = ["shared_normal"]
+short_text = "Detag all"
+short_description = "Remove all tags"
+long_description = "Remove all trailing tags from the selected entry"
 
 [[keys]]
 id = "move_down"

@@ -2,6 +2,7 @@ use std::io;
 
 use crate::cursor::CursorBuffer;
 use crate::storage::{self, Entry, EntryType};
+use crate::ui::{remove_all_trailing_tags, remove_last_trailing_tag};
 
 use super::{App, EditContext, InputMode, Line, SelectedItem, ViewMode};
 
@@ -28,6 +29,22 @@ enum DeleteTarget {
 
 /// Internal helper for toggle operations
 enum ToggleTarget {
+    Later {
+        source_date: chrono::NaiveDate,
+        line_index: usize,
+    },
+    Daily {
+        line_idx: usize,
+    },
+    Filter {
+        index: usize,
+        source_date: chrono::NaiveDate,
+        line_index: usize,
+    },
+}
+
+/// Internal helper for tag removal operations
+enum TagRemovalTarget {
     Later {
         source_date: chrono::NaiveDate,
         line_index: usize,
@@ -277,6 +294,101 @@ impl App {
             Ok(()) => self.set_status("Yanked"),
             Err(e) => self.set_status(format!("Failed to yank: {e}")),
         }
+    }
+
+    /// Remove the last trailing tag from the selected entry
+    pub fn remove_last_tag_from_current_entry(&mut self) -> io::Result<()> {
+        self.remove_tags_from_current_entry(remove_last_trailing_tag)
+    }
+
+    /// Remove all trailing tags from the selected entry
+    pub fn remove_all_tags_from_current_entry(&mut self) -> io::Result<()> {
+        self.remove_tags_from_current_entry(remove_all_trailing_tags)
+    }
+
+    fn remove_tags_from_current_entry<F>(&mut self, remover: F) -> io::Result<()>
+    where
+        F: Fn(&str) -> Option<String>,
+    {
+        let target = match self.get_selected_item() {
+            SelectedItem::Later { entry, .. } => Some(TagRemovalTarget::Later {
+                source_date: entry.source_date,
+                line_index: entry.line_index,
+            }),
+            SelectedItem::Daily { line_idx, .. } => Some(TagRemovalTarget::Daily { line_idx }),
+            SelectedItem::Filter { index, entry } => Some(TagRemovalTarget::Filter {
+                index,
+                source_date: entry.source_date,
+                line_index: entry.line_index,
+            }),
+            SelectedItem::None => None,
+        };
+
+        let Some(target) = target else {
+            return Ok(());
+        };
+
+        match target {
+            TagRemovalTarget::Later {
+                source_date,
+                line_index,
+            } => {
+                let changed = storage::mutate_entry(source_date, line_index, |entry| {
+                    if let Some(new_content) = remover(&entry.content) {
+                        entry.content = new_content;
+                        true
+                    } else {
+                        false
+                    }
+                })?;
+
+                if changed == Some(true) {
+                    if let ViewMode::Daily(state) = &mut self.view {
+                        state.later_entries =
+                            storage::collect_later_entries_for_date(self.current_date)?;
+                    }
+                    self.refresh_tag_cache();
+                }
+            }
+            TagRemovalTarget::Daily { line_idx } => {
+                if let Line::Entry(entry) = &mut self.lines[line_idx]
+                    && let Some(new_content) = remover(&entry.content)
+                {
+                    entry.content = new_content;
+                    self.save();
+                    self.refresh_tag_cache();
+                }
+            }
+            TagRemovalTarget::Filter {
+                index,
+                source_date,
+                line_index,
+            } => {
+                let changed = storage::mutate_entry(source_date, line_index, |entry| {
+                    if let Some(new_content) = remover(&entry.content) {
+                        entry.content = new_content;
+                        true
+                    } else {
+                        false
+                    }
+                })?;
+
+                if changed == Some(true) {
+                    if let ViewMode::Filter(state) = &mut self.view
+                        && let Some(filter_entry) = state.entries.get_mut(index)
+                        && let Some(new_content) = remover(&filter_entry.content)
+                    {
+                        filter_entry.content = new_content;
+                    }
+
+                    if source_date == self.current_date {
+                        self.reload_current_day()?;
+                    }
+                    self.refresh_tag_cache();
+                }
+            }
+        }
+        Ok(())
     }
 
     fn copy_to_clipboard(text: &str) -> Result<(), arboard::Error> {

@@ -95,7 +95,7 @@ fn build_footer_line(
             Style::default().fg(Color::Gray),
         ));
         spans.push(Span::styled(
-            format!(" {}  ", action.short_text),
+            format!(" {} ", action.short_text),
             Style::default().fg(Color::DarkGray),
         ));
     }

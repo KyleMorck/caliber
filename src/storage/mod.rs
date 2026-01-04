@@ -19,7 +19,7 @@ pub use entries::{
 // Re-export persistence functions
 pub use persistence::{
     cycle_entry_type, delete_entry, extract_day_content, load_day, load_day_lines, load_journal,
-    parse_day_header, save_day, save_day_lines, save_journal, toggle_entry_complete,
+    mutate_entry, parse_day_header, save_day, save_day_lines, save_journal, toggle_entry_complete,
     update_day_content, update_entry_content,
 };
 
