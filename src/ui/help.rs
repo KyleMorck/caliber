@@ -78,7 +78,6 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
         KeyActionId::RemoveLastTag,
         KeyActionId::RemoveAllTags,
         KeyActionId::YankEntry,
-        KeyActionId::ViewEntrySource,
         KeyActionId::EnterFilterMode,
         KeyActionId::EnterCommandMode,
         KeyActionId::ShowHelp,

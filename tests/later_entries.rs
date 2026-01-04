@@ -72,27 +72,6 @@ fn test_toggle_later_entry() {
     );
 }
 
-/// LE-6: Jump to source day from later entry
-#[test]
-fn test_jump_to_source() {
-    let view_date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let content = "# 2026/01/10\n- [ ] Task from past @01/15\n";
-    let mut ctx = TestContext::with_journal_content(view_date, content);
-
-    ctx.press(KeyCode::Char('v')); // View source
-
-    // Should now be on 1/10
-    assert_eq!(
-        ctx.app.current_date,
-        NaiveDate::from_ymd_opt(2026, 1, 10).unwrap(),
-        "Should jump to source date"
-    );
-    assert!(
-        ctx.screen_contains("Task from past @01/15"),
-        "Entry should be visible on source date"
-    );
-}
-
 /// LE-5: Delete later entry removes from source
 #[test]
 fn test_delete_later_entry() {

@@ -50,6 +50,17 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             Span::styled("n/Esc", Style::default().fg(Color::Gray)),
             Span::styled(" No", Style::default().fg(Color::DarkGray)),
         ]),
+        (_, InputMode::Selection(state)) => {
+            let count = state.count();
+            let actions = [
+                KeyActionId::SelectionToggle,
+                KeyActionId::SelectionExtendRange,
+                KeyActionId::SelectionDelete,
+                KeyActionId::SelectionYank,
+                KeyActionId::SelectionExit,
+            ];
+            build_footer_line(&format!(" SELECT ({count}) "), Color::Green, &actions)
+        }
         (ViewMode::Daily(_), InputMode::Normal) => {
             let actions = [
                 KeyActionId::NewEntryBottom,
@@ -65,7 +76,6 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 KeyActionId::ToggleEntry,
                 KeyActionId::DeleteEntry,
                 KeyActionId::RefreshFilter,
-                KeyActionId::ViewEntrySource,
                 KeyActionId::ExitFilter,
                 KeyActionId::ShowHelp,
             ];

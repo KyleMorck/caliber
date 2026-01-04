@@ -120,12 +120,12 @@ short_description = "Toggle Global/Project journal"
 long_description = "Switch between Global and Project journal"
 
 [[keys]]
-id = "view_entry_source"
+id = "enter_selection_mode"
 key = "v"
 modes = ["shared_normal"]
-short_text = "View"
-short_description = "View entry source"
-long_description = "Jump to the source day of a filtered entry"
+short_text = "Select"
+short_description = "Selection mode"
+long_description = "Enter selection mode for multi-entry operations"
 
 [[keys]]
 id = "yank_entry"
@@ -332,6 +332,92 @@ modes = ["reorder"]
 short_text = "Move down"
 short_description = "Move entry down"
 long_description = "Move the selected entry down in the list"
+
+# =============================================================================
+# Selection Mode
+# =============================================================================
+
+[[keys]]
+id = "selection_exit"
+key = "Esc"
+modes = ["selection"]
+short_text = "Exit"
+short_description = "Exit selection"
+long_description = "Exit selection mode and return to normal mode"
+
+[[keys]]
+id = "selection_toggle"
+key = "v"
+modes = ["selection"]
+short_text = "Toggle"
+short_description = "Toggle selection"
+long_description = "Toggle selection on the current entry"
+
+[[keys]]
+id = "selection_extend_range"
+key = "V"
+modes = ["selection"]
+short_text = "Range"
+short_description = "Select range"
+long_description = "Select all entries between last selection and cursor"
+
+[[keys]]
+id = "selection_move_down"
+key = "j"
+alt_key = "↓"
+modes = ["selection"]
+short_text = "Down"
+short_description = "Move cursor down"
+long_description = "Move cursor down without changing selection"
+
+[[keys]]
+id = "selection_move_up"
+key = "k"
+alt_key = "↑"
+modes = ["selection"]
+short_text = "Up"
+short_description = "Move cursor up"
+long_description = "Move cursor up without changing selection"
+
+[[keys]]
+id = "selection_delete"
+key = "d"
+modes = ["selection"]
+short_text = "Delete"
+short_description = "Delete selected"
+long_description = "Delete all selected entries"
+
+[[keys]]
+id = "selection_toggle_complete"
+key = "c"
+modes = ["selection"]
+short_text = "Toggle"
+short_description = "Toggle completion"
+long_description = "Toggle completion status of all selected entries"
+
+[[keys]]
+id = "selection_yank"
+key = "y"
+modes = ["selection"]
+short_text = "Yank"
+short_description = "Yank selected"
+long_description = "Copy all selected entries to clipboard"
+
+[[keys]]
+id = "selection_remove_last_tag"
+key = "x"
+modes = ["selection"]
+short_text = "Detag"
+short_description = "Remove last tag"
+long_description = "Remove the last trailing tag from all selected entries"
+
+[[keys]]
+id = "selection_remove_all_tags"
+key = "X"
+modes = ["selection"]
+short_text = "Detag all"
+short_description = "Remove all tags"
+long_description = "Remove all trailing tags from all selected entries"
 
 # =============================================================================
 # Help Popup

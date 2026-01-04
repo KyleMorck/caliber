@@ -102,6 +102,9 @@ impl TestContext {
                 InputMode::Confirm(_) => {
                     let _ = handlers::handle_confirm_key(&mut self.app, key.code);
                 }
+                InputMode::Selection(_) => {
+                    let _ = handlers::handle_selection_key(&mut self.app, key);
+                }
             }
         }
     }

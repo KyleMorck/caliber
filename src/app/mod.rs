@@ -6,9 +6,12 @@ pub mod hints;
 mod journal;
 mod navigation;
 mod reorder;
+mod selection_ops;
 
+pub use entry_ops::{DeleteTarget, TagRemovalTarget, ToggleTarget, YankTarget};
 pub use hints::{HintContext, HintMode};
 
+use std::collections::BTreeSet;
 use std::io;
 
 use chrono::{Local, NaiveDate};
@@ -58,6 +61,73 @@ pub struct FilterState {
     pub scroll_offset: usize,
 }
 
+/// State for multi-select operations
+#[derive(Clone, Debug, PartialEq)]
+pub struct SelectionState {
+    /// The anchor index where selection started (visible index)
+    pub anchor: usize,
+    /// Set of all currently selected visible indices
+    pub selected_indices: BTreeSet<usize>,
+}
+
+impl SelectionState {
+    #[must_use]
+    pub fn new(anchor: usize) -> Self {
+        let mut selected_indices = BTreeSet::new();
+        selected_indices.insert(anchor);
+        Self {
+            anchor,
+            selected_indices,
+        }
+    }
+
+    /// Toggle range from anchor to new index
+    /// If any in range are unselected, select all; otherwise deselect all
+    pub fn extend_to(&mut self, new_index: usize) {
+        let (start, end) = if new_index < self.anchor {
+            (new_index, self.anchor)
+        } else {
+            (self.anchor, new_index)
+        };
+        let all_selected = (start..=end).all(|i| self.selected_indices.contains(&i));
+        if all_selected {
+            for i in start..=end {
+                self.selected_indices.remove(&i);
+            }
+        } else {
+            for i in start..=end {
+                self.selected_indices.insert(i);
+            }
+        }
+    }
+
+    /// Toggle a single index in selection and update anchor
+    pub fn toggle(&mut self, index: usize) {
+        if self.selected_indices.contains(&index) {
+            self.selected_indices.remove(&index);
+        } else {
+            self.selected_indices.insert(index);
+        }
+        self.anchor = index;
+    }
+
+    #[must_use]
+    pub fn count(&self) -> usize {
+        self.selected_indices.len()
+    }
+
+    #[must_use]
+    pub fn is_selected(&self, index: usize) -> bool {
+        self.selected_indices.contains(&index)
+    }
+
+    /// Returns indices in descending order (for safe deletion)
+    #[must_use]
+    pub fn indices_descending(&self) -> Vec<usize> {
+        self.selected_indices.iter().copied().rev().collect()
+    }
+}
+
 /// Which view is currently active and its state
 #[derive(Clone)]
 pub enum ViewMode {
@@ -105,6 +175,7 @@ pub enum InputMode {
     Reorder,
     QueryInput,
     Confirm(ConfirmContext),
+    Selection(SelectionState),
 }
 
 /// Where to insert a new entry

@@ -161,7 +161,6 @@ The entry will appear in the "Later" section when you view that date.
 | `x` | Remove last tag |
 | `X` | Remove all tags |
 | `y` | Yank to clipboard |
-| `v` | View entry source |
 | `/` | Filter mode |
 | `:` | Command mode |
 | `?` | Show help |

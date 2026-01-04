@@ -6,8 +6,8 @@ use crate::ui::{remove_all_trailing_tags, remove_last_trailing_tag};
 
 use super::{App, EditContext, InputMode, Line, SelectedItem, ViewMode};
 
-/// Internal helper for delete operations (owns data extracted from SelectedItem)
-enum DeleteTarget {
+/// Target for delete operations (owns data extracted from SelectedItem)
+pub enum DeleteTarget {
     Later {
         source_date: chrono::NaiveDate,
         line_index: usize,
@@ -27,8 +27,8 @@ enum DeleteTarget {
     },
 }
 
-/// Internal helper for toggle operations
-enum ToggleTarget {
+/// Target for toggle operations
+pub enum ToggleTarget {
     Later {
         source_date: chrono::NaiveDate,
         line_index: usize,
@@ -43,8 +43,8 @@ enum ToggleTarget {
     },
 }
 
-/// Internal helper for tag removal operations
-enum TagRemovalTarget {
+/// Target for tag removal operations
+pub enum TagRemovalTarget {
     Later {
         source_date: chrono::NaiveDate,
         line_index: usize,
@@ -57,6 +57,13 @@ enum TagRemovalTarget {
         source_date: chrono::NaiveDate,
         line_index: usize,
     },
+}
+
+/// Target for yank operations
+pub enum YankTarget {
+    Later { content: String },
+    Daily { content: String },
+    Filter { content: String },
 }
 
 impl App {
@@ -70,9 +77,9 @@ impl App {
         }
     }
 
-    /// Delete the currently selected entry (view-aware)
-    pub fn delete_current_entry(&mut self) -> io::Result<()> {
-        let delete_info = match self.get_selected_item() {
+    /// Extract delete target from current selection
+    pub fn extract_delete_target_from_current(&self) -> Option<DeleteTarget> {
+        match self.get_selected_item() {
             SelectedItem::Later { entry, .. } => Some(DeleteTarget::Later {
                 source_date: entry.source_date,
                 line_index: entry.line_index,
@@ -93,12 +100,11 @@ impl App {
                 content: entry.content.clone(),
             }),
             SelectedItem::None => None,
-        };
+        }
+    }
 
-        let Some(target) = delete_info else {
-            return Ok(());
-        };
-
+    /// Execute delete on a target
+    pub fn execute_delete(&mut self, target: DeleteTarget) -> io::Result<()> {
         match target {
             DeleteTarget::Later {
                 source_date,
@@ -172,9 +178,17 @@ impl App {
         Ok(())
     }
 
-    /// Toggle task completion (view-aware)
-    pub fn toggle_current_entry(&mut self) -> io::Result<()> {
-        let toggle_info = match self.get_selected_item() {
+    /// Delete the currently selected entry (view-aware)
+    pub fn delete_current_entry(&mut self) -> io::Result<()> {
+        let Some(target) = self.extract_delete_target_from_current() else {
+            return Ok(());
+        };
+        self.execute_delete(target)
+    }
+
+    /// Extract toggle target from current selection (only for tasks)
+    pub fn extract_toggle_target_from_current(&self) -> Option<ToggleTarget> {
+        match self.get_selected_item() {
             SelectedItem::Later { entry, .. } => {
                 if matches!(entry.entry_type, EntryType::Task { .. }) {
                     Some(ToggleTarget::Later {
@@ -206,12 +220,11 @@ impl App {
                 }
             }
             SelectedItem::None => None,
-        };
+        }
+    }
 
-        let Some(target) = toggle_info else {
-            return Ok(());
-        };
-
+    /// Execute toggle on a target
+    pub fn execute_toggle(&mut self, target: ToggleTarget) -> io::Result<()> {
         match target {
             ToggleTarget::Later {
                 source_date,
@@ -252,6 +265,14 @@ impl App {
         Ok(())
     }
 
+    /// Toggle task completion (view-aware)
+    pub fn toggle_current_entry(&mut self) -> io::Result<()> {
+        let Some(target) = self.extract_toggle_target_from_current() else {
+            return Ok(());
+        };
+        self.execute_toggle(target)
+    }
+
     /// Start editing the current entry (view-aware)
     pub fn edit_current_entry(&mut self) {
         let (ctx, content) = match self.get_selected_item() {
@@ -282,35 +303,60 @@ impl App {
         self.input_mode = InputMode::Edit(ctx);
     }
 
-    pub fn yank_current_entry(&mut self) {
-        let content = match self.get_selected_item() {
-            SelectedItem::Later { entry, .. } => entry.content.clone(),
-            SelectedItem::Daily { entry, .. } => entry.content.clone(),
-            SelectedItem::Filter { entry, .. } => entry.content.clone(),
-            SelectedItem::None => return,
-        };
+    /// Extract yank target from current selection
+    pub fn extract_yank_target_from_current(&self) -> Option<YankTarget> {
+        match self.get_selected_item() {
+            SelectedItem::Later { entry, .. } => Some(YankTarget::Later {
+                content: entry.content.clone(),
+            }),
+            SelectedItem::Daily { entry, .. } => Some(YankTarget::Daily {
+                content: entry.content.clone(),
+            }),
+            SelectedItem::Filter { entry, .. } => Some(YankTarget::Filter {
+                content: entry.content.clone(),
+            }),
+            SelectedItem::None => None,
+        }
+    }
 
-        match Self::copy_to_clipboard(&content) {
-            Ok(()) => self.set_status("Yanked"),
+    /// Get content from a yank target
+    pub fn yank_target_content(target: &YankTarget) -> &str {
+        match target {
+            YankTarget::Later { content }
+            | YankTarget::Daily { content }
+            | YankTarget::Filter { content } => content,
+        }
+    }
+
+    /// Execute yank - copy content to clipboard
+    pub fn execute_yank(&mut self, contents: &[&str]) {
+        if contents.is_empty() {
+            return;
+        }
+        let combined = contents.join("\n");
+        match Self::copy_to_clipboard(&combined) {
+            Ok(()) => {
+                if contents.len() == 1 {
+                    self.set_status("Yanked");
+                } else {
+                    self.set_status(format!("Yanked {} entries", contents.len()));
+                }
+            }
             Err(e) => self.set_status(format!("Failed to yank: {e}")),
         }
     }
 
-    /// Remove the last trailing tag from the selected entry
-    pub fn remove_last_tag_from_current_entry(&mut self) -> io::Result<()> {
-        self.remove_tags_from_current_entry(remove_last_trailing_tag)
+    pub fn yank_current_entry(&mut self) {
+        let Some(target) = self.extract_yank_target_from_current() else {
+            return;
+        };
+        let content = Self::yank_target_content(&target);
+        self.execute_yank(&[content]);
     }
 
-    /// Remove all trailing tags from the selected entry
-    pub fn remove_all_tags_from_current_entry(&mut self) -> io::Result<()> {
-        self.remove_tags_from_current_entry(remove_all_trailing_tags)
-    }
-
-    fn remove_tags_from_current_entry<F>(&mut self, remover: F) -> io::Result<()>
-    where
-        F: Fn(&str) -> Option<String>,
-    {
-        let target = match self.get_selected_item() {
+    /// Extract tag removal target from current selection
+    pub fn extract_tag_removal_target_from_current(&self) -> Option<TagRemovalTarget> {
+        match self.get_selected_item() {
             SelectedItem::Later { entry, .. } => Some(TagRemovalTarget::Later {
                 source_date: entry.source_date,
                 line_index: entry.line_index,
@@ -322,12 +368,14 @@ impl App {
                 line_index: entry.line_index,
             }),
             SelectedItem::None => None,
-        };
+        }
+    }
 
-        let Some(target) = target else {
-            return Ok(());
-        };
-
+    /// Execute tag removal on a target
+    pub fn execute_tag_removal<F>(&mut self, target: TagRemovalTarget, remover: F) -> io::Result<()>
+    where
+        F: Fn(&str) -> Option<String>,
+    {
         match target {
             TagRemovalTarget::Later {
                 source_date,
@@ -389,6 +437,22 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    /// Remove the last trailing tag from the selected entry
+    pub fn remove_last_tag_from_current_entry(&mut self) -> io::Result<()> {
+        let Some(target) = self.extract_tag_removal_target_from_current() else {
+            return Ok(());
+        };
+        self.execute_tag_removal(target, remove_last_trailing_tag)
+    }
+
+    /// Remove all trailing tags from the selected entry
+    pub fn remove_all_tags_from_current_entry(&mut self) -> io::Result<()> {
+        let Some(target) = self.extract_tag_removal_target_from_current() else {
+            return Ok(());
+        };
+        self.execute_tag_removal(target, remove_all_trailing_tags)
     }
 
     fn copy_to_clipboard(text: &str) -> Result<(), arboard::Error> {

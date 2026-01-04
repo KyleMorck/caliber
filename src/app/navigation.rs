@@ -201,31 +201,32 @@ impl App {
 
     #[must_use]
     pub fn visible_entry_count(&self) -> usize {
-        let ViewMode::Daily(state) = &self.view else {
-            return 0;
-        };
-
-        if !self.hide_completed {
-            return state.later_entries.len() + self.entry_indices.len();
-        }
-
-        let visible_later = state
-            .later_entries
-            .iter()
-            .filter(|e| self.should_show_later(e))
-            .count();
-        let visible_regular = self
-            .entry_indices
-            .iter()
-            .filter(|&&i| {
-                if let Line::Entry(entry) = &self.lines[i] {
-                    self.should_show_entry(entry)
-                } else {
-                    true
+        match &self.view {
+            ViewMode::Filter(state) => state.entries.len(),
+            ViewMode::Daily(state) => {
+                if !self.hide_completed {
+                    return state.later_entries.len() + self.entry_indices.len();
                 }
-            })
-            .count();
-        visible_later + visible_regular
+
+                let visible_later = state
+                    .later_entries
+                    .iter()
+                    .filter(|e| self.should_show_later(e))
+                    .count();
+                let visible_regular = self
+                    .entry_indices
+                    .iter()
+                    .filter(|&&i| {
+                        if let Line::Entry(entry) = &self.lines[i] {
+                            self.should_show_entry(entry)
+                        } else {
+                            true
+                        }
+                    })
+                    .count();
+                visible_later + visible_regular
+            }
+        }
     }
 
     #[must_use]

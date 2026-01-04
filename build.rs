@@ -385,7 +385,6 @@ fn generate_filter_view_table(keys: &[KeyDef]) -> String {
         "remove_last_tag",
         "remove_all_tags",
         "yank_entry",
-        "view_entry_source",
         "enter_filter_mode",
         "enter_command_mode",
         "show_help",

@@ -118,7 +118,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             return Ok(());
         }
         KeyCode::Char('v') => {
-            app.view_entry_source()?;
+            app.enter_selection_mode();
             return Ok(());
         }
         KeyCode::Char('y') => {
@@ -379,5 +379,57 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         _ => {}
     }
 
+    Ok(())
+}
+
+pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
+    let KeyEvent {
+        code, modifiers, ..
+    } = key;
+
+    // Shift+V selects range from anchor to cursor
+    if modifiers.contains(KeyModifiers::SHIFT) && code == KeyCode::Char('V') {
+        app.selection_extend_to_cursor();
+        return Ok(());
+    }
+
+    match code {
+        KeyCode::Esc => {
+            app.exit_selection_mode();
+        }
+        KeyCode::Char('v') => {
+            app.selection_toggle_current();
+        }
+        // Navigation (without extending)
+        KeyCode::Down | KeyCode::Char('j') => {
+            app.selection_move_down();
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            app.selection_move_up();
+        }
+        KeyCode::Char('g') => {
+            app.jump_to_first();
+        }
+        KeyCode::Char('G') => {
+            app.jump_to_last();
+        }
+        // Batch operations
+        KeyCode::Char('d') => {
+            app.delete_selected()?;
+        }
+        KeyCode::Char('c') => {
+            app.toggle_selected()?;
+        }
+        KeyCode::Char('y') => {
+            app.yank_selected();
+        }
+        KeyCode::Char('x') => {
+            app.remove_last_tag_from_selected()?;
+        }
+        KeyCode::Char('X') => {
+            app.remove_all_tags_from_selected()?;
+        }
+        _ => {}
+    }
     Ok(())
 }

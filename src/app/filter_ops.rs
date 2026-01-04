@@ -1,13 +1,12 @@
 use std::io;
 
-use chrono::{Local, NaiveDate};
+use chrono::Local;
 
 use crate::cursor::CursorBuffer;
 use crate::storage::{self, EntryType};
 
 use super::{
-    App, DailyState, EditContext, FILTER_HEADER_LINES, FilterState, InputMode, SelectedItem,
-    ViewMode,
+    App, DailyState, EditContext, FILTER_HEADER_LINES, FilterState, InputMode, ViewMode,
 };
 
 impl App {
@@ -126,50 +125,6 @@ impl App {
         state.selected = state.selected.min(state.entries.len().saturating_sub(1));
         state.scroll_offset = 0;
         Ok(())
-    }
-
-    /// Navigate to a specific day and select the entry at the given line index
-    fn goto_entry_source(&mut self, date: NaiveDate, line_index: usize) -> io::Result<()> {
-        if let ViewMode::Filter(state) = &self.view {
-            self.last_filter_query = Some(state.query.clone());
-        }
-        if date != self.current_date {
-            self.save();
-        }
-
-        let later_entries = self.load_day(date)?;
-        let later_count = later_entries.len();
-
-        let entry_pos = self
-            .entry_indices
-            .iter()
-            .position(|&i| i == line_index)
-            .unwrap_or(0);
-        let selected = later_count + entry_pos;
-
-        self.view = ViewMode::Daily(DailyState {
-            selected,
-            scroll_offset: 0,
-            original_lines: None,
-            later_entries,
-        });
-        self.input_mode = InputMode::Normal;
-        self.edit_buffer = None;
-
-        Ok(())
-    }
-
-    /// View the source day of the currently selected entry (unified across views)
-    pub fn view_entry_source(&mut self) -> io::Result<()> {
-        match self.get_selected_item() {
-            SelectedItem::Filter { entry, .. } => {
-                self.goto_entry_source(entry.source_date, entry.line_index)
-            }
-            SelectedItem::Later { entry, .. } => {
-                self.goto_entry_source(entry.source_date, entry.line_index)
-            }
-            SelectedItem::Daily { .. } | SelectedItem::None => Ok(()),
-        }
     }
 
     pub fn filter_quick_add(&mut self) {

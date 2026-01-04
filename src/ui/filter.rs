@@ -84,7 +84,18 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                 };
                 let available = width.saturating_sub(prefix_width + date_suffix_width);
                 let display_text = truncate_with_tags(&text, available);
-                let mut spans = vec![Span::styled("→", Style::default().fg(Color::Cyan))];
+
+                let is_cursor_selected = if let InputMode::Selection(ref sel_state) = app.input_mode {
+                    sel_state.is_selected(idx)
+                } else {
+                    false
+                };
+                let cursor_indicator = if is_cursor_selected {
+                    Span::styled("◉", Style::default().fg(Color::Green))
+                } else {
+                    Span::styled("→", Style::default().fg(Color::Cyan))
+                };
+                let mut spans = vec![cursor_indicator];
                 spans.push(Span::styled(sel_prefix.to_string(), content_style));
                 spans.extend(style_content(
                     &display_text,
@@ -98,9 +109,27 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                 lines.push(RatatuiLine::from(spans));
             }
         } else {
+            // Check if this entry is selected in selection mode (but not cursor)
+            let is_selected_in_selection = if let InputMode::Selection(ref sel_state) = app.input_mode {
+                sel_state.is_selected(idx)
+            } else {
+                false
+            };
+
             let available = width.saturating_sub(prefix_width + date_suffix_width);
             let display_text = truncate_with_tags(&text, available);
-            let mut spans = vec![Span::styled(prefix.to_string(), content_style)];
+
+            let first_char = if is_selected_in_selection {
+                Span::styled("○", Style::default().fg(Color::Green))
+            } else {
+                Span::styled(
+                    prefix.chars().next().unwrap_or('-').to_string(),
+                    content_style,
+                )
+            };
+            let rest_of_prefix: String = prefix.chars().skip(1).collect();
+
+            let mut spans = vec![first_char, Span::styled(rest_of_prefix, content_style)];
             spans.extend(style_content(
                 &display_text,
                 content_style,

@@ -533,6 +533,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     InputMode::QueryInput => handlers::handle_query_input_key(&mut app, key)?,
                     InputMode::Reorder => handlers::handle_reorder_key(&mut app, key.code),
                     InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
+                    InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
                 }
             }
         }

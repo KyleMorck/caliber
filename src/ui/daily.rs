@@ -90,33 +90,24 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                     )));
                 }
             }
-        } else if is_selected {
-            let available = width.saturating_sub(prefix_width + source_suffix_width);
-            let display_text = truncate_with_tags(&text, available);
-            let rest_of_prefix: String = prefix.chars().skip(1).collect();
-            let mut spans = vec![
-                Span::styled("→", Style::default().fg(Color::Red)),
-                Span::styled(rest_of_prefix, content_style),
-            ];
-            spans.extend(style_content(
-                &display_text,
-                content_style,
-                later_entry.completed,
-            ));
-            spans.push(Span::styled(
-                source_suffix,
-                Style::default().fg(Color::DarkGray),
-            ));
-            lines.push(RatatuiLine::from(spans));
         } else {
             let available = width.saturating_sub(prefix_width + source_suffix_width);
             let display_text = truncate_with_tags(&text, available);
             let first_char = prefix.chars().next().unwrap_or('-').to_string();
             let rest_of_prefix: String = prefix.chars().skip(1).collect();
-            let mut spans = vec![
-                Span::styled(first_char, later_prefix_style),
-                Span::styled(rest_of_prefix, content_style),
-            ];
+
+            // Determine the indicator based on mode
+            let visible_idx = visible_later_idx - 1; // Already incremented
+            let indicator = get_entry_indicator(
+                app,
+                is_selected,
+                visible_idx,
+                Color::Red,
+                &first_char,
+                later_prefix_style,
+            );
+
+            let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
             spans.extend(style_content(
                 &display_text,
                 content_style,
@@ -177,22 +168,20 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                         )));
                     }
                 }
-            } else if is_selected {
+            } else {
+                let first_char = prefix.chars().next().unwrap_or('-').to_string();
                 let rest_of_prefix = prefix.chars().skip(1).collect::<String>();
-                let indicator = if app.input_mode == InputMode::Reorder {
-                    Span::styled("↕", Style::default().fg(Color::Yellow))
-                } else {
-                    Span::styled("→", Style::default().fg(Color::Cyan))
-                };
+                let indicator = get_entry_indicator(
+                    app,
+                    is_selected,
+                    selection_idx,
+                    Color::Cyan,
+                    &first_char,
+                    content_style,
+                );
                 let available = width.saturating_sub(prefix_width);
                 let display_text = truncate_with_tags(&text, available);
                 let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
-                spans.extend(style_content(&display_text, content_style, is_completed));
-                lines.push(RatatuiLine::from(spans));
-            } else {
-                let available = width.saturating_sub(prefix_width);
-                let display_text = truncate_with_tags(&text, available);
-                let mut spans = vec![Span::styled(prefix.to_string(), content_style)];
                 spans.extend(style_content(&display_text, content_style, is_completed));
                 lines.push(RatatuiLine::from(spans));
             }
@@ -213,4 +202,39 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     }
 
     lines
+}
+
+/// Determine the indicator character for an entry based on mode and selection state
+fn get_entry_indicator(
+    app: &App,
+    is_cursor: bool,
+    visible_idx: usize,
+    cursor_color: Color,
+    default_first_char: &str,
+    default_style: Style,
+) -> Span<'static> {
+    // Check if in selection mode and this entry is selected
+    let is_selected_in_selection = if let InputMode::Selection(ref state) = app.input_mode {
+        state.is_selected(visible_idx)
+    } else {
+        false
+    };
+
+    if is_cursor {
+        if app.input_mode == InputMode::Reorder {
+            Span::styled("↕", Style::default().fg(Color::Yellow))
+        } else if matches!(app.input_mode, InputMode::Selection(_)) {
+            if is_selected_in_selection {
+                Span::styled("◉", Style::default().fg(Color::Green))
+            } else {
+                Span::styled("→", Style::default().fg(Color::Cyan))
+            }
+        } else {
+            Span::styled("→", Style::default().fg(cursor_color))
+        }
+    } else if is_selected_in_selection {
+        Span::styled("○", Style::default().fg(Color::Green))
+    } else {
+        Span::styled(default_first_char.to_string(), default_style)
+    }
 }
