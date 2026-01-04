@@ -214,3 +214,80 @@ fn test_date_command_short() {
         "Short :d syntax should work with current year default"
     );
 }
+
+/// NV-2: Date command with natural language (tomorrow/yesterday)
+#[test]
+fn test_date_command_natural_relative() {
+    let today = chrono::Local::now().date_naive();
+    let mut ctx = TestContext::with_date(today);
+
+    ctx.press(KeyCode::Char(':'));
+    ctx.type_str("d tomorrow");
+    ctx.press(KeyCode::Enter);
+
+    assert_eq!(
+        ctx.app.current_date,
+        today + chrono::Days::new(1),
+        ":d tomorrow should go to tomorrow"
+    );
+
+    ctx.press(KeyCode::Char(':'));
+    ctx.type_str("d yesterday");
+    ctx.press(KeyCode::Enter);
+
+    assert_eq!(
+        ctx.app.current_date,
+        today - chrono::Days::new(1),
+        ":d yesterday should go to yesterday"
+    );
+}
+
+/// NV-2: Date command with day offset (3d, -3d)
+#[test]
+fn test_date_command_day_offset() {
+    let today = chrono::Local::now().date_naive();
+    let mut ctx = TestContext::with_date(today);
+
+    ctx.press(KeyCode::Char(':'));
+    ctx.type_str("d 3d");
+    ctx.press(KeyCode::Enter);
+
+    assert_eq!(
+        ctx.app.current_date,
+        today + chrono::Days::new(3),
+        ":d 3d should go 3 days forward"
+    );
+
+    ctx.press(KeyCode::Char(':'));
+    ctx.type_str("d -5d");
+    ctx.press(KeyCode::Enter);
+
+    assert_eq!(
+        ctx.app.current_date,
+        today - chrono::Days::new(5),
+        ":d -5d should go 5 days back"
+    );
+}
+
+/// NV-2: Date command with weekday references (next-mon, last-fri)
+#[test]
+fn test_date_command_weekday() {
+    let today = chrono::Local::now().date_naive();
+    let mut ctx = TestContext::with_date(today);
+
+    ctx.press(KeyCode::Char(':'));
+    ctx.type_str("d next-friday");
+    ctx.press(KeyCode::Enter);
+
+    // Verify we moved to a Friday in the future
+    use chrono::Datelike;
+    assert!(
+        ctx.app.current_date > today,
+        "next-friday should be in the future"
+    );
+    assert_eq!(
+        ctx.app.current_date.weekday(),
+        chrono::Weekday::Fri,
+        "Should land on a Friday"
+    );
+}

@@ -1,6 +1,6 @@
 use std::io;
 
-use chrono::{Datelike, Days, Local, NaiveDate};
+use chrono::{Days, Local, NaiveDate};
 
 use crate::storage::{self, Entry, EntryType, LaterEntry, Line};
 
@@ -328,41 +328,11 @@ impl App {
         self.goto_day(Local::now().date_naive())
     }
 
+    /// Parses a date string for the :goto command.
+    /// Supports natural language (tomorrow, yesterday, next-mon, 3d, -3d) and
+    /// standard formats (YYYY/MM/DD, MM/DD/YYYY, MM/DD/YY, MM/DD).
     #[must_use]
     pub fn parse_goto_date(input: &str) -> Option<NaiveDate> {
-        if let Some(first_slash) = input.find('/')
-            && first_slash == 4
-            && input[..4].chars().all(|c| c.is_ascii_digit())
-            && let Ok(date) = NaiveDate::parse_from_str(input, "%Y/%m/%d")
-        {
-            return Some(date);
-        }
-
-        let parts: Vec<&str> = input.split('/').collect();
-
-        if parts.len() == 3
-            && let (Ok(month), Ok(day), Ok(year)) = (
-                parts[0].parse::<u32>(),
-                parts[1].parse::<u32>(),
-                parts[2].parse::<i32>(),
-            )
-        {
-            let full_year = if year < 100 { 2000 + year } else { year };
-            return NaiveDate::from_ymd_opt(full_year, month, day);
-        }
-
-        if parts.len() == 2
-            && let (Ok(month), Ok(day)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>())
-        {
-            let today = Local::now().date_naive();
-            if let Some(date) = NaiveDate::from_ymd_opt(today.year(), month, day) {
-                if date >= today {
-                    return Some(date);
-                }
-                return NaiveDate::from_ymd_opt(today.year() + 1, month, day);
-            }
-        }
-
-        None
+        storage::parse_natural_date(input, Local::now().date_naive())
     }
 }
