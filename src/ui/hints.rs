@@ -60,6 +60,16 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
         _ => None,
     };
 
+    // Context-specific colors: tags = light yellow, commands = blue, filters = magenta
+    let hint_color = match hint_state {
+        HintContext::Tags { .. } => Color::LightYellow,
+        HintContext::Commands { .. } => Color::Blue,
+        HintContext::FilterTypes { .. }
+        | HintContext::DateOps { .. }
+        | HintContext::Negation { .. } => Color::Magenta,
+        HintContext::Inactive => unreachable!(),
+    };
+
     let items: Vec<String> = match hint_state {
         HintContext::Inactive => return vec![],
         HintContext::Tags { matches, .. } => matches.iter().map(|t| format!("#{t}")).collect(),
@@ -102,7 +112,7 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
             }
 
             let display = format!("{:width$}", item, width = COLUMN_WIDTH);
-            row_spans[row].push(Span::styled(display, Style::default().fg(Color::Cyan)));
+            row_spans[row].push(Span::styled(display, Style::default().fg(hint_color)));
         }
 
         for spans in row_spans {
