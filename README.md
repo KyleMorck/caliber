@@ -119,60 +119,65 @@ The entry will appear in the "Later" section when you view that date.
 | `Enter` | New entry at end |
 | `o` | New entry below |
 | `O` | New entry above |
-| `h`/`[` | Previous day |
-| `l`/`]` | Next day |
-| `t` | Go to today |
-| `s` | Sort entries |
-| `r` | Reorder mode |
-| `z` | Toggle hide completed |
-| `Tab` | Return to filter |
 | `i` | Edit selected |
 | `c` | Toggle task complete |
 | `d` | Delete entry |
-| `x` | Remove last tag |
-| `X` | Remove all tags |
 | `y` | Yank to clipboard |
 | `u` | Undo delete |
+| `x` | Remove last tag |
+| `X` | Remove all tags |
 | `j`/`↓` | Navigate down |
 | `k`/`↑` | Navigate up |
 | `g` | Jump to first |
 | `G` | Jump to last |
+| `h`/`[` | Previous day |
+| `l`/`]` | Next day |
+| `t` | Go to today |
+| `z` | Toggle hide completed |
+| `s` | Sort entries |
+| `r` | Reorder mode |
+| `v` | Selection mode |
 | `0-9` | Filter favorite tag |
-| `/` | Filter mode |
+| `Tab` | Return to filter |
 | `` ` `` | Toggle Global/Project journal |
-| `?` | Show help |
+| `/` | Filter mode |
 | `:` | Command mode |
+| `?` | Show help |
 
 
 ### Filter Mode
 
 | Key | Action |
 |-----|--------|
+| `i` | Edit selected |
+| `c` | Toggle task complete |
+| `d` | Delete entry |
+| `y` | Yank to clipboard |
+| `u` | Undo delete |
+| `x` | Remove last tag |
+| `X` | Remove all tags |
 | `j`/`↓` | Navigate down |
 | `k`/`↑` | Navigate up |
 | `g` | Jump to first |
 | `G` | Jump to last |
-| `Esc`/`Tab` | Exit to daily |
-| `r` | Refresh results |
-| `Enter` | Quick add to today |
-| `i` | Edit selected |
-| `c` | Toggle task complete |
-| `d` | Delete entry |
-| `x` | Remove last tag |
-| `X` | Remove all tags |
-| `y` | Yank to clipboard |
+| `v` | Selection mode |
+| `0-9` | Filter favorite tag |
+| `` ` `` | Toggle Global/Project journal |
 | `/` | Filter mode |
 | `:` | Command mode |
 | `?` | Show help |
+| `Enter` | Quick add to today |
+| `r` | Refresh results |
+| `Esc`/`Tab` | Exit to daily |
 
 
 ### Edit Mode
 
 | Key | Action |
 |-----|--------|
-| `Shift+Tab` | Toggle entry type |
-| `Tab` | Save and new |
 | `Enter` | Save and exit |
+| `Tab` | Save and new |
+| `Shift+Tab` | Toggle entry type |
 | `Esc` | Cancel |
 
 
@@ -182,10 +187,10 @@ Reorder entries within a day.
 
 | Key | Action |
 |-----|--------|
+| `j`/`↓` | Move entry down |
+| `k`/`↑` | Move entry up |
 | `r`/`Enter` | Save |
 | `Esc` | Cancel |
-| `k`/`↑` | Move entry up |
-| `j`/`↓` | Move entry down |
 
 
 ### Text Editing
@@ -200,12 +205,12 @@ These shortcuts work in all text input modes (Edit, Command, and Filter query):
 | `Alt+F`/`Ctrl+→` | Move cursor one word right |
 | `Home`/`Ctrl+A` | Move cursor to start |
 | `End`/`Ctrl+E` | Move cursor to end |
+| `Backspace` | Delete char before cursor |
+| `Delete` | Delete char after cursor |
 | `Ctrl+W` | Delete word before cursor |
 | `Alt+D` | Delete word after cursor |
 | `Ctrl+U` | Delete to start |
 | `Ctrl+K` | Delete to end |
-| `Delete` | Delete char after cursor |
-| `Backspace` | Delete char before cursor |
 
 
 ### Commands

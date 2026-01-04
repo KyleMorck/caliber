@@ -6,8 +6,7 @@ use ratatui::{
 };
 
 use crate::registry::{
-    COMMANDS, FILTER_SYNTAX, FilterCategory, KeyActionId, KeyMode, get_key_action,
-    key_actions_for_mode,
+    COMMANDS, FILTER_SYNTAX, FilterCategory, HelpSection, KEY_ACTIONS, KeyAction, help_section_keys,
 };
 
 const KEY_WIDTH: usize = 14;
@@ -23,99 +22,49 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
 
     let mut lines = Vec::new();
 
-    // [Daily Mode] section
+    // Daily Mode
     lines.push(section_header("[Daily Mode]", &header_indent, header_style));
-    for action in key_actions_for_mode(KeyMode::DailyNormal) {
-        lines.push(help_line_from_action(action, key_style, desc_style));
-    }
-    let shared_daily = [
-        KeyActionId::EditEntry,
-        KeyActionId::ToggleEntry,
-        KeyActionId::DeleteEntry,
-        KeyActionId::RemoveLastTag,
-        KeyActionId::RemoveAllTags,
-        KeyActionId::YankEntry,
-        KeyActionId::Undo,
-        KeyActionId::MoveDown,
-        KeyActionId::MoveUp,
-        KeyActionId::JumpToFirst,
-        KeyActionId::JumpToLast,
-        KeyActionId::QuickFilterTag,
-        KeyActionId::EnterFilterMode,
-        KeyActionId::ToggleJournal,
-        KeyActionId::ShowHelp,
-        KeyActionId::EnterCommandMode,
-    ];
-    for id in shared_daily {
-        let action = get_key_action(id);
+    for action in KEY_ACTIONS
+        .iter()
+        .filter(|a| a.help_sections.contains(&HelpSection::Daily))
+    {
         lines.push(help_line_from_action(action, key_style, desc_style));
     }
     lines.push(RatatuiLine::from(""));
 
-    // [Filter Mode] section
+    // Filter Mode
     lines.push(section_header(
         "[Filter Mode]",
         &header_indent,
         header_style,
     ));
-    let filter_nav = [
-        KeyActionId::MoveDown,
-        KeyActionId::MoveUp,
-        KeyActionId::JumpToFirst,
-        KeyActionId::JumpToLast,
+    for action in KEY_ACTIONS
+        .iter()
+        .filter(|a| a.help_sections.contains(&HelpSection::Filter))
+    {
+        lines.push(help_line_from_action(action, key_style, desc_style));
+    }
+    lines.push(RatatuiLine::from(""));
+
+    // Other mode sections
+    let other_sections = [
+        (HelpSection::Edit, "[Edit Mode]"),
+        (HelpSection::Reorder, "[Reorder Mode]"),
+        (HelpSection::Selection, "[Selection Mode]"),
+        (HelpSection::TextEditing, "[Text Editing]"),
     ];
-    for id in filter_nav {
-        let action = get_key_action(id);
-        lines.push(help_line_from_action(action, key_style, desc_style));
-    }
-    for action in key_actions_for_mode(KeyMode::FilterNormal) {
-        lines.push(help_line_from_action(action, key_style, desc_style));
-    }
-    let filter_shared = [
-        KeyActionId::EditEntry,
-        KeyActionId::ToggleEntry,
-        KeyActionId::DeleteEntry,
-        KeyActionId::RemoveLastTag,
-        KeyActionId::RemoveAllTags,
-        KeyActionId::YankEntry,
-        KeyActionId::EnterFilterMode,
-        KeyActionId::EnterCommandMode,
-        KeyActionId::ShowHelp,
-    ];
-    for id in filter_shared {
-        let action = get_key_action(id);
-        lines.push(help_line_from_action(action, key_style, desc_style));
-    }
-    lines.push(RatatuiLine::from(""));
 
-    // [Edit Mode] section
-    lines.push(section_header("[Edit Mode]", &header_indent, header_style));
-    for action in key_actions_for_mode(KeyMode::Edit) {
-        lines.push(help_line_from_action(action, key_style, desc_style));
+    for (section, title) in other_sections {
+        let actions: Vec<_> = help_section_keys(section).collect();
+        if actions.is_empty() {
+            continue;
+        }
+        lines.push(section_header(title, &header_indent, header_style));
+        for action in actions {
+            lines.push(help_line_from_action(action, key_style, desc_style));
+        }
+        lines.push(RatatuiLine::from(""));
     }
-    lines.push(RatatuiLine::from(""));
-
-    // [Reorder Mode] section
-    lines.push(section_header(
-        "[Reorder Mode]",
-        &header_indent,
-        header_style,
-    ));
-    for action in key_actions_for_mode(KeyMode::Reorder) {
-        lines.push(help_line_from_action(action, key_style, desc_style));
-    }
-    lines.push(RatatuiLine::from(""));
-
-    // [Text Editing] section
-    lines.push(section_header(
-        "[Text Editing]",
-        &header_indent,
-        header_style,
-    ));
-    for action in key_actions_for_mode(KeyMode::TextEditing) {
-        lines.push(help_line_from_action(action, key_style, desc_style));
-    }
-    lines.push(RatatuiLine::from(""));
 
     // [Commands] section
     lines.push(section_header("[Commands]", &header_indent, header_style));
@@ -162,7 +111,7 @@ fn section_header(title: &str, indent: &str, style: Style) -> RatatuiLine<'stati
 }
 
 fn help_line_from_action(
-    action: &crate::registry::KeyAction,
+    action: &KeyAction,
     key_style: Style,
     desc_style: Style,
 ) -> RatatuiLine<'static> {

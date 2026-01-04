@@ -5,7 +5,7 @@ use ratatui::{
 };
 
 use crate::app::{App, InputMode, ViewMode};
-use crate::registry::{KeyActionId, get_key_action};
+use crate::registry::{FooterMode, KeyAction, footer_actions};
 
 pub fn render_footer(app: &App) -> RatatuiLine<'static> {
     match (&app.view, &app.input_mode) {
@@ -23,22 +23,9 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 Span::raw(buffer.to_string()),
             ])
         }
-        (_, InputMode::Edit(_)) => {
-            let actions = [
-                KeyActionId::SaveEdit,
-                KeyActionId::SaveAndNew,
-                KeyActionId::CycleEntryType,
-                KeyActionId::CancelEdit,
-            ];
-            build_footer_line(" EDIT ", Color::Green, &actions)
-        }
+        (_, InputMode::Edit(_)) => build_footer_line(" EDIT ", Color::Green, FooterMode::Edit),
         (_, InputMode::Reorder) => {
-            let actions = [
-                KeyActionId::ReorderMoveDown,
-                KeyActionId::ReorderSave,
-                KeyActionId::ReorderCancel,
-            ];
-            build_footer_line(" REORDER ", Color::Yellow, &actions)
+            build_footer_line(" REORDER ", Color::Yellow, FooterMode::Reorder)
         }
         (_, InputMode::Confirm(_)) => RatatuiLine::from(vec![
             Span::styled(
@@ -52,65 +39,46 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
         ]),
         (_, InputMode::Selection(state)) => {
             let count = state.count();
-            let actions = [
-                KeyActionId::SelectionToggle,
-                KeyActionId::SelectionExtendRange,
-                KeyActionId::SelectionDelete,
-                KeyActionId::SelectionYank,
-                KeyActionId::SelectionExit,
-            ];
-            build_footer_line(&format!(" SELECT ({count}) "), Color::Green, &actions)
+            build_footer_line(
+                &format!(" SELECT ({count}) "),
+                Color::Green,
+                FooterMode::Selection,
+            )
         }
         (ViewMode::Daily(_), InputMode::Normal) => {
-            let actions = [
-                KeyActionId::NewEntryBottom,
-                KeyActionId::EditEntry,
-                KeyActionId::ToggleEntry,
-                KeyActionId::EnterFilterMode,
-                KeyActionId::ShowHelp,
-            ];
-            build_footer_line(" DAILY ", Color::Cyan, &actions)
+            build_footer_line(" DAILY ", Color::Cyan, FooterMode::NormalDaily)
         }
         (ViewMode::Filter(_), InputMode::Normal) => {
-            let actions = [
-                KeyActionId::ToggleEntry,
-                KeyActionId::DeleteEntry,
-                KeyActionId::RefreshFilter,
-                KeyActionId::ExitFilter,
-                KeyActionId::ShowHelp,
-            ];
-            build_footer_line(" FILTER ", Color::Magenta, &actions)
+            build_footer_line(" FILTER ", Color::Magenta, FooterMode::NormalFilter)
         }
     }
 }
 
-fn build_footer_line(
-    mode_name: &str,
-    color: Color,
-    actions: &[KeyActionId],
-) -> RatatuiLine<'static> {
+fn build_footer_line(mode_name: &str, color: Color, mode: FooterMode) -> RatatuiLine<'static> {
     let mut spans = vec![Span::styled(
         mode_name.to_string(),
         Style::default().fg(Color::Black).bg(color),
     )];
 
-    for id in actions {
-        let action = get_key_action(*id);
-        let key_display = match action.alt_key {
-            Some(alt) => format!("{}/{}", action.key, alt),
-            None => action.key.to_string(),
-        };
-        spans.push(Span::styled(
-            format!("  {key_display}"),
-            Style::default().fg(Color::Gray),
-        ));
-        spans.push(Span::styled(
-            format!(" {} ", action.short_text),
-            Style::default().fg(Color::DarkGray),
-        ));
+    for action in footer_actions(mode) {
+        spans.extend(action_spans(action));
     }
 
     RatatuiLine::from(spans)
+}
+
+fn action_spans(action: &KeyAction) -> [Span<'static>; 2] {
+    let key_display = match action.alt_key {
+        Some(alt) => format!("{}/{}", action.key, alt),
+        None => action.key.to_string(),
+    };
+    [
+        Span::styled(format!("  {key_display}"), Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!(" {} ", action.short_text),
+            Style::default().fg(Color::DarkGray),
+        ),
+    ]
 }
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
