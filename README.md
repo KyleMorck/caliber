@@ -135,12 +135,10 @@ The entry will appear in the "Later" section when you view that date.
 | `Tab` | Return to last filter |
 | `` ` `` | Toggle Global/Project journal |
 | `?` | Show help |
-| `:[g]oto` | Go to date (MM/DD, MM/DD/YY, MM/DD/YYYY, YYYY/MM/DD) |
-| `:[o]pen` | Open journal file |
-| `:global` | Switch to Global journal |
-| `:project` | Switch to Project journal |
-| `:init-project` | Create .caliber/journal.md |
-| `:config-reload` | Reload config file |
+| `:[d]ate` | Go to date (MM/DD, MM/DD/YY, MM/DD/YYYY, YYYY/MM/DD) |
+| `:[g]lobal` | Switch to Global journal |
+| `:[p]roject` | Manage project journal [init\|default\|path.md] |
+| `:[c]onfig` | Manage config [reload] |
 | `:[q]uit` | Quit |
 
 ### Reorder Mode

@@ -10,25 +10,25 @@ use tempfile::TempDir;
 use caliber::app::InputMode;
 use caliber::storage;
 
-/// CM-1: Open command exists and handles missing argument
+/// CM-1: Config command without valid subcommand shows usage
 #[test]
-fn test_open_command_usage() {
+fn test_config_command_usage() {
     let mut ctx = TestContext::new();
 
-    // Enter command mode and try :open without argument
+    // Enter command mode and try :config without argument
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("open");
+    ctx.type_str("config");
     ctx.press(KeyCode::Enter);
 
     // App should show usage message but remain functional
     // (Status message is set internally, we verify app still works)
     ctx.press(KeyCode::Enter);
-    ctx.type_str("Test after open command");
+    ctx.type_str("Test after config command");
     ctx.press(KeyCode::Enter);
 
     assert!(
-        ctx.screen_contains("Test after open command"),
-        "App should still work after :open command"
+        ctx.screen_contains("Test after config command"),
+        "App should still work after :config command"
     );
 }
 
@@ -127,9 +127,9 @@ fn test_help_overlay_scroll() {
     assert!(!ctx.app.show_help, "Help should close with Esc");
 }
 
-/// CM-1: Open specific file loads that journal
+/// CM-1: Project with path loads that journal
 #[test]
-fn test_open_command_loads_file() {
+fn test_project_command_loads_file() {
     let temp_dir = TempDir::new().unwrap();
     let other_journal = temp_dir.path().join("other_journal.md");
 
@@ -146,9 +146,9 @@ fn test_open_command_loads_file() {
 
     let mut ctx = TestContext::new();
 
-    // Open the other journal
+    // Open the other journal via :project path
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str(&format!("open {}", other_journal.display()));
+    ctx.type_str(&format!("project {}", other_journal.display()));
     ctx.press(KeyCode::Enter);
 
     // Should now see content from the other journal
@@ -175,20 +175,19 @@ fn test_config_reload_command() {
 
     let mut ctx = TestContext::new();
 
-    // Manually set config path for reload (simulating real config location)
-    // Note: The actual config-reload command reads from the standard config path,
+    // Note: The actual config reload command reads from the standard config path,
     // but we can verify the command doesn't crash the app
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("config-reload");
+    ctx.type_str("config reload");
     ctx.press(KeyCode::Enter);
 
-    // App should remain functional after config-reload
+    // App should remain functional after config reload
     ctx.press(KeyCode::Enter);
     ctx.type_str("Test after config reload");
     ctx.press(KeyCode::Enter);
 
     assert!(
         ctx.screen_contains("Test after config reload"),
-        "App should remain functional after :config-reload"
+        "App should remain functional after :config reload"
     );
 }

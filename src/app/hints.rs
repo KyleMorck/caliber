@@ -60,34 +60,24 @@ pub struct NegationHint {
 pub static COMMAND_HINTS: LazyLock<Vec<CommandHint>> = LazyLock::new(|| {
     vec![
         CommandHint {
-            command: "goto",
-            aliases: &["g"],
+            command: "date",
+            aliases: &["d"],
             description: "Go to date (MM/DD)",
         },
         CommandHint {
-            command: "open",
-            aliases: &["o"],
-            description: "Open journal file",
-        },
-        CommandHint {
             command: "global",
-            aliases: &[],
+            aliases: &["g"],
             description: "Switch to Global journal",
         },
         CommandHint {
             command: "project",
-            aliases: &[],
-            description: "Switch to Project journal",
+            aliases: &["p"],
+            description: "Project [init|default|path]",
         },
         CommandHint {
-            command: "init-project",
-            aliases: &[],
-            description: "Create project journal",
-        },
-        CommandHint {
-            command: "config-reload",
-            aliases: &[],
-            description: "Reload config file",
+            command: "config",
+            aliases: &["c"],
+            description: "Config [reload]",
         },
         CommandHint {
             command: "quit",

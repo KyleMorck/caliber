@@ -181,14 +181,14 @@ fn test_bracket_key_navigation() {
     );
 }
 
-/// NV-2: Goto command (:goto DATE)
+/// NV-2: Date command (:date DATE)
 #[test]
-fn test_goto_command() {
+fn test_date_command() {
     let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let mut ctx = TestContext::with_date(date);
 
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("goto 12/25/25");
+    ctx.type_str("date 12/25/25");
     ctx.press(KeyCode::Enter);
 
     assert_eq!(
@@ -198,19 +198,19 @@ fn test_goto_command() {
     );
 }
 
-/// NV-2: Goto command with short syntax (:g DATE)
+/// NV-2: Date command with short syntax (:d DATE)
 #[test]
-fn test_goto_command_short() {
+fn test_date_command_short() {
     let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let mut ctx = TestContext::with_date(date);
 
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("g 3/15");
+    ctx.type_str("d 3/15");
     ctx.press(KeyCode::Enter);
 
     assert_eq!(
         ctx.app.current_date,
         NaiveDate::from_ymd_opt(2026, 3, 15).unwrap(),
-        "Short :g syntax should work with current year default"
+        "Short :d syntax should work with current year default"
     );
 }

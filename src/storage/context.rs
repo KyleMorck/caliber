@@ -60,6 +60,15 @@ pub fn set_project_path(path: PathBuf) {
     }
 }
 
+/// Resets project path to the auto-detected default (.caliber/journal.md)
+pub fn reset_project_path() {
+    if let Ok(mut guard) = JOURNAL_CONTEXT.write()
+        && let Some(ctx) = guard.as_mut()
+    {
+        ctx.project_path = detect_project_journal();
+    }
+}
+
 /// Resets the journal context (for testing only)
 pub fn reset_journal_context() {
     if let Ok(mut guard) = JOURNAL_CONTEXT.write() {

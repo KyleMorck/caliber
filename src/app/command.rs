@@ -17,30 +17,27 @@ impl App {
                 self.save();
                 self.should_quit = true;
             }
-            "goto" | "g" => {
+            "d" | "date" => {
                 if arg.is_empty() {
-                    self.set_status("Usage: :goto YYYY/MM/DD or :goto MM/DD");
+                    self.set_status("Usage: :date MM/DD");
                 } else if let Some(date) = Self::parse_goto_date(arg) {
                     self.goto_day(date)?;
                 } else {
                     self.set_status(format!("Invalid date: {arg}"));
                 }
             }
-            "o" | "open" => {
-                if arg.is_empty() {
-                    self.set_status("Usage: :open /path/to/file.md");
+            "c" | "config" => {
+                if arg == "reload" {
+                    self.reload_config()?;
                 } else {
-                    self.open_journal(arg)?;
+                    self.set_status("Usage: :config reload");
                 }
             }
-            "config-reload" => {
-                self.reload_config()?;
-            }
-            "global" => {
+            "g" | "global" => {
                 self.switch_to_global()?;
             }
-            "project" => {
-                if arg.is_empty() {
+            "p" | "project" => match arg {
+                "" => {
                     if storage::get_project_path().is_some() {
                         self.switch_to_project()?;
                     } else if self.in_git_repo {
@@ -49,27 +46,39 @@ impl App {
                     } else {
                         self.set_status("Not in a git repository - no project journal available");
                     }
-                } else {
-                    self.open_journal(arg)?;
                 }
-            }
-            "init-project" => {
-                if storage::get_project_path().is_some() {
-                    self.set_status("Project journal already exists");
-                } else if self.in_git_repo {
-                    self.input_mode = InputMode::Confirm(ConfirmContext::CreateProjectJournal);
-                    return Ok(());
-                } else {
-                    let cwd = std::env::current_dir()?;
-                    let caliber_dir = cwd.join(".caliber");
-                    std::fs::create_dir_all(&caliber_dir)?;
-                    let journal_path = caliber_dir.join("journal.md");
-                    if !journal_path.exists() {
-                        std::fs::write(&journal_path, "")?;
+                "init" => {
+                    if storage::get_project_path().is_some() {
+                        self.set_status("Project journal already exists");
+                    } else if self.in_git_repo {
+                        self.input_mode = InputMode::Confirm(ConfirmContext::CreateProjectJournal);
+                        return Ok(());
+                    } else {
+                        let cwd = std::env::current_dir()?;
+                        let caliber_dir = cwd.join(".caliber");
+                        std::fs::create_dir_all(&caliber_dir)?;
+                        let journal_path = caliber_dir.join("journal.md");
+                        if !journal_path.exists() {
+                            std::fs::write(&journal_path, "")?;
+                        }
+                        storage::set_project_path(journal_path);
+                        self.switch_to_project()?;
+                        self.set_status("Project journal created");
                     }
-                    storage::set_project_path(journal_path);
-                    self.switch_to_project()?;
-                    self.set_status("Project journal created");
+                }
+                "default" => {
+                    storage::reset_project_path();
+                    if storage::get_project_path().is_some() {
+                        self.switch_to_project()?;
+                    } else {
+                        self.set_status("No default project journal found");
+                    }
+                }
+                path if path.ends_with(".md") => {
+                    self.open_journal(path)?;
+                }
+                _ => {
+                    self.set_status("Usage: :project [init|default|path.md]");
                 }
             }
             _ => {}

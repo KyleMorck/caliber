@@ -215,12 +215,10 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
         (
             "[Commands]",
             &[
-                (":[g]oto", "Go to date (MM/DD, MM/DD/YY, etc.)"),
-                (":[o]pen", "Open journal file"),
-                (":global", "Switch to Global journal"),
-                (":project", "Switch to Project journal"),
-                (":init-project", "Create .caliber/journal.md"),
-                (":config-reload", "Reload config file"),
+                (":[d]ate", "Go to date (MM/DD)"),
+                (":[g]lobal", "Switch to Global journal"),
+                (":[p]roject", "Manage project journal [init|default|path]"),
+                (":[c]onfig", "Manage config [reload]"),
                 (":[q]uit", "Quit"),
             ],
         ),

@@ -10,10 +10,10 @@ fn test_command_hint_completion() {
     let mut ctx = TestContext::new();
 
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("go");
+    ctx.type_str("da");
     ctx.press(KeyCode::Right);
 
-    assert_eq!(ctx.app.command_buffer.content(), "goto");
+    assert_eq!(ctx.app.command_buffer.content(), "date");
 }
 
 /// HI-2: Tag hint completion workflow
@@ -113,7 +113,7 @@ fn test_escape_clears_command_mode() {
     let mut ctx = TestContext::new();
 
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("go");
+    ctx.type_str("da");
     ctx.press(KeyCode::Esc);
 
     assert!(ctx.app.command_buffer.is_empty());

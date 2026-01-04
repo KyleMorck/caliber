@@ -290,10 +290,10 @@ impl App {
             return;
         }
         let line_idx = self.entry_indices[entry_index];
-        if let Line::Entry(entry) = &self.lines[line_idx] {
-            if !entry.content.trim().is_empty() {
-                self.last_deleted = Some((self.current_date, line_idx, entry.clone()));
-            }
+        if let Line::Entry(entry) = &self.lines[line_idx]
+            && !entry.content.trim().is_empty()
+        {
+            self.last_deleted = Some((self.current_date, line_idx, entry.clone()));
         }
         self.lines.remove(line_idx);
         self.entry_indices = Self::compute_entry_indices(&self.lines);
