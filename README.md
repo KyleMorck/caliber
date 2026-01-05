@@ -273,11 +273,22 @@ Caliber uses a markdown-compatible format:
 
 ## Configuration
 
-Config file: `~/.config/caliber/config.toml`
+**Global config:** `~/.config/caliber/config.toml`
+
+**Project config:** `.caliber/config.toml` (created with `:project init`)
+
+Project config merges over global config. HashMaps (favorite_tags, filters) merge with project values overriding matching keys. Scalars use project value if set. Global journal uses global config only.
 
 ```toml
 # Custom global journal path (default: ~/.config/caliber/global_journal.md)
 global_file = "/path/to/journal.md"
+
+# Custom date format for daily view header (default: "%m/%d/%y")
+# Uses strftime syntax: %A=weekday, %B=month, %d=day, %Y=year
+header_date_format = "%A, %B %-d"
+
+# Start with completed tasks hidden (default: false)
+hide_completed = true
 
 # Custom sort order for 's' command
 sort_order = ["uncompleted", "notes", "events", "completed"]
@@ -298,7 +309,7 @@ someday = "!tasks #someday"
 stale = "!tasks @before:-7d"
 ```
 
-Run `caliber init` to create an empty config file.
+Run `caliber init` to create an empty global config file.
 
 ## License
 

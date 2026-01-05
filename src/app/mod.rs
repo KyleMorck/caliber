@@ -259,6 +259,7 @@ impl App {
         let later_entries = storage::collect_later_entries_for_date(date, &path)?;
         let in_git_repo = storage::find_git_root().is_some();
         let cached_journal_tags = storage::collect_journal_tags(&path).unwrap_or_default();
+        let hide_completed = config.hide_completed;
 
         Ok(Self {
             current_date: date,
@@ -278,7 +279,7 @@ impl App {
             config,
             journal_context,
             in_git_repo,
-            hide_completed: false,
+            hide_completed,
             hint_state: HintContext::Inactive,
             cached_journal_tags,
         })

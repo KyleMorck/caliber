@@ -47,7 +47,16 @@ impl App {
                 }
                 "init" => {
                     if self.journal_context.project_path().is_some() {
-                        self.set_status("Project journal already exists");
+                        // Project exists - ensure config.toml exists too
+                        if let Some(root) = crate::storage::find_git_root() {
+                            let config_path = root.join(".caliber").join("config.toml");
+                            if !config_path.exists() {
+                                std::fs::write(&config_path, "")?;
+                                self.set_status("Project config created");
+                            } else {
+                                self.set_status("Project already initialized");
+                            }
+                        }
                     } else if self.in_git_repo {
                         self.input_mode = InputMode::Confirm(ConfirmContext::CreateProjectJournal);
                         return Ok(());
@@ -58,6 +67,10 @@ impl App {
                         let journal_path = caliber_dir.join("journal.md");
                         if !journal_path.exists() {
                             std::fs::write(&journal_path, "")?;
+                        }
+                        let config_path = caliber_dir.join("config.toml");
+                        if !config_path.exists() {
+                            std::fs::write(&config_path, "")?;
                         }
                         self.journal_context.set_project_path(journal_path);
                         self.switch_to_project()?;

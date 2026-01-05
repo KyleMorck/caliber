@@ -506,11 +506,13 @@ impl App {
                 source_date,
                 line_index,
             } => {
-                if let Ok(Some(new_type)) = storage::cycle_entry_type(source_date, &path, line_index)
+                if let Ok(Some(new_type)) =
+                    storage::cycle_entry_type(source_date, &path, line_index)
                     && let ViewMode::Daily(state) = &mut self.view
-                    && let Some(later_entry) = state.later_entries.iter_mut().find(|e| {
-                        e.source_date == source_date && e.line_index == line_index
-                    })
+                    && let Some(later_entry) = state
+                        .later_entries
+                        .iter_mut()
+                        .find(|e| e.source_date == source_date && e.line_index == line_index)
                 {
                     later_entry.entry_type = new_type;
                     later_entry.completed =
@@ -528,7 +530,8 @@ impl App {
                 source_date,
                 line_index,
             } => {
-                if let Ok(Some(new_type)) = storage::cycle_entry_type(source_date, &path, line_index)
+                if let Ok(Some(new_type)) =
+                    storage::cycle_entry_type(source_date, &path, line_index)
                     && let ViewMode::Filter(state) = &mut self.view
                     && let Some(filter_entry) = state.entries.get_mut(index)
                 {

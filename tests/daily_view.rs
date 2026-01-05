@@ -1,5 +1,6 @@
 mod helpers;
 
+use caliber::config::Config;
 use chrono::NaiveDate;
 use crossterm::event::KeyCode;
 use helpers::TestContext;
@@ -376,5 +377,43 @@ fn test_reorder_with_hidden_completed() {
         c_pos < a_pos,
         "C should be before A after reorder: journal={}",
         journal
+    );
+}
+
+/// DV-11: Custom header date format config
+#[test]
+fn test_header_date_format_config() {
+    let mut config = Config::default();
+    config.header_date_format = "%A, %B %d".to_string();
+    let date = NaiveDate::from_ymd_opt(2026, 1, 4).unwrap();
+    let ctx = TestContext::with_config_and_content(date, "", config);
+
+    // January 4, 2026 is a Sunday
+    assert!(
+        ctx.screen_contains("Sunday, January 04"),
+        "Header should use custom date format"
+    );
+}
+
+/// DV-12: hide_completed config on startup
+#[test]
+fn test_hide_completed_config() {
+    let mut config = Config::default();
+    config.hide_completed = true;
+    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
+    let content = "# 2026/01/15\n- [ ] Incomplete\n- [x] Complete\n";
+    let ctx = TestContext::with_config_and_content(date, content, config);
+
+    assert!(
+        ctx.screen_contains("Incomplete"),
+        "Incomplete task should be visible"
+    );
+    assert!(
+        !ctx.screen_contains("Complete"),
+        "Completed task should be hidden on startup"
+    );
+    assert!(
+        ctx.screen_contains("Hiding 1 completed"),
+        "Should show hidden count"
     );
 }

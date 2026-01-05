@@ -94,6 +94,7 @@ pub fn detect_project_journal() -> Option<PathBuf> {
 }
 
 /// Creates a project journal at .caliber/journal.md in the git root.
+/// Also creates an empty config.toml for project-specific settings.
 pub fn create_project_journal() -> io::Result<PathBuf> {
     let root = find_git_root()
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Not in a git repository"))?;
@@ -104,6 +105,11 @@ pub fn create_project_journal() -> io::Result<PathBuf> {
     let journal_path = caliber_dir.join("journal.md");
     if !journal_path.exists() {
         fs::write(&journal_path, "")?;
+    }
+
+    let config_path = caliber_dir.join("config.toml");
+    if !config_path.exists() {
+        fs::write(&config_path, "")?;
     }
 
     Ok(journal_path)

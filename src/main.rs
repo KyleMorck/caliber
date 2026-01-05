@@ -53,10 +53,7 @@ fn main() -> Result<(), io::Error> {
     }
 
     let cli_file = args.get(1).map(PathBuf::from);
-    let config = Config::load().unwrap_or_default();
-
-    let global_path = config.get_global_journal_path();
-    let (project_path, active_slot) = if let Some(path) = cli_file {
+    let (project_path, active_slot) = if let Some(path) = cli_file.clone() {
         // CLI path overrides project slot
         (
             Some(resolve_path(&path.to_string_lossy())),
@@ -69,6 +66,14 @@ fn main() -> Result<(), io::Error> {
         // No project journal, start in Global
         (None, JournalSlot::Global)
     };
+
+    // Load config appropriate for the starting journal context
+    let config = match active_slot {
+        JournalSlot::Global => Config::load_global().unwrap_or_default(),
+        JournalSlot::Project => Config::load_merged().unwrap_or_default(),
+    };
+
+    let global_path = config.get_global_journal_path();
 
     let journal_context = JournalContext::new(global_path, project_path.clone(), active_slot);
 

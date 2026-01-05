@@ -65,9 +65,7 @@ impl HintContext {
             // Show the matched command's description while typing arguments
             let exact_match: Vec<&'static Command> = COMMANDS
                 .iter()
-                .filter(|c| {
-                    c.name == first_word || c.aliases.contains(&first_word)
-                })
+                .filter(|c| c.name == first_word || c.aliases.contains(&first_word))
                 .collect();
 
             if !exact_match.is_empty() {

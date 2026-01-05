@@ -18,7 +18,10 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
 
     let mut lines = Vec::new();
 
-    let date_header = app.current_date.format("%m/%d/%y").to_string();
+    let date_header = app
+        .current_date
+        .format(&app.config.header_date_format)
+        .to_string();
     let hidden_count = app.hidden_completed_count();
     if app.hide_completed && hidden_count > 0 {
         lines.push(RatatuiLine::from(vec![

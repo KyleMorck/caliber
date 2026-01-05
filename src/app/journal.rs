@@ -27,6 +27,14 @@ impl App {
         }
         self.save();
         self.journal_context.set_active_slot(slot);
+
+        // Reload config appropriate for the journal context
+        self.config = match slot {
+            JournalSlot::Global => Config::load_global()?,
+            JournalSlot::Project => Config::load_merged()?,
+        };
+        self.hide_completed = self.config.hide_completed;
+
         let later_entries = self.load_day(Local::now().date_naive())?;
         self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), later_entries));
         self.refresh_tag_cache();
@@ -64,7 +72,11 @@ impl App {
     }
 
     pub fn reload_config(&mut self) -> io::Result<()> {
-        self.config = Config::load()?;
+        self.config = match self.active_journal() {
+            JournalSlot::Global => Config::load_global()?,
+            JournalSlot::Project => Config::load_merged()?,
+        };
+        self.hide_completed = self.config.hide_completed;
         self.set_status("Config reloaded");
         Ok(())
     }

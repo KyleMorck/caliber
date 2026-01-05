@@ -239,7 +239,12 @@ pub fn normalize_natural_dates(content: &str, today: NaiveDate) -> String {
             if let Some(date) = parse_natural_date(natural_str, today) {
                 // Only @today needs the year to avoid "always future" misinterpretation
                 let normalized = if natural_str.eq_ignore_ascii_case("today") {
-                    format!("@{}/{}/{}", date.format("%m"), date.format("%d"), date.format("%y"))
+                    format!(
+                        "@{}/{}/{}",
+                        date.format("%m"),
+                        date.format("%d"),
+                        date.format("%y")
+                    )
                 } else {
                     format!("@{}/{}", date.format("%m"), date.format("%d"))
                 };
