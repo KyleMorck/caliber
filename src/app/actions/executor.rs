@@ -58,7 +58,9 @@ impl ActionExecutor {
 
         let message = match original_desc.visibility {
             StatusVisibility::Silent => None,
-            StatusVisibility::OnUndo | StatusVisibility::Always => Some(original_desc.past_reversed),
+            StatusVisibility::OnUndo | StatusVisibility::Always => {
+                Some(original_desc.past_reversed)
+            }
         };
 
         Ok(message)
@@ -75,7 +77,9 @@ impl ActionExecutor {
 
         let message = match original_desc.visibility {
             StatusVisibility::Silent => None,
-            StatusVisibility::OnUndo | StatusVisibility::Always => Some(original_desc.past_reversed),
+            StatusVisibility::OnUndo | StatusVisibility::Always => {
+                Some(original_desc.past_reversed)
+            }
         };
 
         Ok(message)

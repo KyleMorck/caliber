@@ -73,22 +73,23 @@ impl Action for UncreateEntry {
         }
 
         if self.target.is_filter_quick_add
-            && let ViewMode::Filter(state) = &mut app.view {
-                // Remove from filter entries and adjust indices
-                state.entries.retain(|e| {
-                    !(e.source_date == self.target.date && e.line_index == self.target.line_index)
-                });
-                for entry in &mut state.entries {
-                    if entry.source_date == self.target.date
-                        && entry.line_index > self.target.line_index
-                    {
-                        entry.line_index -= 1;
-                    }
-                }
-                if !state.entries.is_empty() && state.selected >= state.entries.len() {
-                    state.selected = state.entries.len() - 1;
+            && let ViewMode::Filter(state) = &mut app.view
+        {
+            // Remove from filter entries and adjust indices
+            state.entries.retain(|e| {
+                !(e.source_date == self.target.date && e.line_index == self.target.line_index)
+            });
+            for entry in &mut state.entries {
+                if entry.source_date == self.target.date
+                    && entry.line_index > self.target.line_index
+                {
+                    entry.line_index -= 1;
                 }
             }
+            if !state.entries.is_empty() && state.selected >= state.entries.len() {
+                state.selected = state.entries.len() - 1;
+            }
+        }
 
         // Return action to redo the create
         Ok(Box::new(RecreateEntry::new(self.target.clone())))

@@ -341,7 +341,10 @@ fn test_batch_delete_undo_redo() {
     // Undo
     ctx.press(KeyCode::Char('u'));
     let journal = ctx.read_journal();
-    assert!(journal.contains("Delete Me"), "Should be restored after undo");
+    assert!(
+        journal.contains("Delete Me"),
+        "Should be restored after undo"
+    );
 
     // Redo (Shift+U)
     ctx.press(KeyCode::Char('U'));

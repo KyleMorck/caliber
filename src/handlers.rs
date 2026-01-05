@@ -49,8 +49,8 @@ pub fn handle_help_key(app: &mut App, key: KeyCode) {
 pub fn handle_command_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match key.code {
         KeyCode::Enter => {
-            let did_autocomplete = !matches!(app.hint_state, HintContext::Inactive)
-                && app.accept_hint();
+            let did_autocomplete =
+                !matches!(app.hint_state, HintContext::Inactive) && app.accept_hint();
 
             if did_autocomplete && !app.command_is_complete() {
                 if !app.input_needs_continuation() {

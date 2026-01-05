@@ -86,7 +86,10 @@ impl Action for RedoEdit {
     fn execute(&mut self, app: &mut App) -> io::Result<Box<dyn Action>> {
         // Restore new content
         let mut redo_target = self.target.clone();
-        std::mem::swap(&mut redo_target.original_content, &mut redo_target.new_content);
+        std::mem::swap(
+            &mut redo_target.original_content,
+            &mut redo_target.new_content,
+        );
         set_entry_content_raw(app, &redo_target)?;
 
         // Return action to undo again
@@ -136,9 +139,10 @@ fn set_entry_content_raw(app: &mut App, target: &EditTarget) -> io::Result<()> {
             })?;
 
             if let ViewMode::Filter(state) = &mut app.view
-                && let Some(filter_entry) = state.entries.get_mut(*index) {
-                    filter_entry.content = target.original_content.clone();
-                }
+                && let Some(filter_entry) = state.entries.get_mut(*index)
+            {
+                filter_entry.content = target.original_content.clone();
+            }
 
             if *source_date == app.current_date {
                 app.reload_current_day()?;

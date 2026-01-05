@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io;
 
 use chrono::NaiveDate;
@@ -7,11 +8,7 @@ use super::types::{Action, ActionDescription};
 use crate::storage::{self, Entry, EntryType, FilterEntry};
 
 fn pluralize(count: usize) -> &'static str {
-    if count == 1 {
-        "entry"
-    } else {
-        "entries"
-    }
+    if count == 1 { "entry" } else { "entries" }
 }
 
 pub struct DeleteEntries {
@@ -82,8 +79,7 @@ impl Action for RestoreEntries {
         let mut delete_targets = Vec::new();
 
         // Sort by line index ascending for correct insertion order
-        self.entries
-            .sort_by_key(|(_, line_idx, _)| *line_idx);
+        self.entries.sort_by_key(|(_, line_idx, _)| *line_idx);
 
         match &app.view {
             ViewMode::Daily(_) => {
@@ -140,8 +136,7 @@ impl Action for RestoreEntries {
                 let path = app.active_path().to_path_buf();
 
                 // Group entries by date
-                let mut entries_by_date: std::collections::HashMap<NaiveDate, Vec<(usize, Entry)>> =
-                    std::collections::HashMap::new();
+                let mut entries_by_date: HashMap<NaiveDate, Vec<(usize, Entry)>> = HashMap::new();
                 for (date, line_idx, entry) in &self.entries {
                     entries_by_date
                         .entry(*date)
@@ -154,14 +149,6 @@ impl Action for RestoreEntries {
                         for (i, (line_idx, entry)) in date_entries.into_iter().enumerate() {
                             let insert_idx = (line_idx + i).min(lines.len());
 
-                            delete_targets.push(DeleteTarget::Filter {
-                                index: 0, // Will be updated
-                                source_date: date,
-                                line_index: insert_idx,
-                                entry_type: entry.entry_type.clone(),
-                                content: entry.content.clone(),
-                            });
-
                             let filter_entry = FilterEntry {
                                 source_date: date,
                                 line_index: insert_idx,
@@ -172,11 +159,20 @@ impl Action for RestoreEntries {
                                     EntryType::Task { completed: true }
                                 ),
                             };
-                            lines.insert(insert_idx, Line::Entry(entry));
+                            lines.insert(insert_idx, Line::Entry(entry.clone()));
 
                             if let ViewMode::Filter(state) = &mut app.view {
+                                let filter_index = state.entries.len();
                                 state.entries.push(filter_entry);
-                                state.selected = state.entries.len() - 1;
+                                state.selected = filter_index;
+
+                                delete_targets.push(DeleteTarget::Filter {
+                                    index: filter_index,
+                                    source_date: date,
+                                    line_index: insert_idx,
+                                    entry_type: entry.entry_type.clone(),
+                                    content: entry.content.clone(),
+                                });
                             }
                         }
                         let _ = storage::save_day_lines(date, &path, &lines);
@@ -204,7 +200,10 @@ impl Action for RestoreEntries {
 }
 
 /// Execute a single delete without modifying undo state
-fn execute_delete_raw(app: &mut App, target: &DeleteTarget) -> io::Result<(NaiveDate, usize, Entry)> {
+fn execute_delete_raw(
+    app: &mut App,
+    target: &DeleteTarget,
+) -> io::Result<(NaiveDate, usize, Entry)> {
     let path = app.active_path().to_path_buf();
 
     match target {

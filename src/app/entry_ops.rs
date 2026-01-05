@@ -425,7 +425,11 @@ impl App {
 
         let path = self.active_path().to_path_buf();
         let mut lines = storage::load_day_lines(date, &path)?;
-        let insert_pos = if lines.is_empty() { 0 } else { insert_after + 1 };
+        let insert_pos = if lines.is_empty() {
+            0
+        } else {
+            insert_after + 1
+        };
         for (i, entry) in entries.iter().enumerate() {
             lines.insert(insert_pos + i, Line::Entry(entry.clone()));
         }

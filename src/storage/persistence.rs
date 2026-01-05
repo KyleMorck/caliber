@@ -82,6 +82,24 @@ pub fn cycle_entry_type(
     })
 }
 
+/// Gets the entry type at a specific line index for a given date.
+/// Returns the default task type if the entry doesn't exist.
+#[must_use]
+pub fn get_entry_type(date: NaiveDate, path: &Path, line_index: usize) -> EntryType {
+    load_day_lines(date, path)
+        .ok()
+        .and_then(|lines| {
+            lines.get(line_index).and_then(|line| {
+                if let Line::Entry(entry) = line {
+                    Some(entry.entry_type.clone())
+                } else {
+                    None
+                }
+            })
+        })
+        .unwrap_or(EntryType::Task { completed: false })
+}
+
 /// Deletes an entry at a specific line index for a given date.
 pub fn delete_entry(date: NaiveDate, path: &Path, line_index: usize) -> io::Result<()> {
     let mut lines = load_day_lines(date, path)?;

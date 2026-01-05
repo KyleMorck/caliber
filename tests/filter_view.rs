@@ -451,6 +451,59 @@ fn test_favorite_tag_quick_filter() {
     );
 }
 
+/// FV-9b: Delete from filter with undo/redo
+#[test]
+fn test_delete_from_filter_undo_redo() {
+    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
+    let content = "# 2026/01/15\n- [ ] Entry A\n- [ ] Entry B\n- [ ] Entry C\n";
+    let mut ctx = TestContext::with_journal_content(date, content);
+
+    // Enter filter view
+    ctx.press(KeyCode::Char('/'));
+    ctx.type_str("Entry");
+    ctx.press(KeyCode::Enter);
+
+    // Verify all entries visible
+    assert!(ctx.screen_contains("Entry A"), "Entry A should appear");
+    assert!(ctx.screen_contains("Entry B"), "Entry B should appear");
+    assert!(ctx.screen_contains("Entry C"), "Entry C should appear");
+
+    // Select Entry B (second in list) and delete
+    ctx.press(KeyCode::Char('k')); // Move up from C to B
+    ctx.press(KeyCode::Char('d'));
+
+    // Verify B is deleted
+    assert!(ctx.screen_contains("Entry A"), "Entry A should remain");
+    assert!(!ctx.screen_contains("Entry B"), "Entry B should be deleted");
+    assert!(ctx.screen_contains("Entry C"), "Entry C should remain");
+
+    // Undo the delete
+    ctx.press(KeyCode::Char('u'));
+
+    // Verify B is restored
+    assert!(
+        ctx.screen_contains("Entry B"),
+        "Entry B should be restored after undo"
+    );
+
+    // Redo the delete
+    ctx.press(KeyCode::Char('U'));
+
+    // Verify B is deleted again
+    assert!(
+        !ctx.screen_contains("Entry B"),
+        "Entry B should be deleted after redo"
+    );
+
+    // Undo again and verify persistence
+    ctx.press(KeyCode::Char('u'));
+    let journal = ctx.read_journal();
+    assert!(
+        journal.contains("Entry B"),
+        "Entry B should be persisted after final undo"
+    );
+}
+
 /// FV-14: Saved filter expansion ($name syntax)
 #[test]
 fn test_saved_filter_expansion() {

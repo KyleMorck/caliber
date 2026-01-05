@@ -208,19 +208,7 @@ impl App {
         if new_content.trim().is_empty() {
             let _ = storage::delete_entry(date, &path, line_index);
         } else {
-            // Get entry type before updating
-            let entry_type = storage::load_day_lines(date, &path)
-                .ok()
-                .and_then(|lines| {
-                    lines.get(line_index).and_then(|line| {
-                        if let Line::Entry(entry) = line {
-                            Some(entry.entry_type.clone())
-                        } else {
-                            None
-                        }
-                    })
-                })
-                .unwrap_or(EntryType::Task { completed: false });
+            let entry_type = storage::get_entry_type(date, &path, line_index);
 
             match storage::update_entry_content(date, &path, line_index, new_content.clone()) {
                 Ok(false) => {
@@ -307,19 +295,7 @@ impl App {
         if new_content.trim().is_empty() {
             let _ = storage::delete_entry(source_date, &path, line_index);
         } else {
-            // Get entry type before updating
-            let entry_type = storage::load_day_lines(source_date, &path)
-                .ok()
-                .and_then(|lines| {
-                    lines.get(line_index).and_then(|line| {
-                        if let Line::Entry(entry) = line {
-                            Some(entry.entry_type.clone())
-                        } else {
-                            None
-                        }
-                    })
-                })
-                .unwrap_or(EntryType::Task { completed: false });
+            let entry_type = storage::get_entry_type(source_date, &path, line_index);
 
             match storage::update_entry_content(source_date, &path, line_index, new_content.clone())
             {
@@ -349,9 +325,8 @@ impl App {
         }
 
         if let ViewMode::Daily(state) = &mut self.view {
-            state.later_entries =
-                storage::collect_later_entries_for_date(self.current_date, &path)
-                    .unwrap_or_default();
+            state.later_entries = storage::collect_later_entries_for_date(self.current_date, &path)
+                .unwrap_or_default();
         }
     }
 
