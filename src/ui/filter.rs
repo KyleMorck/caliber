@@ -8,7 +8,7 @@ use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::EntryType;
 
 use super::shared::{
-    completed_style, format_date_suffix, style_content, truncate_with_tags, wrap_text,
+    entry_style, format_date_suffix, style_content, truncate_with_tags, wrap_text,
 };
 
 pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
@@ -37,7 +37,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
         let is_selected = idx == state.selected && !is_quick_adding;
         let is_editing_this = is_selected && is_editing;
 
-        let content_style = completed_style(filter_entry.completed);
+        let content_style = entry_style(&filter_entry.entry_type);
 
         let text = if is_editing_this {
             if let Some(ref buffer) = app.edit_buffer {
@@ -96,13 +96,10 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                 } else {
                     Span::styled("→", Style::default().fg(Color::Cyan))
                 };
+                let muted = filter_entry.completed;
                 let mut spans = vec![cursor_indicator];
                 spans.push(Span::styled(sel_prefix.to_string(), content_style));
-                spans.extend(style_content(
-                    &display_text,
-                    content_style,
-                    filter_entry.completed,
-                ));
+                spans.extend(style_content(&display_text, content_style, muted));
                 spans.push(Span::styled(
                     date_suffix,
                     Style::default().fg(Color::DarkGray),
@@ -131,12 +128,9 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
             };
             let rest_of_prefix: String = prefix.chars().skip(1).collect();
 
+            let muted = filter_entry.completed;
             let mut spans = vec![first_char, Span::styled(rest_of_prefix, content_style)];
-            spans.extend(style_content(
-                &display_text,
-                content_style,
-                filter_entry.completed,
-            ));
+            spans.extend(style_content(&display_text, content_style, muted));
             spans.push(Span::styled(
                 date_suffix,
                 Style::default().fg(Color::DarkGray),

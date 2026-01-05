@@ -8,14 +8,14 @@ use ratatui::{
 use regex::Regex;
 use unicode_width::UnicodeWidthStr;
 
-use crate::storage::{LATER_DATE_REGEX, NATURAL_DATE_REGEX, TAG_REGEX};
+use crate::storage::{EntryType, LATER_DATE_REGEX, NATURAL_DATE_REGEX, TAG_REGEX};
 
 #[must_use]
-pub fn completed_style(completed: bool) -> Style {
-    if completed {
-        Style::default().fg(Color::DarkGray)
-    } else {
-        Style::default()
+pub fn entry_style(entry_type: &EntryType) -> Style {
+    match entry_type {
+        EntryType::Task { completed: true } => Style::default().fg(Color::DarkGray),
+        EntryType::Event => Style::default().add_modifier(ratatui::style::Modifier::ITALIC),
+        _ => Style::default(),
     }
 }
 
