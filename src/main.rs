@@ -333,8 +333,35 @@ fn run_app<B: ratatui::backend::Backend>(
             }
 
             #[allow(clippy::cast_possible_truncation)]
-            let content = Paragraph::new(lines).scroll((app.scroll_offset() as u16, 0));
+            let content = Paragraph::new(lines.clone()).scroll((app.scroll_offset() as u16, 0));
             f.render_widget(content, content_area);
+
+            // Render scroll indicator on bottom border if content is scrollable
+            let total_lines = lines.len();
+            let scroll_offset = app.scroll_offset();
+            let can_scroll_up = scroll_offset > 0;
+            let can_scroll_down = scroll_offset + visible_height < total_lines;
+
+            if can_scroll_up || can_scroll_down {
+                let arrows = match (can_scroll_up, can_scroll_down) {
+                    (true, true) => " ▲▼ scroll ",
+                    (true, false) => " ▲ scroll ",
+                    (false, true) => " ▼ scroll ",
+                    (false, false) => "",
+                };
+                let indicator_width = arrows.width() as u16;
+                let indicator_area = ratatui::layout::Rect {
+                    x: chunks[0].x + chunks[0].width.saturating_sub(indicator_width + 1),
+                    y: chunks[0].y + chunks[0].height.saturating_sub(1),
+                    width: indicator_width,
+                    height: 1,
+                };
+                let scroll_indicator = Paragraph::new(Span::styled(
+                    arrows,
+                    Style::default().fg(Color::DarkGray),
+                ));
+                f.render_widget(scroll_indicator, indicator_area);
+            }
 
             if let Some(ref msg) = app.status_message {
                 let msg_width = msg.len() as u16 + 2;
