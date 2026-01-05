@@ -14,11 +14,11 @@ pub use entries::{
     CrossDayEntry, Entry, EntryType, FilterEntry, LaterEntry, Line, parse_lines, serialize_lines,
 };
 
-// Re-export persistence functions
+// Re-export persistence functions and types
 pub use persistence::{
-    cycle_entry_type, delete_entry, extract_day_content, load_day, load_day_lines, load_journal,
-    mutate_entry, parse_day_header, save_day, save_day_lines, save_journal, toggle_entry_complete,
-    update_day_content, update_entry_content,
+    DayInfo, cycle_entry_type, delete_entry, extract_day_content, load_day, load_day_lines,
+    load_journal, mutate_entry, parse_day_header, save_day, save_day_lines, save_journal,
+    scan_days_in_range, toggle_entry_complete, update_day_content, update_entry_content,
 };
 
 // Re-export filter types and functions

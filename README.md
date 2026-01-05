@@ -145,6 +145,7 @@ The entry will appear in the "Later" section when you view that date.
 | `/` | Filter mode |
 | `:` | Command mode |
 | `?` | Show help |
+| `\` | Open datepicker |
 
 
 ### Filter Mode
@@ -170,6 +171,7 @@ The entry will appear in the "Later" section when you view that date.
 | `/` | Filter mode |
 | `:` | Command mode |
 | `?` | Show help |
+| `\` | Open datepicker |
 | `Enter` | Quick add to today |
 | `r` | Refresh results |
 | `Esc`/`Tab` | Exit to daily |
@@ -197,6 +199,25 @@ Reorder entries within a day.
 | `Esc` | Cancel |
 
 
+### Date Mode
+
+Open a calendar picker to quickly jump to any date. Press `\` to open.
+
+| Key | Action |
+|-----|--------|
+| `h`/`←` | Previous day |
+| `l`/`→` | Next day |
+| `k`/`↑` | Previous week |
+| `j`/`↓` | Next week |
+| `[` | Previous month |
+| `]` | Next month |
+| `Y` | Previous year |
+| `y` | Next year |
+| `t` | Jump to today |
+| `Enter` | Navigate to date |
+| `\`/`Esc` | Close datepicker |
+
+
 ### Text Editing
 
 These shortcuts work in all text input modes (Edit, Command, and Filter query):
@@ -221,7 +242,6 @@ These shortcuts work in all text input modes (Edit, Command, and Filter query):
 
 | Key | Action |
 |-----|--------|
-| `:[d]ate` | Go to date (MM/DD) |
 | `:[o]pen` | Open config or journal in $EDITOR |
 | `:[q]uit` | Quit application |
 

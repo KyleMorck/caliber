@@ -45,6 +45,9 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 FooterMode::Selection,
             )
         }
+        (_, InputMode::Datepicker(_)) => {
+            build_footer_line(" DATE ", Color::Cyan, FooterMode::Datepicker)
+        }
         (ViewMode::Daily(_), InputMode::Normal) => {
             build_footer_line(" DAILY ", Color::Cyan, FooterMode::NormalDaily)
         }

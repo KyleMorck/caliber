@@ -276,7 +276,7 @@ modes = ["shared_normal"]
 help_sections = ["daily", "filter"]
 short_text = "Commands"
 short_description = "Command mode"
-long_description = "Enter command mode for :date, :quit, etc."
+long_description = "Enter command mode for :quit, :open, etc."
 
 [[keys]]
 id = "show_help"
@@ -287,6 +287,15 @@ footer = ["normal_daily", "normal_filter"]
 short_text = "Help"
 short_description = "Show help"
 long_description = "Display the help overlay with all keybindings"
+
+[[keys]]
+id = "open_datepicker"
+key = "\\"
+modes = ["shared_normal"]
+help_sections = ["daily", "filter"]
+short_text = "Calendar"
+short_description = "Open datepicker"
+long_description = "Open the calendar datepicker to navigate to a specific date"
 
 # =============================================================================
 # Filter Normal Mode
@@ -680,3 +689,131 @@ help_sections = ["text_editing"]
 short_text = "Del end"
 short_description = "Delete to end"
 long_description = "Delete from cursor to end of line"
+
+# =============================================================================
+# Datepicker Mode
+# =============================================================================
+
+[[keys]]
+id = "datepicker_move_left"
+key = "h"
+alt_key = "←"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Left"
+short_description = "Previous day"
+long_description = "Move selection to the previous day"
+
+[[keys]]
+id = "datepicker_move_right"
+key = "l"
+alt_key = "→"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Right"
+short_description = "Next day"
+long_description = "Move selection to the next day"
+
+[[keys]]
+id = "datepicker_move_up"
+key = "k"
+alt_key = "↑"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Up"
+short_description = "Previous week"
+long_description = "Move selection up one week"
+
+[[keys]]
+id = "datepicker_move_down"
+key = "j"
+alt_key = "↓"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Down"
+short_description = "Next week"
+long_description = "Move selection down one week"
+
+[[keys]]
+id = "datepicker_prev_month"
+key = "["
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "← Month"
+short_description = "Previous month"
+long_description = "Navigate to the previous month"
+
+[[keys]]
+id = "datepicker_next_month"
+key = "]"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Month →"
+short_description = "Next month"
+long_description = "Navigate to the next month"
+
+[[keys]]
+id = "datepicker_prev_year"
+key = "Y"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Prev year"
+short_description = "Previous year"
+long_description = "Navigate to the previous year"
+
+[[keys]]
+id = "datepicker_next_year"
+key = "y"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Next year"
+short_description = "Next year"
+long_description = "Navigate to the next year"
+
+[[keys]]
+id = "datepicker_today"
+key = "t"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Today"
+short_description = "Jump to today"
+long_description = "Jump to today's date in the calendar"
+
+[[keys]]
+id = "datepicker_confirm"
+key = "Enter"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Go"
+short_description = "Navigate to date"
+long_description = "Navigate to the selected date"
+
+[[keys]]
+id = "datepicker_cancel"
+key = "\\"
+alt_key = "Esc"
+modes = ["datepicker"]
+help_sections = ["date"]
+short_text = "Cancel"
+short_description = "Close datepicker"
+long_description = "Close datepicker without navigating"
+
+# Footer-only entry for compact datepicker popup (not shown in help)
+[[keys]]
+id = "datepicker_footer_nav_month"
+key = "[]"
+modes = ["datepicker"]
+footer = ["datepicker"]
+short_text = "Month"
+short_description = "Month"
+long_description = "Navigate months"
+
+[[keys]]
+id = "datepicker_footer_nav_year"
+key = "y/Y"
+modes = ["datepicker"]
+footer = ["datepicker"]
+short_text = "Year"
+short_description = "Year"
+long_description = "Navigate years"
+

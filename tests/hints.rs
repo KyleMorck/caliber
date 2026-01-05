@@ -10,10 +10,10 @@ fn test_command_hint_completion() {
     let mut ctx = TestContext::new();
 
     ctx.press(KeyCode::Char(':'));
-    ctx.type_str("da");
+    ctx.type_str("qu");
     ctx.press(KeyCode::Right);
 
-    assert_eq!(ctx.app.command_buffer.content(), "date");
+    assert_eq!(ctx.app.command_buffer.content(), "quit");
 }
 
 /// HI-2: Tag hint completion workflow

@@ -222,7 +222,7 @@ fn get_entry_indicator(
     };
 
     if is_cursor {
-        if app.input_mode == InputMode::Reorder {
+        if matches!(app.input_mode, InputMode::Reorder) {
             Span::styled("↕", Style::default().fg(Color::Yellow))
         } else if matches!(app.input_mode, InputMode::Selection(_)) {
             if is_selected_in_selection {

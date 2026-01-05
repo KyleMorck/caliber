@@ -15,6 +15,7 @@ struct KeyDef {
     key: String,
     alt_key: Option<String>,
     modes: Vec<String>,
+    #[serde(default)]
     help_sections: Vec<String>,
     footer: Option<Vec<String>>,
     short_text: String,
@@ -68,6 +69,7 @@ const VALID_HELP_SECTIONS: &[&str] = &[
     "edit",
     "reorder",
     "selection",
+    "date",
     "text_editing",
     "commands",
     "filters",
@@ -80,6 +82,7 @@ const VALID_FOOTER_MODES: &[&str] = &[
     "edit",
     "reorder",
     "selection",
+    "datepicker",
 ];
 
 fn to_pascal_case(s: &str) -> String {
@@ -103,9 +106,12 @@ fn validate_keys(keys: &[KeyDef]) {
             panic!("Duplicate key ID: {}", key.id);
         }
 
-        // Validate help_sections
-        if key.help_sections.is_empty() {
-            panic!("Key '{}' must have at least one help_section", key.id);
+        // Validate help_sections (footer-only keys may have none)
+        if key.help_sections.is_empty() && key.footer.is_none() {
+            panic!(
+                "Key '{}' must have at least one help_section or footer",
+                key.id
+            );
         }
         for section in &key.help_sections {
             if !VALID_HELP_SECTIONS.contains(&section.as_str()) {
@@ -218,7 +224,7 @@ fn generate_keys_code(keys: &[KeyDef]) -> String {
             .map(|m| format!("KeyMode::{}", to_pascal_case(m)))
             .collect();
         let alt_key = match &key.alt_key {
-            Some(ak) => format!("Some(\"{}\")", ak),
+            Some(ak) => format!("Some(r#\"{}\"#)", ak),
             None => "None".to_string(),
         };
         let help_sections_str: Vec<String> = key
@@ -236,7 +242,7 @@ fn generate_keys_code(keys: &[KeyDef]) -> String {
             })
             .unwrap_or_default();
         code.push_str(&format!(
-            "    KeyAction {{\n        id: KeyActionId::{},\n        key: \"{}\",\n        alt_key: {},\n        modes: &[{}],\n        help_sections: &[{}],\n        footer_modes: &[{}],\n        short_text: \"{}\",\n        short_description: \"{}\",\n        long_description: \"{}\",\n    }},\n",
+            "    KeyAction {{\n        id: KeyActionId::{},\n        key: r#\"{}\"#,\n        alt_key: {},\n        modes: &[{}],\n        help_sections: &[{}],\n        footer_modes: &[{}],\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
             to_pascal_case(&key.id),
             key.key,
             alt_key,
@@ -301,9 +307,13 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
     // Generate COMMANDS static
     code.push_str("pub static COMMANDS: &[Command] = &[\n");
     for cmd in commands {
-        let aliases_str: Vec<String> = cmd.aliases.iter().map(|a| format!("\"{}\"", a)).collect();
+        let aliases_str: Vec<String> = cmd
+            .aliases
+            .iter()
+            .map(|a| format!("r#\"{}\"#", a))
+            .collect();
         let args = match &cmd.args {
-            Some(a) => format!("Some(\"{}\")", a),
+            Some(a) => format!("Some(r#\"{}\"#)", a),
             None => "None".to_string(),
         };
         let subargs = match &cmd.subargs {
@@ -312,7 +322,7 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
                     .iter()
                     .map(|s| {
                         let opts: Vec<String> =
-                            s.options.iter().map(|o| format!("\"{}\"", o)).collect();
+                            s.options.iter().map(|o| format!("r#\"{}\"#", o)).collect();
                         format!("SubArg {{ options: &[{}] }}", opts.join(", "))
                     })
                     .collect();
@@ -321,7 +331,7 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
             None => "&[]".to_string(),
         };
         code.push_str(&format!(
-            "    Command {{\n        name: \"{}\",\n        aliases: &[{}],\n        args: {},\n        subargs: {},\n        key: \"{}\",\n        short_text: \"{}\",\n        short_description: \"{}\",\n        long_description: \"{}\",\n    }},\n",
+            "    Command {{\n        name: r#\"{}\"#,\n        aliases: &[{}],\n        args: {},\n        subargs: {},\n        key: r#\"{}\"#,\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
             cmd.name,
             aliases_str.join(", "),
             args,
@@ -388,11 +398,11 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
         let aliases_str: Vec<String> = filter
             .aliases
             .iter()
-            .map(|a| format!("\"{}\"", a))
+            .map(|a| format!("r#\"{}\"#", a))
             .collect();
         let display = filter.display.as_deref().unwrap_or(&filter.syntax);
         code.push_str(&format!(
-            "    FilterSyntax {{\n        syntax: \"{}\",\n        display: \"{}\",\n        aliases: &[{}],\n        category: FilterCategory::{},\n        short_text: \"{}\",\n        short_description: \"{}\",\n        long_description: \"{}\",\n    }},\n",
+            "    FilterSyntax {{\n        syntax: r#\"{}\"#,\n        display: r#\"{}\"#,\n        aliases: &[{}],\n        category: FilterCategory::{},\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
             filter.syntax,
             display,
             aliases_str.join(", "),
@@ -563,6 +573,7 @@ fn generate_readme(
     let daily_table = generate_daily_keys_table(keys);
     let reorder_table = generate_keys_table_by_section(keys, "reorder");
     let edit_table = generate_keys_table_by_section(keys, "edit");
+    let date_table = generate_keys_table_by_section(keys, "date");
     let text_editing_table = generate_keys_table_by_section(keys, "text_editing");
     let filter_table = generate_filter_view_table(keys);
     let commands_table = generate_commands_table(commands);
@@ -573,6 +584,7 @@ fn generate_readme(
         .replace("<!-- GENERATED:DAILY_KEYS -->", &daily_table)
         .replace("<!-- GENERATED:REORDER_KEYS -->", &reorder_table)
         .replace("<!-- GENERATED:EDIT_KEYS -->", &edit_table)
+        .replace("<!-- GENERATED:DATE_KEYS -->", &date_table)
         .replace("<!-- GENERATED:TEXT_EDITING_KEYS -->", &text_editing_table)
         .replace("<!-- GENERATED:FILTER_KEYS -->", &filter_table)
         .replace("<!-- GENERATED:COMMANDS -->", &commands_table)

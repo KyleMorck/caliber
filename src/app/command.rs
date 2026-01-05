@@ -27,15 +27,6 @@ impl App {
                 self.save();
                 self.should_quit = true;
             }
-            "d" | "date" => {
-                if arg.is_empty() {
-                    self.set_status("Usage: :date MM/DD");
-                } else if let Some(date) = Self::parse_goto_date(arg) {
-                    self.goto_day(date)?;
-                } else {
-                    self.set_status(format!("Invalid date: {arg}"));
-                }
-            }
             "o" | "open" => {
                 self.handle_open_command(arg)?;
             }

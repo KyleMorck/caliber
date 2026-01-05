@@ -93,6 +93,10 @@ pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
             app.enter_filter_input();
             return Ok(());
         }
+        KeyCode::Char('\\') => {
+            app.open_datepicker();
+            return Ok(());
+        }
         KeyCode::Char('i') => {
             app.edit_current_entry();
             return Ok(());
@@ -464,6 +468,31 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
         KeyCode::BackTab => {
             app.cycle_selected_entry_types()?;
         }
+        _ => {}
+    }
+    Ok(())
+}
+
+pub fn handle_datepicker_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
+    let KeyEvent { code, .. } = key;
+
+    match code {
+        // Day navigation
+        KeyCode::Left | KeyCode::Char('h') => app.datepicker_move(-1, 0),
+        KeyCode::Right | KeyCode::Char('l') => app.datepicker_move(1, 0),
+        KeyCode::Up | KeyCode::Char('k') => app.datepicker_move(0, -1),
+        KeyCode::Down | KeyCode::Char('j') => app.datepicker_move(0, 1),
+        // Month navigation
+        KeyCode::Char('[') => app.datepicker_prev_month(),
+        KeyCode::Char(']') => app.datepicker_next_month(),
+        // Year navigation
+        KeyCode::Char('y') => app.datepicker_next_year(),
+        KeyCode::Char('Y') => app.datepicker_prev_year(),
+        // Jump to today
+        KeyCode::Char('t') => app.datepicker_goto_today(),
+        // Confirm/Cancel
+        KeyCode::Enter => app.confirm_datepicker()?,
+        KeyCode::Esc | KeyCode::Char('\\') => app.close_datepicker(),
         _ => {}
     }
     Ok(())

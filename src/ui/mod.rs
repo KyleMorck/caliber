@@ -1,4 +1,5 @@
 mod daily;
+mod datepicker;
 mod filter;
 mod footer;
 mod help;
@@ -7,6 +8,7 @@ mod scroll;
 mod shared;
 
 pub use daily::render_daily_view;
+pub use datepicker::render_datepicker;
 pub use filter::render_filter_view;
 pub use footer::{centered_rect, render_footer};
 pub use help::{get_help_total_lines, render_help_content};

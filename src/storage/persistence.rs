@@ -1,8 +1,17 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::Path;
 
 use chrono::NaiveDate;
+
+/// Information about a day's content for calendar display.
+#[derive(Debug, Clone, Default)]
+pub struct DayInfo {
+    pub has_entries: bool,
+    pub has_incomplete_tasks: bool,
+    pub has_events: bool,
+}
 
 use super::entries::{Entry, EntryType, Line, parse_lines, serialize_lines};
 
@@ -266,4 +275,60 @@ pub fn save_day(date: NaiveDate, path: &Path, content: &str) -> io::Result<()> {
     let journal = load_journal(path)?;
     let updated = update_day_content(&journal, date, content);
     save_journal(path, &updated)
+}
+
+/// Scans journal for day info within a date range (inclusive).
+/// Returns a map of dates to their content info for calendar display.
+pub fn scan_days_in_range(
+    start: NaiveDate,
+    end: NaiveDate,
+    path: &Path,
+) -> io::Result<HashMap<NaiveDate, DayInfo>> {
+    let journal = load_journal(path)?;
+    let mut result = HashMap::new();
+    let mut current_date: Option<NaiveDate> = None;
+    let mut current_info = DayInfo::default();
+
+    for line in journal.lines() {
+        if let Some(date) = parse_day_header(line) {
+            // Save previous day if in range
+            if let Some(prev_date) = current_date
+                && prev_date >= start
+                && prev_date <= end
+                && current_info.has_entries
+            {
+                result.insert(prev_date, current_info);
+            }
+            current_date = Some(date);
+            current_info = DayInfo::default();
+            continue;
+        }
+
+        if current_date.is_some() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("- [ ] ") {
+                current_info.has_entries = true;
+                current_info.has_incomplete_tasks = true;
+            } else if trimmed.starts_with("* ") {
+                current_info.has_entries = true;
+                current_info.has_events = true;
+            } else if trimmed.starts_with("- [x] ")
+                || trimmed.starts_with("- [X] ")
+                || (trimmed.starts_with("- ") && !trimmed.starts_with("- ["))
+            {
+                current_info.has_entries = true;
+            }
+        }
+    }
+
+    // Save last day if in range
+    if let Some(date) = current_date
+        && date >= start
+        && date <= end
+        && current_info.has_entries
+    {
+        result.insert(date, current_info);
+    }
+
+    Ok(result)
 }

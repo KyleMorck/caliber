@@ -313,6 +313,7 @@ impl App {
         self.reset_daily_view(date)?;
         self.edit_buffer = None;
         self.input_mode = InputMode::Normal;
+        self.last_daily_date = date;
 
         Ok(())
     }
@@ -333,13 +334,5 @@ impl App {
 
     pub fn goto_today(&mut self) -> io::Result<()> {
         self.goto_day(Local::now().date_naive())
-    }
-
-    /// Parses a date string for the :goto command.
-    /// Supports natural language (tomorrow, yesterday, next-mon, 3d, -3d) and
-    /// standard formats (YYYY/MM/DD, MM/DD/YYYY, MM/DD/YY, MM/DD).
-    #[must_use]
-    pub fn parse_goto_date(input: &str) -> Option<NaiveDate> {
-        storage::parse_natural_date(input, Local::now().date_naive())
     }
 }

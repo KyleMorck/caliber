@@ -51,6 +51,7 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
         (HelpSection::Edit, "[Edit Mode]"),
         (HelpSection::Reorder, "[Reorder Mode]"),
         (HelpSection::Selection, "[Selection Mode]"),
+        (HelpSection::Date, "[Date Mode]"),
         (HelpSection::TextEditing, "[Text Editing]"),
     ];
 

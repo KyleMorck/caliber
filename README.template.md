@@ -130,6 +130,12 @@ Reorder entries within a day.
 
 <!-- GENERATED:REORDER_KEYS -->
 
+### Date Mode
+
+Open a calendar picker to quickly jump to any date. Press `\` to open.
+
+<!-- GENERATED:DATE_KEYS -->
+
 ### Text Editing
 
 These shortcuts work in all text input modes (Edit, Command, and Filter query):

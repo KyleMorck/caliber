@@ -1,4 +1,5 @@
 mod command;
+mod datepicker;
 mod edit_mode;
 mod entry_ops;
 mod filter_ops;
@@ -11,16 +12,16 @@ mod selection_ops;
 pub use entry_ops::{DeleteTarget, EntryLocation, TagRemovalTarget, ToggleTarget, YankTarget};
 pub use hints::{HintContext, HintMode};
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::io;
 use std::path::Path;
 
-use chrono::{Local, NaiveDate};
+use chrono::{Datelike, Local, NaiveDate};
 
 use crate::config::Config;
 use crate::cursor::CursorBuffer;
 use crate::storage::{
-    self, Entry, EntryType, FilterEntry, JournalContext, JournalSlot, LaterEntry, Line,
+    self, DayInfo, Entry, EntryType, FilterEntry, JournalContext, JournalSlot, LaterEntry, Line,
 };
 
 pub const DAILY_HEADER_LINES: usize = 1;
@@ -132,6 +133,28 @@ impl SelectionState {
     }
 }
 
+/// State for the datepicker popup
+#[derive(Clone, Debug)]
+pub struct DatepickerState {
+    /// Currently selected date
+    pub selected: NaiveDate,
+    /// First day of the displayed month
+    pub display_month: NaiveDate,
+    /// Cached day info for the display month
+    pub day_cache: HashMap<NaiveDate, DayInfo>,
+}
+
+impl DatepickerState {
+    #[must_use]
+    pub fn new(date: NaiveDate) -> Self {
+        Self {
+            selected: date,
+            display_month: NaiveDate::from_ymd_opt(date.year(), date.month(), 1).unwrap(),
+            day_cache: HashMap::new(),
+        }
+    }
+}
+
 /// Which view is currently active and its state
 #[derive(Clone)]
 pub enum ViewMode {
@@ -171,7 +194,7 @@ pub enum ConfirmContext {
 }
 
 /// What keyboard handler to use
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum InputMode {
     Normal,
     Edit(EditContext),
@@ -180,6 +203,7 @@ pub enum InputMode {
     QueryInput,
     Confirm(ConfirmContext),
     Selection(SelectionState),
+    Datepicker(DatepickerState),
 }
 
 /// Where to insert a new entry
@@ -209,6 +233,7 @@ pub enum SelectedItem<'a> {
 
 pub struct App {
     pub current_date: NaiveDate,
+    pub last_daily_date: NaiveDate,
     pub lines: Vec<Line>,
     pub entry_indices: Vec<usize>,
     pub view: ViewMode,
@@ -264,6 +289,7 @@ impl App {
 
         let mut app = Self {
             current_date: date,
+            last_daily_date: date,
             lines,
             view: ViewMode::Daily(DailyState::new(entry_indices.len(), later_entries)),
             entry_indices,

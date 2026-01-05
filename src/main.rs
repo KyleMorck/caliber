@@ -497,6 +497,11 @@ fn run_app<B: ratatui::backend::Backend>(
                 let paragraph = Paragraph::new(content).alignment(Alignment::Center);
                 f.render_widget(paragraph, inner_area);
             }
+
+            // Render datepicker if active
+            if let InputMode::Datepicker(ref state) = app.input_mode {
+                ui::render_datepicker(f, state, size);
+            }
         })?;
 
         if event::poll(std::time::Duration::from_millis(16))?
@@ -515,6 +520,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     InputMode::Reorder => handlers::handle_reorder_key(&mut app, key.code),
                     InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
                     InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
+                    InputMode::Datepicker(_) => handlers::handle_datepicker_key(&mut app, key)?,
                 }
             }
         }

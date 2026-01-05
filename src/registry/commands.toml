@@ -2,16 +2,6 @@
 # Each entry defines a command with its aliases and help text variants
 
 [[commands]]
-name = "date"
-aliases = ["d"]
-args = "DATE"
-key = ":date DATE"
-help_section = "commands"
-short_text = "Go to date"
-short_description = "Go to date (MM/DD)"
-long_description = "Go to a specific date. Accepts MM/DD, YYYY/MM/DD, or natural dates (tomorrow, next-mon, 3d). Aliases: d"
-
-[[commands]]
 name = "open"
 aliases = ["o"]
 args = "<config|journal> [project|global]"
