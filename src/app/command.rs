@@ -48,13 +48,14 @@ impl App {
         let (path, is_config) = match target {
             "config" => (self.resolve_config_path(scope), true),
             "journal" => (self.resolve_journal_path(scope), false),
+            "scratchpad" | "sp" => (Ok(self.config.get_scratchpad_path()), false),
             "" => {
-                self.set_status("Usage: :open <config|journal> [project|global]");
+                self.set_status("Usage: :open <config|journal|scratchpad>");
                 return Ok(());
             }
             _ => {
                 self.set_status(format!(
-                    "Unknown target: {target}. Use 'config' or 'journal'"
+                    "Unknown target: {target}. Use 'config', 'journal', or 'scratchpad'"
                 ));
                 return Ok(());
             }

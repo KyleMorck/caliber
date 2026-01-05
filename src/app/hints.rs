@@ -87,7 +87,15 @@ impl HintContext {
                     };
                 };
 
-                if arg_position < cmd.subargs.len() {
+                // Some first args don't have further subargs (e.g., "scratchpad" for :open)
+                let first_arg = words.get(1).copied().unwrap_or("");
+                let max_args = if first_arg == "scratchpad" || first_arg == "sp" {
+                    1
+                } else {
+                    cmd.subargs.len()
+                };
+
+                if arg_position < max_args {
                     let subarg = &cmd.subargs[arg_position];
                     let matches: Vec<&'static str> = subarg
                         .options
@@ -99,7 +107,7 @@ impl HintContext {
                     if !has_trailing_space
                         && matches.len() == 1
                         && matches[0] == current_arg
-                        && arg_position + 1 >= cmd.subargs.len()
+                        && arg_position + 1 >= max_args
                     {
                         return Self::Inactive;
                     }

@@ -244,7 +244,7 @@ These shortcuts work in all text input modes (Edit, Command, and Filter query):
 
 | Key | Action |
 |-----|--------|
-| `:[o]pen` | Open config or journal in $EDITOR |
+| `:[o]pen` | Open config, journal, or scratchpad in $EDITOR |
 | `:[q]uit` | Quit application |
 
 

@@ -34,10 +34,16 @@ fn default_header_date_format() -> String {
     "%m/%d/%y".to_string()
 }
 
+fn default_scratchpad_file() -> PathBuf {
+    get_config_dir().join("scratchpad.md")
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub global_file: Option<String>,
+    #[serde(default)]
+    pub scratchpad_file: Option<String>,
     #[serde(default = "default_sort_order")]
     pub sort_order: Vec<String>,
     #[serde(default = "default_favorite_tags")]
@@ -56,6 +62,7 @@ pub struct Config {
 #[derive(Debug, Clone, Deserialize, Default)]
 struct RawConfig {
     pub global_file: Option<String>,
+    pub scratchpad_file: Option<String>,
     pub sort_order: Option<Vec<String>>,
     pub favorite_tags: Option<HashMap<String, String>>,
     pub filters: Option<HashMap<String, String>>,
@@ -68,6 +75,7 @@ impl RawConfig {
     fn into_config(self) -> Config {
         Config {
             global_file: self.global_file,
+            scratchpad_file: self.scratchpad_file,
             sort_order: self.sort_order.unwrap_or_else(default_sort_order),
             favorite_tags: self.favorite_tags.unwrap_or_else(default_favorite_tags),
             filters: self.filters.unwrap_or_default(),
@@ -84,6 +92,7 @@ impl RawConfig {
             // global_file is NEVER overridden from project
             global_file: global.global_file,
             // Scalars: use project if set, otherwise global
+            scratchpad_file: self.scratchpad_file.or(global.scratchpad_file),
             sort_order: self.sort_order.or(global.sort_order),
             default_filter: self.default_filter.or(global.default_filter),
             header_date_format: self.header_date_format.or(global.header_date_format),
@@ -178,6 +187,14 @@ impl Config {
             get_default_journal_path()
         }
     }
+
+    pub fn get_scratchpad_path(&self) -> PathBuf {
+        if let Some(ref file) = self.scratchpad_file {
+            expand_tilde(file)
+        } else {
+            default_scratchpad_file()
+        }
+    }
 }
 
 /// Resolve a path to absolute, joining with cwd if relative.
@@ -188,6 +205,19 @@ pub fn resolve_path(path: &str) -> PathBuf {
         path
     } else {
         std::env::current_dir().unwrap_or_default().join(path)
+    }
+}
+
+/// Expand ~ to home directory.
+fn expand_tilde(path: &str) -> PathBuf {
+    if let Some(stripped) = path.strip_prefix("~/") {
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(stripped)
+    } else if path == "~" {
+        dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
+    } else {
+        resolve_path(path)
     }
 }
 
