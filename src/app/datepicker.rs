@@ -27,7 +27,19 @@ impl App {
             InputMode::Datepicker(state) => state.selected,
             _ => return Ok(()),
         };
+
+        // If in filter view, always switch to daily view (even if same date)
+        let in_filter_view = matches!(self.view, ViewMode::Filter(_));
+
         self.input_mode = InputMode::Normal;
+
+        if in_filter_view && target_date == self.current_date {
+            self.save();
+            self.reset_daily_view(target_date)?;
+            self.last_daily_date = target_date;
+            return Ok(());
+        }
+
         self.goto_day(target_date)
     }
 
