@@ -77,6 +77,15 @@ short_description = "Yank to clipboard"
 long_description = "Copy the selected entry to clipboard"
 
 [[keys]]
+id = "paste"
+key = "p"
+modes = ["shared_normal"]
+help_sections = ["daily", "filter"]
+short_text = "Paste"
+short_description = "Paste from clipboard"
+long_description = "Paste clipboard content as entries below cursor"
+
+[[keys]]
 id = "undo"
 key = "u"
 modes = ["shared_normal"]

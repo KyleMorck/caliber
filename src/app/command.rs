@@ -102,7 +102,6 @@ impl App {
     fn open_in_editor(&mut self, path: &std::path::Path, is_config: bool) -> io::Result<()> {
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
 
-        // Save before opening editor
         self.save();
 
         // Suspend TUI

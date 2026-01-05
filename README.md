@@ -123,6 +123,7 @@ The entry will appear in the "Later" section when you view that date.
 | `c` | Toggle task complete |
 | `d` | Delete entry |
 | `y` | Yank to clipboard |
+| `p` | Paste from clipboard |
 | `u` | Undo last action |
 | `U` | Redo undone action |
 | `x` | Remove last tag |
@@ -157,6 +158,7 @@ The entry will appear in the "Later" section when you view that date.
 | `c` | Toggle task complete |
 | `d` | Delete entry |
 | `y` | Yank to clipboard |
+| `p` | Paste from clipboard |
 | `u` | Undo last action |
 | `U` | Redo undone action |
 | `x` | Remove last tag |

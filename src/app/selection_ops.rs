@@ -202,13 +202,19 @@ impl App {
         })
     }
 
-    /// Collect yank targets for all selected entries
+    /// Collect yank targets for all selected entries (includes prefix for round-trip paste)
     fn collect_yank_targets_from_selected(&self) -> Vec<YankTarget> {
         self.collect_targets_from_selected(|entry| {
             let content = match entry {
-                SelectedEntry::Later(later) => later.content.clone(),
-                SelectedEntry::Daily { entry, .. } => entry.content.clone(),
-                SelectedEntry::Filter { entry, .. } => entry.content.clone(),
+                SelectedEntry::Later(later) => {
+                    format!("{}{}", later.entry_type.prefix(), later.content)
+                }
+                SelectedEntry::Daily { entry, .. } => {
+                    format!("{}{}", entry.prefix(), entry.content)
+                }
+                SelectedEntry::Filter { entry, .. } => {
+                    format!("{}{}", entry.entry_type.prefix(), entry.content)
+                }
             };
             Some(YankTarget { content })
         })
@@ -264,8 +270,16 @@ impl App {
         })
     }
 
-    /// Delete all selected entries
+    /// Delete all selected entries (yanks to clipboard first)
     pub fn delete_selected(&mut self) -> io::Result<()> {
+        // Yank before deleting (like Vim)
+        let yank_targets = self.collect_yank_targets_from_selected();
+        if !yank_targets.is_empty() {
+            let contents: Vec<&str> = yank_targets.iter().map(Self::yank_target_content).collect();
+            let combined = contents.join("\n");
+            let _ = Self::copy_to_clipboard(&combined);
+        }
+
         let targets = self.collect_delete_targets_from_selected();
         if targets.is_empty() {
             self.exit_selection_mode();

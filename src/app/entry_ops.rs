@@ -92,8 +92,13 @@ impl App {
         }
     }
 
-    /// Delete the currently selected entry (view-aware)
+    /// Delete the currently selected entry (view-aware, yanks to clipboard first)
     pub fn delete_current_entry(&mut self) -> io::Result<()> {
+        // Yank before deleting (like Vim)
+        if let Some(yank_target) = self.extract_yank_target_from_current() {
+            let _ = Self::copy_to_clipboard(Self::yank_target_content(&yank_target));
+        }
+
         let Some(target) = self.extract_delete_target_from_current() else {
             return Ok(());
         };
@@ -220,12 +225,18 @@ impl App {
         self.input_mode = InputMode::Edit(ctx);
     }
 
-    /// Extract yank target from current selection
+    /// Extract yank target from current selection (includes prefix for round-trip paste)
     pub fn extract_yank_target_from_current(&self) -> Option<YankTarget> {
         let content = match self.get_selected_item() {
-            SelectedItem::Later { entry, .. } => entry.content.clone(),
-            SelectedItem::Daily { entry, .. } => entry.content.clone(),
-            SelectedItem::Filter { entry, .. } => entry.content.clone(),
+            SelectedItem::Later { entry, .. } => {
+                format!("{}{}", entry.entry_type.prefix(), entry.content)
+            }
+            SelectedItem::Daily { entry, .. } => {
+                format!("{}{}", entry.prefix(), entry.content)
+            }
+            SelectedItem::Filter { entry, .. } => {
+                format!("{}{}", entry.entry_type.prefix(), entry.content)
+            }
             SelectedItem::None => return None,
         };
         Some(YankTarget { content })
@@ -377,10 +388,106 @@ impl App {
         self.execute_action(Box::new(action))
     }
 
-    fn copy_to_clipboard(text: &str) -> Result<(), arboard::Error> {
+    pub(super) fn copy_to_clipboard(text: &str) -> Result<(), arboard::Error> {
         let mut clipboard = arboard::Clipboard::new()?;
         clipboard.set_text(text)?;
         Ok(())
+    }
+
+    fn read_from_clipboard() -> Result<String, arboard::Error> {
+        let mut clipboard = arboard::Clipboard::new()?;
+        clipboard.get_text()
+    }
+
+    /// Paste clipboard content as entries below current selection
+    pub fn paste_from_clipboard(&mut self) -> io::Result<()> {
+        // Read clipboard
+        let text = match Self::read_from_clipboard() {
+            Ok(t) => t,
+            Err(e) => {
+                self.set_status(format!("Failed to read clipboard: {e}"));
+                return Ok(());
+            }
+        };
+
+        let entries = Self::parse_paste_text(&text);
+        if entries.is_empty() {
+            self.set_status("Nothing to paste");
+            return Ok(());
+        }
+
+        let (date, insert_after) = match self.get_selected_item() {
+            SelectedItem::Daily { line_idx, .. } => (self.current_date, line_idx),
+            SelectedItem::Later { entry, .. } => (entry.source_date, entry.line_index),
+            SelectedItem::Filter { entry, .. } => (entry.source_date, entry.line_index),
+            SelectedItem::None => (self.current_date, 0),
+        };
+
+        let path = self.active_path().to_path_buf();
+        let mut lines = storage::load_day_lines(date, &path)?;
+        let insert_pos = if lines.is_empty() { 0 } else { insert_after + 1 };
+        for (i, entry) in entries.iter().enumerate() {
+            lines.insert(insert_pos + i, Line::Entry(entry.clone()));
+        }
+        storage::save_day_lines(date, &path, &lines)?;
+
+        if date == self.current_date {
+            self.reload_current_day()?;
+        }
+        if let ViewMode::Filter(_) = &self.view {
+            let _ = self.refresh_filter();
+        }
+
+        let target = super::actions::PasteTarget {
+            date,
+            start_line_index: insert_pos,
+            entries,
+        };
+        let action = super::actions::PasteEntries::new(target);
+        self.execute_action(Box::new(action))
+    }
+
+    fn parse_paste_text(text: &str) -> Vec<Entry> {
+        text.lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(Self::parse_line_to_entry)
+            .collect()
+    }
+
+    /// Parse a single line into an Entry, stripping markdown prefixes.
+    fn parse_line_to_entry(line: &str) -> Entry {
+        let trimmed = line.trim_start();
+
+        // strip_prefix returns text AFTER the prefix (no duplication)
+        if let Some(content) = trimmed.strip_prefix("- [ ] ") {
+            return Entry {
+                entry_type: EntryType::Task { completed: false },
+                content: content.to_string(),
+            };
+        }
+        if let Some(content) = trimmed.strip_prefix("- [x] ") {
+            return Entry {
+                entry_type: EntryType::Task { completed: true },
+                content: content.to_string(),
+            };
+        }
+        if let Some(content) = trimmed.strip_prefix("* ") {
+            return Entry {
+                entry_type: EntryType::Event,
+                content: content.to_string(),
+            };
+        }
+        if let Some(content) = trimmed.strip_prefix("- ") {
+            return Entry {
+                entry_type: EntryType::Note,
+                content: content.to_string(),
+            };
+        }
+        // No prefix → Note with full line as content
+        Entry {
+            entry_type: EntryType::Note,
+            content: trimmed.to_string(),
+        }
     }
 
     pub(super) fn delete_at_index_daily(&mut self, entry_index: usize) {
