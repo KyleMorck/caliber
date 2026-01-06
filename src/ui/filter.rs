@@ -1,5 +1,5 @@
 use ratatui::{
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line as RatatuiLine, Span},
 };
 use unicode_width::UnicodeWidthStr;
@@ -8,7 +8,8 @@ use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::EntryType;
 
 use super::shared::{
-    entry_style, format_date_suffix, style_content, truncate_with_tags, wrap_text,
+    date_suffix_style, entry_style, format_date_suffix, style_content, truncate_with_tags,
+    wrap_text,
 };
 
 pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
@@ -64,7 +65,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                         spans.push(Span::styled(line_text.clone(), content_style));
                         spans.push(Span::styled(
                             date_suffix.clone(),
-                            Style::default().fg(Color::DarkGray),
+                            date_suffix_style(content_style),
                         ));
                         lines.push(RatatuiLine::from(spans));
                     } else {
@@ -96,14 +97,10 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                 } else {
                     Span::styled("→", Style::default().fg(Color::Cyan))
                 };
-                let muted = filter_entry.completed;
                 let mut spans = vec![cursor_indicator];
                 spans.push(Span::styled(sel_prefix.to_string(), content_style));
-                spans.extend(style_content(&display_text, content_style, muted));
-                spans.push(Span::styled(
-                    date_suffix,
-                    Style::default().fg(Color::DarkGray),
-                ));
+                spans.extend(style_content(&display_text, content_style));
+                spans.push(Span::styled(date_suffix, date_suffix_style(content_style)));
                 lines.push(RatatuiLine::from(spans));
             }
         } else {
@@ -128,13 +125,9 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
             };
             let rest_of_prefix: String = prefix.chars().skip(1).collect();
 
-            let muted = filter_entry.completed;
             let mut spans = vec![first_char, Span::styled(rest_of_prefix, content_style)];
-            spans.extend(style_content(&display_text, content_style, muted));
-            spans.push(Span::styled(
-                date_suffix,
-                Style::default().fg(Color::DarkGray),
-            ));
+            spans.extend(style_content(&display_text, content_style));
+            spans.push(Span::styled(date_suffix, date_suffix_style(content_style)));
             lines.push(RatatuiLine::from(spans));
         }
     }
@@ -167,7 +160,7 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
     if state.entries.is_empty() && !is_quick_adding {
         lines.push(RatatuiLine::from(Span::styled(
             "(no matches)",
-            Style::default().fg(Color::DarkGray),
+            Style::default().dim(),
         )));
     }
 

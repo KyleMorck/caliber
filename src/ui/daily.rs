@@ -1,5 +1,5 @@
 use ratatui::{
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line as RatatuiLine, Span},
 };
 use unicode_width::UnicodeWidthStr;
@@ -8,7 +8,8 @@ use crate::app::{App, EditContext, InputMode, ViewMode};
 use crate::storage::{EntryType, Line};
 
 use super::shared::{
-    entry_style, format_date_suffix, style_content, truncate_with_tags, wrap_text,
+    date_suffix_style, entry_style, format_date_suffix, style_content, truncate_with_tags,
+    wrap_text,
 };
 
 pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
@@ -28,7 +29,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
             Span::styled(date_header, Style::default().fg(Color::Cyan)),
             Span::styled(
                 format!(" (Hiding {hidden_count} completed)"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().dim(),
             ),
         ]));
     } else {
@@ -81,7 +82,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                         Span::styled(first_char, later_prefix_style),
                         Span::styled(rest_of_prefix, content_style),
                         Span::styled(line_text.clone(), content_style),
-                        Span::styled(source_suffix.clone(), Style::default().fg(Color::DarkGray)),
+                        Span::styled(source_suffix.clone(), date_suffix_style(content_style)),
                     ];
                     lines.push(RatatuiLine::from(spans));
                 } else {
@@ -109,12 +110,11 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 later_prefix_style,
             );
 
-            let muted = later_entry.completed;
             let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
-            spans.extend(style_content(&display_text, content_style, muted));
+            spans.extend(style_content(&display_text, content_style));
             spans.push(Span::styled(
                 source_suffix,
-                Style::default().fg(Color::DarkGray),
+                date_suffix_style(content_style),
             ));
             lines.push(RatatuiLine::from(spans));
         }
@@ -179,9 +179,8 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 );
                 let available = width.saturating_sub(prefix_width);
                 let display_text = truncate_with_tags(&text, available);
-                let muted = is_completed;
                 let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
-                spans.extend(style_content(&display_text, content_style, muted));
+                spans.extend(style_content(&display_text, content_style));
                 lines.push(RatatuiLine::from(spans));
             }
         }
@@ -194,10 +193,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         } else {
             "(No entries - press Enter to add)"
         };
-        lines.push(RatatuiLine::from(Span::styled(
-            message,
-            Style::default().fg(Color::DarkGray),
-        )));
+        lines.push(RatatuiLine::from(Span::styled(message, Style::default().dim())));
     }
 
     lines

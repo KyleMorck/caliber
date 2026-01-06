@@ -126,7 +126,7 @@ pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, area: Rect) {
             ));
             spans.push(Span::styled(
                 format!(" {}", action.short_text),
-                Style::new().fg(Color::DarkGray),
+                Style::new().dim(),
             ));
         }
 

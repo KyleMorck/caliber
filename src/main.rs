@@ -10,7 +10,7 @@ use ratatui::{
     Terminal,
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::Span,
     widgets::{Block, Borders, Clear, Paragraph},
 };
@@ -357,7 +357,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     height: 1,
                 };
                 let scroll_indicator =
-                    Paragraph::new(Span::styled(arrows, Style::default().fg(Color::DarkGray)));
+                    Paragraph::new(Span::styled(arrows, Style::default().dim()));
                 f.render_widget(scroll_indicator, indicator_area);
             }
 
@@ -460,23 +460,14 @@ fn run_app<B: ratatui::backend::Backend>(
                 let footer_line = if arrows.is_empty() {
                     ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
-                        ratatui::text::Span::styled(
-                            " close ",
-                            Style::default().fg(Color::DarkGray),
-                        ),
+                        ratatui::text::Span::styled(" close ", Style::default().dim()),
                     ])
                 } else {
                     ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled(arrows, Style::default().fg(Color::White)),
-                        ratatui::text::Span::styled(
-                            " scroll  ",
-                            Style::default().fg(Color::DarkGray),
-                        ),
+                        ratatui::text::Span::styled(" scroll  ", Style::default().dim()),
                         ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
-                        ratatui::text::Span::styled(
-                            " close ",
-                            Style::default().fg(Color::DarkGray),
-                        ),
+                        ratatui::text::Span::styled(" close ", Style::default().dim()),
                     ])
                 };
                 let footer =

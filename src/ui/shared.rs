@@ -13,7 +13,9 @@ use crate::storage::{EntryType, LATER_DATE_REGEX, NATURAL_DATE_REGEX, TAG_REGEX}
 #[must_use]
 pub fn entry_style(entry_type: &EntryType) -> Style {
     match entry_type {
-        EntryType::Task { completed: true } => Style::default().fg(Color::DarkGray),
+        EntryType::Task { completed: true } => {
+            Style::default().add_modifier(ratatui::style::Modifier::DIM)
+        }
         EntryType::Event => Style::default().add_modifier(ratatui::style::Modifier::ITALIC),
         _ => Style::default(),
     }
@@ -24,6 +26,12 @@ pub fn format_date_suffix(date: NaiveDate) -> (String, usize) {
     let suffix = format!(" ({})", date.format("%m/%d"));
     let width = suffix.width();
     (suffix, width)
+}
+
+/// Style for date suffixes - always dimmed relative to entry content
+#[must_use]
+pub fn date_suffix_style(base: Style) -> Style {
+    base.add_modifier(ratatui::style::Modifier::DIM)
 }
 
 /// Matches one or more trailing tags at end of line
@@ -60,16 +68,12 @@ pub fn remove_all_trailing_tags(text: &str) -> Option<String> {
     })
 }
 
-pub fn style_content(text: &str, base_style: Style, muted: bool) -> Vec<Span<'static>> {
+pub fn style_content(text: &str, base_style: Style) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     let mut last_end = 0;
 
-    let tag_color = if muted {
-        Color::Yellow
-    } else {
-        Color::LightYellow
-    };
-    let date_color = if muted { Color::Red } else { Color::LightRed };
+    let tag_color = Color::Yellow;
+    let date_color = Color::Red;
 
     let mut matches: Vec<(usize, usize, Color)> = Vec::new();
 
@@ -97,9 +101,10 @@ pub fn style_content(text: &str, base_style: Style, muted: bool) -> Vec<Span<'st
         if start > last_end {
             spans.push(Span::styled(text[last_end..start].to_string(), base_style));
         }
+        // Apply base style modifiers (like DIM) to colored spans
         spans.push(Span::styled(
             text[start..end].to_string(),
-            Style::default().fg(color),
+            base_style.fg(color),
         ));
         last_end = end;
     }

@@ -1,6 +1,6 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line as RatatuiLine, Span},
 };
 
@@ -33,9 +33,9 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 Style::default().fg(Color::Black).bg(Color::Blue),
             ),
             Span::styled("  y", Style::default().fg(Color::Gray)),
-            Span::styled(" Yes  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(" Yes  ", Style::default().dim()),
             Span::styled("n/Esc", Style::default().fg(Color::Gray)),
-            Span::styled(" No", Style::default().fg(Color::DarkGray)),
+            Span::styled(" No", Style::default().dim()),
         ]),
         (_, InputMode::Selection(state)) => {
             let count = state.count();
@@ -77,10 +77,7 @@ fn action_spans(action: &KeyAction) -> [Span<'static>; 2] {
     };
     [
         Span::styled(format!("  {key_display}"), Style::default().fg(Color::Gray)),
-        Span::styled(
-            format!(" {} ", action.short_text),
-            Style::default().fg(Color::DarkGray),
-        ),
+        Span::styled(format!(" {} ", action.short_text), Style::default().dim()),
     ]
 }
 

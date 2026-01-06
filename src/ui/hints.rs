@@ -1,7 +1,7 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
@@ -31,7 +31,7 @@ pub fn render_hint_overlay(f: &mut Frame, hint_state: &HintContext, footer_area:
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(Style::default().dim());
 
     let inner = block.inner(overlay_area);
     f.render_widget(block, overlay_area);
@@ -61,9 +61,9 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
         _ => None,
     };
 
-    // Context-specific colors: tags = light yellow, commands = blue, filters = magenta
+    // Context-specific colors: tags = yellow, commands = blue, filters = magenta
     let hint_color = match hint_state {
-        HintContext::Tags { .. } => Color::LightYellow,
+        HintContext::Tags { .. } => Color::Yellow,
         HintContext::Commands { .. } | HintContext::SubArgs { .. } => Color::Blue,
         HintContext::FilterTypes { .. }
         | HintContext::DateOps { .. }
