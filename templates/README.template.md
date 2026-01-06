@@ -2,7 +2,7 @@
 
 A terminal-based task journal for developers. Capture ideas without leaving your workflow, find them when you need them.
 
-![caliber screenshot](screenshot.png)
+![caliber demo](examples/hero.gif)
 
 - **Keyboard-driven** — Vim-style navigation that feels natural in the terminal
 - **Zero-friction capture** — Press enter and start typing, organize later or don't
@@ -64,7 +64,7 @@ That's enough to get started. The sections below go deeper.
 
 ## Daily View
 
-![daily view screenshot](daily_screenshot.png)
+![daily view demo](examples/entry-ops.gif)
 
 Your home base. Each day is a page in your journal. Navigate between days with `h` / `l` or `[` / `]`, or jump to any date with `\` to open the datepicker.
 
@@ -85,11 +85,13 @@ Entries from other days that target today using `@date` syntax appear in a "Late
 
 ### Datepicker
 
+![datepicker demo](examples/datepicker.gif)
+
 Press `\` to open a calendar for quick navigation. Days with entries are highlighted. Navigate with `h/j/k/l` or arrow keys, switch months with `[` and `]`, and press `Enter` to jump to the selected date.
 
 ## Filtering
 
-![filter view screenshot](filter_screenshot.png)
+![filter view demo](examples/filter.gif)
 
 Press `/` to search across your entire journal. Filter by entry type, tags, dates, or text — and combine them.
 
@@ -124,7 +126,7 @@ Dates in filters support natural language:
 
 ## Task Management
 
-![task management screenshot](task_screenshot.png)
+![selection mode demo](examples/selection.gif)
 
 ### Selection Mode
 
@@ -170,6 +172,8 @@ The entry appears in the "Later" section when you view the target date.
 Most actions can be undone with `u` and redone with `U`. Undo history clears when you navigate to a different day, filter, or journal.
 
 ## Favorite Tags
+
+![favorite tags demo](examples/favorite-tags.gif)
 
 Slots `1-9` give you quick access to commonly-used tags.
 
