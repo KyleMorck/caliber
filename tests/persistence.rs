@@ -20,7 +20,7 @@ fn test_edit_persists_after_reload() {
     std::fs::write(&journal_path, &content).unwrap();
 
     // Load via App with explicit context
-    let context = JournalContext::new(journal_path, None, JournalSlot::Global);
+    let context = JournalContext::new(journal_path, None, JournalSlot::Hub);
     let config = Config::default();
     let app = App::new_with_context(config, date, context).unwrap();
 

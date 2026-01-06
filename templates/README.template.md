@@ -6,7 +6,7 @@ A terminal-based task journal for developers. Capture ideas without leaving your
 
 - **Keyboard-driven** — Vim-style navigation that feels natural in the terminal
 - **Zero-friction capture** — Press enter and start typing, organize later or don't
-- **Project and global journals** — Keep a journal per repo plus one that follows you everywhere
+- **Project and hub journals** — Keep a journal per repo plus one that follows you everywhere
 - **Schedule forward** — Tag a task with a future date and it surfaces when that day comes
 - **Filter everything** — Search your entire history by tags, dates, or text
 - **Plain markdown** — Commit it, edit it anywhere, let AI agents read it for context
@@ -17,7 +17,7 @@ If you live in the terminal, context-switching to a GUI app just to jot down a t
 
 Tab over, press enter, start typing. That's it. No forms, no fields, no friction.
 
-Keep a journal per project and a global journal that follows you everywhere. When you're deep in a repo and remember you need to pay a bill, one keystroke switches context. No need to organize your task manager around your projects — the structure is already there.
+Keep a journal per project and a hub journal that follows you everywhere. When you're deep in a repo and remember you need to pay a bill, one keystroke switches context. No need to organize your task manager around your projects — the structure is already there.
 
 Tasks and notes stay where you wrote them. When you want to review what's open, filter across your entire history by tags, dates, or text. When you don't have time to organize, don't. Things surface when you need them.
 
@@ -37,7 +37,7 @@ Requires Rust 1.85+ (edition 2024).
 caliber                  # Open your journal
 ```
 
-Launch Caliber in a git repository and it will prompt you to create a project journal. Otherwise, you'll start in your global journal.
+Launch Caliber in a git repository and it will prompt you to create a project journal. Otherwise, you'll start in your hub journal.
 
 **The basics:**
 
@@ -48,7 +48,7 @@ Launch Caliber in a git repository and it will prompt you to create a project jo
 | `h` / `l` or `[` / `]` | Previous / next day |
 | `Shift+Tab` | Cycle type: task → note → event |
 | `/` | Open filter |
-| `` ` `` | Toggle between project and global journal |
+| `` ` `` | Toggle between project and hub journal |
 | `?` | Help |
 
 **Entry types:**
@@ -280,8 +280,8 @@ Config file: `~/.config/caliber/config.toml`
 Run `caliber init` to create an empty config file. Configuration is optional — Caliber works out of the box with sensible defaults.
 
 ```toml
-# Custom global journal path (default: ~/.config/caliber/global_journal.md)
-global_file = "/path/to/journal.md"
+# Custom hub journal path (default: ~/.config/caliber/hub_journal.md)
+hub_file = "/path/to/journal.md"
 
 # Custom scratchpad path (default: ~/.config/caliber/scratchpad.md)
 scratchpad_file = "~/notes/scratchpad.md"
@@ -314,7 +314,7 @@ e = "!events"
 
 ### Project Configuration
 
-Project config at `.caliber/config.toml` merges over global — project values override matching keys, while unset options inherit from global.
+Project config at `.caliber/config.toml` overlays the base config — project values override matching keys, while unset options inherit from your base `config.toml`. Similarly, `hub_config.toml` can override settings specifically for your hub journal.
 
 When you launch Caliber in a git repository, it will offer to create a project journal for you. If you declined or want to create one outside a git repo, run `caliber init project`.
 

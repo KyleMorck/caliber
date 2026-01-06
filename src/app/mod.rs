@@ -269,13 +269,13 @@ impl App {
 
     /// Creates a new App with a specific date, detecting paths from config
     pub fn new_with_date(config: Config, date: NaiveDate) -> io::Result<Self> {
-        let global_path = config
-            .global_file
+        let hub_path = config
+            .hub_file
             .as_ref()
             .map(std::path::PathBuf::from)
             .unwrap_or_else(crate::config::get_default_journal_path);
         let project_path = storage::detect_project_journal();
-        let context = JournalContext::new(global_path, project_path, JournalSlot::Global);
+        let context = JournalContext::new(hub_path, project_path, JournalSlot::Hub);
         Self::new_with_context(config, date, context)
     }
 

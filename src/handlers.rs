@@ -412,7 +412,7 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
         },
         KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => match context {
             ConfirmContext::CreateProjectJournal => {
-                app.set_status("Staying on Global journal");
+                app.set_status("Staying on Hub journal");
                 app.input_mode = InputMode::Normal;
             }
             ConfirmContext::AddToGitignore => {

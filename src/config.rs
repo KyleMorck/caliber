@@ -41,7 +41,7 @@ fn default_scratchpad_file() -> PathBuf {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
-    pub global_file: Option<String>,
+    pub hub_file: Option<String>,
     #[serde(default)]
     pub scratchpad_file: Option<String>,
     #[serde(default = "default_sort_order")]
@@ -61,7 +61,7 @@ pub struct Config {
 /// Raw config for deserialization - all fields are Option to distinguish "not set" from "set to default"
 #[derive(Debug, Clone, Deserialize, Default)]
 struct RawConfig {
-    pub global_file: Option<String>,
+    pub hub_file: Option<String>,
     pub scratchpad_file: Option<String>,
     pub sort_order: Option<Vec<String>>,
     pub favorite_tags: Option<HashMap<String, String>>,
@@ -74,7 +74,7 @@ struct RawConfig {
 impl RawConfig {
     fn into_config(self) -> Config {
         Config {
-            global_file: self.global_file,
+            hub_file: self.hub_file,
             scratchpad_file: self.scratchpad_file,
             sort_order: self.sort_order.unwrap_or_else(default_sort_order),
             favorite_tags: self.favorite_tags.unwrap_or_else(default_favorite_tags),
@@ -87,19 +87,19 @@ impl RawConfig {
         }
     }
 
-    fn merge_over(self, global: RawConfig) -> RawConfig {
+    fn merge_over(self, base: RawConfig) -> RawConfig {
         RawConfig {
-            // global_file is NEVER overridden from project
-            global_file: global.global_file,
-            // Scalars: use project if set, otherwise global
-            scratchpad_file: self.scratchpad_file.or(global.scratchpad_file),
-            sort_order: self.sort_order.or(global.sort_order),
-            default_filter: self.default_filter.or(global.default_filter),
-            header_date_format: self.header_date_format.or(global.header_date_format),
-            hide_completed: self.hide_completed.or(global.hide_completed),
-            // HashMaps: MERGE (project values override matching global keys)
-            favorite_tags: Some(merge_hashmaps(global.favorite_tags, self.favorite_tags)),
-            filters: Some(merge_hashmaps(global.filters, self.filters)),
+            // hub_file is NEVER overridden from context config
+            hub_file: base.hub_file,
+            // Scalars: use context if set, otherwise base
+            scratchpad_file: self.scratchpad_file.or(base.scratchpad_file),
+            sort_order: self.sort_order.or(base.sort_order),
+            default_filter: self.default_filter.or(base.default_filter),
+            header_date_format: self.header_date_format.or(base.header_date_format),
+            hide_completed: self.hide_completed.or(base.hide_completed),
+            // HashMaps: merge (context values override matching base keys)
+            favorite_tags: Some(merge_hashmaps(base.favorite_tags, self.favorite_tags)),
+            filters: Some(merge_hashmaps(base.filters, self.filters)),
         }
     }
 }
@@ -149,20 +149,25 @@ impl Config {
             .filter(|s| !s.is_empty())
     }
 
-    /// Load global config only (no project merge)
-    pub fn load_global() -> io::Result<Self> {
-        let global = load_raw_config(get_config_path())?;
-        Ok(global.into_config())
+    /// Load hub config (base + optional hub_config.toml overlay)
+    pub fn load_hub() -> io::Result<Self> {
+        let base = load_raw_config(get_config_path())?;
+
+        if let Some(hub) = load_hub_config() {
+            Ok(hub.merge_over(base).into_config())
+        } else {
+            Ok(base.into_config())
+        }
     }
 
-    /// Load config, merging project config over global config if present
+    /// Load project config (base + project config overlay)
     pub fn load_merged() -> io::Result<Self> {
-        let global = load_raw_config(get_config_path())?;
+        let base = load_raw_config(get_config_path())?;
 
         if let Some(project) = load_project_config() {
-            Ok(project.merge_over(global).into_config())
+            Ok(project.merge_over(base).into_config())
         } else {
-            Ok(global.into_config())
+            Ok(base.into_config())
         }
     }
 
@@ -180,8 +185,8 @@ impl Config {
         Ok(true)
     }
 
-    pub fn get_global_journal_path(&self) -> PathBuf {
-        if let Some(ref file) = self.global_file {
+    pub fn get_hub_journal_path(&self) -> PathBuf {
+        if let Some(ref file) = self.hub_file {
             resolve_path(file)
         } else {
             get_default_journal_path()
@@ -232,8 +237,12 @@ pub fn get_config_path() -> PathBuf {
     get_config_dir().join("config.toml")
 }
 
+pub fn get_hub_config_path() -> PathBuf {
+    get_config_dir().join("hub_config.toml")
+}
+
 pub fn get_default_journal_path() -> PathBuf {
-    get_config_dir().join("global_journal.md")
+    get_config_dir().join("hub_journal.md")
 }
 
 fn load_raw_config(path: PathBuf) -> io::Result<RawConfig> {
@@ -248,6 +257,16 @@ fn load_raw_config(path: PathBuf) -> io::Result<RawConfig> {
 fn load_project_config() -> Option<RawConfig> {
     let root = find_git_root()?;
     let path = root.join(".caliber").join("config.toml");
+    if path.exists() {
+        let content = fs::read_to_string(&path).ok()?;
+        toml::from_str(&content).ok()
+    } else {
+        None
+    }
+}
+
+fn load_hub_config() -> Option<RawConfig> {
+    let path = get_hub_config_path();
     if path.exists() {
         let content = fs::read_to_string(&path).ok()?;
         toml::from_str(&content).ok()

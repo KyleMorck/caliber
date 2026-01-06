@@ -4,21 +4,21 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JournalSlot {
-    Global,
+    Hub,
     Project,
 }
 
 pub struct JournalContext {
-    global_path: PathBuf,
+    hub_path: PathBuf,
     project_path: Option<PathBuf>,
     active: JournalSlot,
 }
 
 impl JournalContext {
     #[must_use]
-    pub fn new(global_path: PathBuf, project_path: Option<PathBuf>, active: JournalSlot) -> Self {
+    pub fn new(hub_path: PathBuf, project_path: Option<PathBuf>, active: JournalSlot) -> Self {
         Self {
-            global_path,
+            hub_path,
             project_path,
             active,
         }
@@ -27,8 +27,8 @@ impl JournalContext {
     #[must_use]
     pub fn active_path(&self) -> &std::path::Path {
         match self.active {
-            JournalSlot::Global => &self.global_path,
-            JournalSlot::Project => self.project_path.as_deref().unwrap_or(&self.global_path),
+            JournalSlot::Hub => &self.hub_path,
+            JournalSlot::Project => self.project_path.as_deref().unwrap_or(&self.hub_path),
         }
     }
 
@@ -42,8 +42,8 @@ impl JournalContext {
     }
 
     #[must_use]
-    pub fn global_path(&self) -> &std::path::Path {
-        &self.global_path
+    pub fn hub_path(&self) -> &std::path::Path {
+        &self.hub_path
     }
 
     #[must_use]

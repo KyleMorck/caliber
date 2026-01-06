@@ -70,7 +70,8 @@ impl App {
 
     fn resolve_config_path(&self, scope: Option<&str>) -> Result<PathBuf, String> {
         match scope {
-            None | Some("global") => Ok(config::get_config_path()),
+            None => Ok(config::get_config_path()),
+            Some("hub") => Ok(config::get_hub_config_path()),
             Some("project") => {
                 if let Some(project_path) = self.journal_context.project_path() {
                     let config_path = project_path
@@ -82,20 +83,20 @@ impl App {
                     Err("No project journal active".to_string())
                 }
             }
-            Some(other) => Err(format!("Unknown scope: {other}. Use 'project' or 'global'")),
+            Some(other) => Err(format!("Unknown scope: {other}. Use 'hub' or 'project'")),
         }
     }
 
     fn resolve_journal_path(&self, scope: Option<&str>) -> Result<PathBuf, String> {
         match scope {
             None => Ok(self.journal_context.active_path().to_path_buf()),
-            Some("global") => Ok(self.journal_context.global_path().to_path_buf()),
+            Some("hub") => Ok(self.journal_context.hub_path().to_path_buf()),
             Some("project") => self
                 .journal_context
                 .project_path()
                 .map(|p| p.to_path_buf())
                 .ok_or_else(|| "No project journal active".to_string()),
-            Some(other) => Err(format!("Unknown scope: {other}. Use 'project' or 'global'")),
+            Some(other) => Err(format!("Unknown scope: {other}. Use 'hub' or 'project'")),
         }
     }
 

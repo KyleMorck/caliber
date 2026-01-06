@@ -4,16 +4,16 @@
 [[commands]]
 name = "open"
 aliases = ["o"]
-args = "<config|journal|scratchpad> [project|global]"
+args = "<config|journal|scratchpad> [hub|project]"
 subargs = [
   { options = ["config", "journal", "scratchpad"] },
-  { options = ["global", "project"] },
+  { options = ["hub", "project"] },
 ]
 key = ":open"
 help_section = "commands"
 short_text = "Open in editor"
 short_description = "Open config, journal, or scratchpad in $EDITOR"
-long_description = "Open a file in $EDITOR. Use 'config', 'journal', or 'scratchpad' (alias: sp), optionally with 'project' or 'global' scope for config/journal. Aliases: o"
+long_description = "Open a file in $EDITOR. Use 'config', 'journal', or 'scratchpad' (alias: sp), optionally with 'hub' or 'project' scope for config/journal. Aliases: o"
 
 [[commands]]
 name = "quit"

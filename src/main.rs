@@ -55,19 +55,19 @@ fn main() -> Result<(), io::Error> {
         // Existing project journal detected
         (Some(path), JournalSlot::Project)
     } else {
-        // No project journal, start in Global
-        (None, JournalSlot::Global)
+        // No project journal, start in Hub
+        (None, JournalSlot::Hub)
     };
 
     // Load config appropriate for the starting journal context
     let config = match active_slot {
-        JournalSlot::Global => Config::load_global().unwrap_or_default(),
+        JournalSlot::Hub => Config::load_hub().unwrap_or_default(),
         JournalSlot::Project => Config::load_merged().unwrap_or_default(),
     };
 
-    let global_path = config.get_global_journal_path();
+    let hub_path = config.get_hub_journal_path();
 
-    let journal_context = JournalContext::new(global_path, project_path.clone(), active_slot);
+    let journal_context = JournalContext::new(hub_path, project_path.clone(), active_slot);
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -383,7 +383,7 @@ fn run_app<B: ratatui::backend::Backend>(
             ui::render_hint_overlay(f, &app.hint_state, chunks[1]);
 
             let (indicator, indicator_color) = match app.active_journal() {
-                JournalSlot::Global => ("[GLOBAL]", Color::Green),
+                JournalSlot::Hub => ("[HUB]", Color::Green),
                 JournalSlot::Project => ("[PROJECT]", Color::Blue),
             };
             let indicator_width = indicator.len() as u16;

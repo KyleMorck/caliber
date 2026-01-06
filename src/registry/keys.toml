@@ -274,8 +274,8 @@ key = "`"
 modes = ["shared_normal"]
 help_sections = ["daily", "filter"]
 short_text = "Journal"
-short_description = "Toggle Global/Project journal"
-long_description = "Switch between Global and Project journal"
+short_description = "Toggle Hub/Project journal"
+long_description = "Switch between Hub and Project journal"
 
 [[keys]]
 id = "enter_filter_mode"

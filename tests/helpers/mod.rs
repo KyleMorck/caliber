@@ -30,7 +30,7 @@ impl TestContext {
         let journal_path = temp_dir.path().join("test_journal.md");
         std::fs::write(&journal_path, "").expect("Failed to create journal");
 
-        let context = JournalContext::new(journal_path, None, JournalSlot::Global);
+        let context = JournalContext::new(journal_path, None, JournalSlot::Hub);
 
         let config = Config::default();
         let app = App::new_with_context(config, date, context).expect("Failed to create app");
@@ -49,7 +49,7 @@ impl TestContext {
         let journal_path = temp_dir.path().join("test_journal.md");
         std::fs::write(&journal_path, content).expect("Failed to write journal");
 
-        let context = JournalContext::new(journal_path, None, JournalSlot::Global);
+        let context = JournalContext::new(journal_path, None, JournalSlot::Hub);
         let app = App::new_with_context(config, date, context).expect("Failed to create app");
 
         Self { app, temp_dir }

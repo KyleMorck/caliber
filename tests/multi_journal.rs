@@ -23,7 +23,7 @@ fn test_journal_isolation() {
     fs::write(&project_path, "# 2026/01/15\n- [ ] Project entry\n").unwrap();
 
     let context =
-        storage::JournalContext::new(global_path, Some(project_path), JournalSlot::Global);
+        storage::JournalContext::new(global_path, Some(project_path), JournalSlot::Hub);
 
     let config = Config::default();
     let app = App::new_with_context(config, date, context).unwrap();
@@ -107,7 +107,7 @@ fn test_journal_toggle_key() {
     fs::write(&project_path, "# 2026/01/15\n- [ ] Project entry\n").unwrap();
 
     let context =
-        storage::JournalContext::new(global_path, Some(project_path), JournalSlot::Global);
+        storage::JournalContext::new(global_path, Some(project_path), JournalSlot::Hub);
 
     let config = Config::default();
     let mut app = App::new_with_context(config, date, context).unwrap();
@@ -115,7 +115,7 @@ fn test_journal_toggle_key() {
     // Verify we're in global
     assert_eq!(
         app.active_journal(),
-        JournalSlot::Global,
+        JournalSlot::Hub,
         "Should start in global journal"
     );
 
@@ -134,7 +134,7 @@ fn test_journal_toggle_key() {
     let _ = caliber::handlers::handle_normal_key(&mut app, event);
     assert_eq!(
         app.active_journal(),
-        JournalSlot::Global,
+        JournalSlot::Hub,
         "Should switch back to global journal"
     );
 }
@@ -157,7 +157,7 @@ fn test_project_journal_creation() {
     fs::write(&global_path, "# 2026/01/15\n- [ ] Global entry\n").unwrap();
 
     // Set up with no project journal - will trigger creation flow
-    let context = storage::JournalContext::new(global_path.clone(), None, JournalSlot::Global);
+    let context = storage::JournalContext::new(global_path.clone(), None, JournalSlot::Hub);
 
     let config = Config::default();
     let mut app = App::new_with_context(config, date, context).unwrap();

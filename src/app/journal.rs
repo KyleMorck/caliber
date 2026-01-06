@@ -34,21 +34,21 @@ impl App {
         self.journal_context.set_active_slot(slot);
 
         self.config = match slot {
-            JournalSlot::Global => Config::load_global()?,
+            JournalSlot::Hub => Config::load_hub()?,
             JournalSlot::Project => Config::load_merged()?,
         };
         self.hide_completed = self.config.hide_completed;
 
         self.reset_journal_view()?;
         self.set_status(match slot {
-            JournalSlot::Global => "Switched to Global journal",
+            JournalSlot::Hub => "Switched to Hub journal",
             JournalSlot::Project => "Switched to Project journal",
         });
         Ok(())
     }
 
-    pub fn switch_to_global(&mut self) -> io::Result<()> {
-        self.switch_to_journal(JournalSlot::Global)
+    pub fn switch_to_hub(&mut self) -> io::Result<()> {
+        self.switch_to_journal(JournalSlot::Hub)
     }
 
     pub fn switch_to_project(&mut self) -> io::Result<()> {
@@ -57,7 +57,7 @@ impl App {
 
     pub fn toggle_journal(&mut self) -> io::Result<()> {
         match self.active_journal() {
-            JournalSlot::Global => {
+            JournalSlot::Hub => {
                 if self.journal_context.project_path().is_some() {
                     self.switch_to_project()?;
                 } else if self.in_git_repo {
@@ -67,7 +67,7 @@ impl App {
                 }
             }
             JournalSlot::Project => {
-                self.switch_to_global()?;
+                self.switch_to_hub()?;
             }
         }
         Ok(())
@@ -75,7 +75,7 @@ impl App {
 
     pub fn reload_config(&mut self) -> io::Result<()> {
         self.config = match self.active_journal() {
-            JournalSlot::Global => Config::load_global()?,
+            JournalSlot::Hub => Config::load_hub()?,
             JournalSlot::Project => Config::load_merged()?,
         };
         self.hide_completed = self.config.hide_completed;
