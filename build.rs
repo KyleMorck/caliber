@@ -36,7 +36,6 @@ struct SubArgDef {
 #[derive(Debug, Deserialize)]
 struct CommandDef {
     name: String,
-    aliases: Vec<String>,
     args: Option<String>,
     subargs: Option<Vec<SubArgDef>>,
     key: String,
@@ -55,7 +54,6 @@ struct FiltersFile {
 struct FilterDef {
     syntax: String,
     display: Option<String>,
-    aliases: Vec<String>,
     category: String,
     help_section: String,
     short_text: String,
@@ -295,7 +293,6 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
     code.push_str("#[derive(Clone, Debug, PartialEq)]\n");
     code.push_str("pub struct Command {\n");
     code.push_str("    pub name: &'static str,\n");
-    code.push_str("    pub aliases: &'static [&'static str],\n");
     code.push_str("    pub args: Option<&'static str>,\n");
     code.push_str("    pub subargs: &'static [SubArg],\n");
     code.push_str("    pub key: &'static str,\n");
@@ -307,11 +304,6 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
     // Generate COMMANDS static
     code.push_str("pub static COMMANDS: &[Command] = &[\n");
     for cmd in commands {
-        let aliases_str: Vec<String> = cmd
-            .aliases
-            .iter()
-            .map(|a| format!("r#\"{}\"#", a))
-            .collect();
         let args = match &cmd.args {
             Some(a) => format!("Some(r#\"{}\"#)", a),
             None => "None".to_string(),
@@ -331,9 +323,8 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
             None => "&[]".to_string(),
         };
         code.push_str(&format!(
-            "    Command {{\n        name: r#\"{}\"#,\n        aliases: &[{}],\n        args: {},\n        subargs: {},\n        key: r#\"{}\"#,\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
+            "    Command {{\n        name: r#\"{}\"#,\n        args: {},\n        subargs: {},\n        key: r#\"{}\"#,\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
             cmd.name,
-            aliases_str.join(", "),
             args,
             subargs,
             cmd.key,
@@ -347,18 +338,14 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
     // Generate find_command function
     code.push_str("#[must_use]\n");
     code.push_str("pub fn find_command(input: &str) -> Option<&'static Command> {\n");
-    code.push_str("    COMMANDS.iter().find(|c| c.name == input || c.aliases.contains(&input))\n");
+    code.push_str("    COMMANDS.iter().find(|c| c.name == input)\n");
     code.push_str("}\n\n");
 
     // Generate commands_matching function for autocomplete
     code.push_str(
         "pub fn commands_matching(prefix: &str) -> impl Iterator<Item = &'static Command> {\n",
     );
-    code.push_str("    COMMANDS.iter().filter(move |c| {\n");
-    code.push_str(
-        "        c.name.starts_with(prefix) || c.aliases.iter().any(|a| a.starts_with(prefix))\n",
-    );
-    code.push_str("    })\n");
+    code.push_str("    COMMANDS.iter().filter(move |c| c.name.starts_with(prefix))\n");
     code.push_str("}\n");
 
     code
@@ -385,7 +372,6 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
     code.push_str("pub struct FilterSyntax {\n");
     code.push_str("    pub syntax: &'static str,\n");
     code.push_str("    pub display: &'static str,\n");
-    code.push_str("    pub aliases: &'static [&'static str],\n");
     code.push_str("    pub category: FilterCategory,\n");
     code.push_str("    pub short_text: &'static str,\n");
     code.push_str("    pub short_description: &'static str,\n");
@@ -395,17 +381,11 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
     // Generate FILTER_SYNTAX static
     code.push_str("pub static FILTER_SYNTAX: &[FilterSyntax] = &[\n");
     for filter in filters {
-        let aliases_str: Vec<String> = filter
-            .aliases
-            .iter()
-            .map(|a| format!("r#\"{}\"#", a))
-            .collect();
         let display = filter.display.as_deref().unwrap_or(&filter.syntax);
         code.push_str(&format!(
-            "    FilterSyntax {{\n        syntax: r#\"{}\"#,\n        display: r#\"{}\"#,\n        aliases: &[{}],\n        category: FilterCategory::{},\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
+            "    FilterSyntax {{\n        syntax: r#\"{}\"#,\n        display: r#\"{}\"#,\n        category: FilterCategory::{},\n        short_text: r#\"{}\"#,\n        short_description: r#\"{}\"#,\n        long_description: r#\"{}\"#,\n    }},\n",
             filter.syntax,
             display,
-            aliases_str.join(", "),
             to_pascal_case(&filter.category),
             filter.short_text,
             filter.short_description,
@@ -421,11 +401,7 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
 
     // Generate filter_syntax_matching function for autocomplete
     code.push_str("pub fn filter_syntax_matching(prefix: &str) -> impl Iterator<Item = &'static FilterSyntax> {\n");
-    code.push_str("    FILTER_SYNTAX.iter().filter(move |f| {\n");
-    code.push_str(
-        "        f.syntax.starts_with(prefix) || f.aliases.iter().any(|a| a.starts_with(prefix))\n",
-    );
-    code.push_str("    })\n");
+    code.push_str("    FILTER_SYNTAX.iter().filter(move |f| f.syntax.starts_with(prefix))\n");
     code.push_str("}\n");
 
     code
@@ -520,10 +496,7 @@ fn generate_commands_table(commands: &[CommandDef]) -> String {
 }
 
 fn format_command_display(cmd: &CommandDef) -> String {
-    match cmd.aliases.first() {
-        Some(alias) => format!("`:[{}]{}`", alias, &cmd.name[alias.len()..]),
-        None => format!("`:{}`", cmd.name),
-    }
+    format!("`:{}`", cmd.name)
 }
 
 fn generate_filter_syntax_table(filters: &[FilterDef]) -> String {
@@ -536,13 +509,7 @@ fn generate_filter_syntax_table(filters: &[FilterDef]) -> String {
         }
 
         let display = filter.display.as_deref().unwrap_or(&filter.syntax);
-        let pattern = if !filter.aliases.is_empty() {
-            format!("`{}` or `{}`", display, filter.aliases[0])
-        } else {
-            format!("`{}`", display)
-        };
-
-        table.push_str(&format!("\n| {} | {} |", pattern, filter.short_description));
+        table.push_str(&format!("\n| `{}` | {} |", display, filter.short_description));
     }
 
     // Add text search pattern
@@ -591,6 +558,12 @@ fn generate_readme(
         .replace("<!-- GENERATED:FILTER_KEYS -->", &filter_table)
         .replace("<!-- GENERATED:COMMANDS -->", &commands_table)
         .replace("<!-- GENERATED:FILTER_SYNTAX -->", &filter_syntax_table);
+
+    // Prepend auto-generated notice
+    let readme = format!(
+        "<!-- AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. Edit /templates/README.template.md instead. -->\n\n{}",
+        readme
+    );
 
     fs::write(&readme_path, readme).expect("Failed to write README.md");
 }

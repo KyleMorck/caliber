@@ -575,9 +575,7 @@ impl App {
         let arg_part = parts.next();
 
         // Find matching command
-        let Some(cmd) = COMMANDS
-            .iter()
-            .find(|c| c.name == cmd_part || c.aliases.contains(&cmd_part))
+        let Some(cmd) = COMMANDS.iter().find(|c| c.name == cmd_part)
         else {
             // Unknown command - let execute_command show the error
             return true;

@@ -70,7 +70,7 @@ fn build_help_lines() -> Vec<RatatuiLine<'static>> {
     // [Commands] section
     lines.push(section_header("[Commands]", &header_indent, header_style));
     for cmd in COMMANDS.iter() {
-        let key_display = format_command_key(cmd.name, cmd.aliases.first().copied());
+        let key_display = format_command_key(cmd.name, None);
         lines.push(help_line(
             &key_display,
             cmd.short_description,

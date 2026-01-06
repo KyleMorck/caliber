@@ -2,24 +2,22 @@
 # Each entry defines a command with its aliases and help text variants
 
 [[commands]]
-name = "open"
-aliases = ["o"]
+name = "edit"
 args = "<config|journal|scratchpad> [hub|project]"
 subargs = [
   { options = ["config", "journal", "scratchpad"] },
   { options = ["hub", "project"] },
 ]
-key = ":open"
+key = ":edit"
 help_section = "commands"
-short_text = "Open in editor"
-short_description = "Open config, journal, or scratchpad in $EDITOR"
-long_description = "Open a file in $EDITOR. Use 'config', 'journal', or 'scratchpad' (alias: sp), optionally with 'hub' or 'project' scope for config/journal. Aliases: o"
+short_text = "Edit in editor"
+short_description = "Edit config, journal, or scratchpad in $EDITOR"
+long_description = "Edit a file in $EDITOR. Use 'config', 'journal', or 'scratchpad' (alias: sp), optionally with 'hub' or 'project' scope for config/journal."
 
 [[commands]]
 name = "quit"
-aliases = ["q"]
 key = ":quit"
 help_section = "commands"
 short_text = "Quit"
 short_description = "Quit application"
-long_description = "Save and exit the application. Aliases: q"
+long_description = "Save and exit the application."

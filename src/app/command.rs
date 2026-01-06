@@ -23,12 +23,12 @@ impl App {
         let arg = parts.get(1).copied().unwrap_or("").trim();
 
         match command {
-            "q" | "quit" => {
+            "quit" => {
                 self.save();
                 self.should_quit = true;
             }
-            "o" | "open" => {
-                self.handle_open_command(arg)?;
+            "edit" => {
+                self.handle_edit_command(arg)?;
             }
             _ => {
                 if !command.is_empty() {
@@ -40,7 +40,7 @@ impl App {
         Ok(())
     }
 
-    fn handle_open_command(&mut self, arg: &str) -> io::Result<()> {
+    fn handle_edit_command(&mut self, arg: &str) -> io::Result<()> {
         let parts: Vec<&str> = arg.split_whitespace().collect();
         let target = parts.first().copied().unwrap_or("");
         let scope = parts.get(1).copied();
@@ -50,7 +50,7 @@ impl App {
             "journal" => (self.resolve_journal_path(scope), false),
             "scratchpad" | "sp" => (Ok(self.config.get_scratchpad_path()), false),
             "" => {
-                self.set_status("Usage: :open <config|journal|scratchpad>");
+                self.set_status("Usage: :edit <config|journal|scratchpad>");
                 return Ok(());
             }
             _ => {

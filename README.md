@@ -1,3 +1,5 @@
+<!-- AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. Edit /templates/README.template.md instead. -->
+
 # Caliber
 
 A terminal-based task journal for developers. Capture ideas without leaving your workflow, find them when you need them.
@@ -365,18 +367,18 @@ These shortcuts work in all text input modes (Edit, Command, and Filter query):
 
 | Key | Action |
 |-----|--------|
-| `:[o]pen` | Open config, journal, or scratchpad in $EDITOR |
-| `:[q]uit` | Quit application |
+| `:edit` | Edit config, journal, or scratchpad in $EDITOR |
+| `:quit` | Quit application |
 
 
 ### Filter Syntax
 
 | Pattern | Matches |
 |---------|---------|
-| `!tasks` or `!t` | Incomplete tasks |
-| `!completed` or `!c` | Completed tasks |
-| `!notes` or `!n` | Notes only |
-| `!events` or `!e` | Events only |
+| `!tasks` | Incomplete tasks |
+| `!completed` | Completed tasks |
+| `!notes` | Notes only |
+| `!events` | Events only |
 | `@before:DATE` | Entries before date |
 | `@after:DATE` | Entries after date |
 | `@overdue` | Entries with past @date |

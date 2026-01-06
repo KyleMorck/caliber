@@ -67,9 +67,7 @@ impl HintContext {
         let words: Vec<&str> = prefix.split_whitespace().collect();
         let first_word = words.first().copied().unwrap_or("");
 
-        let matched_command = COMMANDS
-            .iter()
-            .find(|c| c.name == first_word || c.aliases.contains(&first_word));
+        let matched_command = COMMANDS.iter().find(|c| c.name == first_word);
 
         if let Some(cmd) = matched_command {
             if !cmd.subargs.is_empty() {
@@ -133,9 +131,7 @@ impl HintContext {
 
         let matches: Vec<&'static Command> = COMMANDS
             .iter()
-            .filter(|c| {
-                c.name.starts_with(prefix) || c.aliases.iter().any(|a| a.starts_with(prefix))
-            })
+            .filter(|c| c.name.starts_with(prefix))
             .collect();
 
         if matches.is_empty() {
@@ -195,10 +191,7 @@ impl HintContext {
             let matches: Vec<&'static FilterSyntax> = FILTER_SYNTAX
                 .iter()
                 .filter(|f| f.category == FilterCategory::EntryType)
-                .filter(|f| {
-                    f.syntax[1..].starts_with(type_prefix)
-                        || f.aliases.iter().any(|a| a[1..].starts_with(type_prefix))
-                })
+                .filter(|f| f.syntax[1..].starts_with(type_prefix))
                 .collect();
 
             if matches.is_empty() {

@@ -7,7 +7,6 @@
 
 [[filters]]
 syntax = "!tasks"
-aliases = ["!t"]
 category = "entry_type"
 help_section = "filters"
 short_text = "Tasks"
@@ -16,7 +15,6 @@ long_description = "Filter to show only incomplete tasks (- [ ] entries)"
 
 [[filters]]
 syntax = "!completed"
-aliases = ["!c"]
 category = "entry_type"
 help_section = "filters"
 short_text = "Completed"
@@ -25,7 +23,6 @@ long_description = "Filter to show only completed tasks (- [x] entries)"
 
 [[filters]]
 syntax = "!notes"
-aliases = ["!n"]
 category = "entry_type"
 help_section = "filters"
 short_text = "Notes"
@@ -34,7 +31,6 @@ long_description = "Filter to show only notes (- entries without checkbox)"
 
 [[filters]]
 syntax = "!events"
-aliases = ["!e"]
 category = "entry_type"
 help_section = "filters"
 short_text = "Events"
@@ -48,7 +44,6 @@ long_description = "Filter to show only events (* entries)"
 [[filters]]
 syntax = "@before:"
 display = "@before:DATE"
-aliases = []
 category = "date_op"
 help_section = "filters"
 short_text = "Before"
@@ -58,7 +53,6 @@ long_description = "Filter entries from days on or before DATE (inclusive). Supp
 [[filters]]
 syntax = "@after:"
 display = "@after:DATE"
-aliases = []
 category = "date_op"
 help_section = "filters"
 short_text = "After"
@@ -67,7 +61,6 @@ long_description = "Filter entries from days on or after DATE (inclusive). Suppo
 
 [[filters]]
 syntax = "@overdue"
-aliases = []
 category = "date_op"
 help_section = "filters"
 short_text = "Overdue"
@@ -80,7 +73,6 @@ long_description = "Filter entries that have @date patterns targeting a date bef
 
 [[filters]]
 syntax = "not:#tag"
-aliases = []
 category = "negation"
 help_section = "filters"
 short_text = "Not tag"
@@ -89,7 +81,6 @@ long_description = "Exclude entries that contain the specified tag"
 
 [[filters]]
 syntax = "not:!type"
-aliases = []
 category = "negation"
 help_section = "filters"
 short_text = "Not type"
@@ -98,7 +89,6 @@ long_description = "Exclude entries of the specified type (tasks, notes, or even
 
 [[filters]]
 syntax = "not:word"
-aliases = []
 category = "negation"
 help_section = "filters"
 short_text = "Not text"
@@ -111,7 +101,6 @@ long_description = "Exclude entries that contain the specified text"
 
 [[filters]]
 syntax = "#tag"
-aliases = []
 category = "tag"
 help_section = "filters"
 short_text = "Tag"
@@ -120,7 +109,6 @@ long_description = "Filter entries that contain the specified tag"
 
 [[filters]]
 syntax = "$name"
-aliases = []
 category = "saved_filter"
 help_section = "filters"
 short_text = "Saved"
@@ -129,7 +117,6 @@ long_description = "Expand a saved filter defined in config.toml"
 
 [[filters]]
 syntax = "word"
-aliases = []
 category = "text_search"
 help_section = "filters"
 short_text = "Search"
