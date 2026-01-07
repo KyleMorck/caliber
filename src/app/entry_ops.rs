@@ -388,15 +388,27 @@ impl App {
         self.execute_action(Box::new(action))
     }
 
+    #[cfg(not(test))]
     pub(super) fn copy_to_clipboard(text: &str) -> Result<(), arboard::Error> {
         let mut clipboard = arboard::Clipboard::new()?;
         clipboard.set_text(text)?;
         Ok(())
     }
 
+    #[cfg(test)]
+    pub(super) fn copy_to_clipboard(_text: &str) -> Result<(), arboard::Error> {
+        Ok(())
+    }
+
+    #[cfg(not(test))]
     fn read_from_clipboard() -> Result<String, arboard::Error> {
         let mut clipboard = arboard::Clipboard::new()?;
         clipboard.get_text()
+    }
+
+    #[cfg(test)]
+    fn read_from_clipboard() -> Result<String, arboard::Error> {
+        Ok(String::new())
     }
 
     /// Paste clipboard content as entries below current selection
