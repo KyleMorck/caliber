@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::storage::{Entry, EntryType, FilterEntry, LaterEntry};
+use crate::storage::{Entry, EntryType, FilterResult, ProjectedEntry};
 
 use super::{
     App, DeleteTarget, InputMode, Line, SelectionState, TagRemovalTarget, ToggleTarget, ViewMode,
@@ -9,14 +9,14 @@ use super::{
 
 /// Represents an entry at a selected visible index, used for batch operations.
 enum SelectedEntry<'a> {
-    Later(&'a LaterEntry),
+    Projected(&'a ProjectedEntry),
     Daily {
         line_idx: usize,
         entry: &'a Entry,
     },
     Filter {
         index: usize,
-        entry: &'a FilterEntry,
+        entry: &'a FilterResult,
     },
 }
 
@@ -68,19 +68,19 @@ impl App {
         }
     }
 
-    /// Get later entry at visible index
-    fn get_later_at_visible_index(&self, visible_idx: usize) -> Option<&LaterEntry> {
+    /// Get projected entry at visible index
+    fn get_projected_at_visible_index(&self, visible_idx: usize) -> Option<&ProjectedEntry> {
         let ViewMode::Daily(state) = &self.view else {
             return None;
         };
 
         let mut current_visible = 0;
-        for later in &state.later_entries {
-            if !self.should_show_later(later) {
+        for projected in &state.projected_entries {
+            if !self.should_show_projected(projected) {
                 continue;
             }
             if current_visible == visible_idx {
-                return Some(later);
+                return Some(projected);
             }
             current_visible += 1;
         }
@@ -111,12 +111,12 @@ impl App {
     fn get_entry_at_visible_index(&self, visible_idx: usize) -> Option<SelectedEntry<'_>> {
         match &self.view {
             ViewMode::Daily(_) => {
-                let later_count = self.visible_later_count();
-                if visible_idx < later_count {
-                    self.get_later_at_visible_index(visible_idx)
-                        .map(SelectedEntry::Later)
+                let projected_count = self.visible_projected_count();
+                if visible_idx < projected_count {
+                    self.get_projected_at_visible_index(visible_idx)
+                        .map(SelectedEntry::Projected)
                 } else {
-                    let entry_idx = visible_idx - later_count;
+                    let entry_idx = visible_idx - projected_count;
                     self.get_daily_at_visible_entry_index(entry_idx)
                         .map(|(line_idx, entry)| SelectedEntry::Daily { line_idx, entry })
                 }
@@ -152,11 +152,11 @@ impl App {
     /// Collect delete targets for all selected entries
     fn collect_delete_targets_from_selected(&self) -> Vec<DeleteTarget> {
         self.collect_targets_from_selected(|entry| match entry {
-            SelectedEntry::Later(later) => Some(DeleteTarget::Later {
-                source_date: later.source_date,
-                line_index: later.line_index,
-                entry_type: later.entry_type.clone(),
-                content: later.content.clone(),
+            SelectedEntry::Projected(projected) => Some(DeleteTarget::Projected {
+                source_date: projected.source_date,
+                line_index: projected.line_index,
+                entry_type: projected.entry.entry_type.clone(),
+                content: projected.entry.content.clone(),
             }),
             SelectedEntry::Daily { line_idx, entry } => Some(DeleteTarget::Daily {
                 line_idx,
@@ -166,8 +166,8 @@ impl App {
                 index,
                 source_date: entry.source_date,
                 line_index: entry.line_index,
-                entry_type: entry.entry_type.clone(),
-                content: entry.content.clone(),
+                entry_type: entry.entry.entry_type.clone(),
+                content: entry.entry.content.clone(),
             }),
         })
     }
@@ -175,22 +175,22 @@ impl App {
     /// Collect toggle targets for all selected entries (tasks only)
     fn collect_toggle_targets_from_selected(&self) -> Vec<ToggleTarget> {
         self.collect_targets_from_selected(|entry| {
-            // Helper to check if entry type is a task
             fn is_task(entry_type: &EntryType) -> bool {
                 matches!(entry_type, EntryType::Task { .. })
             }
 
             match entry {
-                SelectedEntry::Later(later) if is_task(&later.entry_type) => {
-                    Some(ToggleTarget::Later {
-                        source_date: later.source_date,
-                        line_index: later.line_index,
+                SelectedEntry::Projected(projected) if is_task(&projected.entry.entry_type) => {
+                    Some(ToggleTarget::Projected {
+                        source_date: projected.source_date,
+                        line_index: projected.line_index,
+                        kind: projected.kind,
                     })
                 }
                 SelectedEntry::Daily { line_idx, entry } if is_task(&entry.entry_type) => {
                     Some(ToggleTarget::Daily { line_idx })
                 }
-                SelectedEntry::Filter { index, entry } if is_task(&entry.entry_type) => {
+                SelectedEntry::Filter { index, entry } if is_task(&entry.entry.entry_type) => {
                     Some(ToggleTarget::Filter {
                         index,
                         source_date: entry.source_date,
@@ -206,14 +206,18 @@ impl App {
     fn collect_yank_targets_from_selected(&self) -> Vec<YankTarget> {
         self.collect_targets_from_selected(|entry| {
             let content = match entry {
-                SelectedEntry::Later(later) => {
-                    format!("{}{}", later.entry_type.prefix(), later.content)
+                SelectedEntry::Projected(projected) => {
+                    format!(
+                        "{}{}",
+                        projected.entry.entry_type.prefix(),
+                        projected.entry.content
+                    )
                 }
                 SelectedEntry::Daily { entry, .. } => {
                     format!("{}{}", entry.prefix(), entry.content)
                 }
                 SelectedEntry::Filter { entry, .. } => {
-                    format!("{}{}", entry.entry_type.prefix(), entry.content)
+                    format!("{}{}", entry.entry.entry_type.prefix(), entry.entry.content)
                 }
             };
             Some(YankTarget { content })
@@ -223,12 +227,13 @@ impl App {
     /// Collect cycle targets (with entry types) for all selected entries
     fn collect_cycle_targets_from_selected(&self) -> Vec<super::actions::CycleTarget> {
         self.collect_targets_from_selected(|entry| match entry {
-            SelectedEntry::Later(later) => Some(super::actions::CycleTarget {
-                location: TagRemovalTarget::Later {
-                    source_date: later.source_date,
-                    line_index: later.line_index,
+            SelectedEntry::Projected(projected) => Some(super::actions::CycleTarget {
+                location: TagRemovalTarget::Projected {
+                    source_date: projected.source_date,
+                    line_index: projected.line_index,
+                    kind: projected.kind,
                 },
-                original_type: later.entry_type.clone(),
+                original_type: projected.entry.entry_type.clone(),
             }),
             SelectedEntry::Daily { line_idx, entry } => Some(super::actions::CycleTarget {
                 location: TagRemovalTarget::Daily { line_idx },
@@ -240,7 +245,7 @@ impl App {
                     source_date: entry.source_date,
                     line_index: entry.line_index,
                 },
-                original_type: entry.entry_type.clone(),
+                original_type: entry.entry.entry_type.clone(),
             }),
         })
     }
@@ -248,12 +253,13 @@ impl App {
     /// Collect tag targets (with content) for all selected entries
     fn collect_tag_targets_from_selected(&self) -> Vec<super::actions::TagTarget> {
         self.collect_targets_from_selected(|entry| match entry {
-            SelectedEntry::Later(later) => Some(super::actions::TagTarget {
-                location: TagRemovalTarget::Later {
-                    source_date: later.source_date,
-                    line_index: later.line_index,
+            SelectedEntry::Projected(projected) => Some(super::actions::TagTarget {
+                location: TagRemovalTarget::Projected {
+                    source_date: projected.source_date,
+                    line_index: projected.line_index,
+                    kind: projected.kind,
                 },
-                original_content: later.content.clone(),
+                original_content: projected.entry.content.clone(),
             }),
             SelectedEntry::Daily { line_idx, entry } => Some(super::actions::TagTarget {
                 location: TagRemovalTarget::Daily { line_idx },
@@ -265,7 +271,7 @@ impl App {
                     source_date: entry.source_date,
                     line_index: entry.line_index,
                 },
-                original_content: entry.content.clone(),
+                original_content: entry.entry.content.clone(),
             }),
         })
     }

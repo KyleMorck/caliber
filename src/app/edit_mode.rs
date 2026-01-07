@@ -39,9 +39,7 @@ impl App {
                     && let ViewMode::Filter(state) = &mut self.view
                     && let Some(filter_entry) = state.entries.get_mut(filter_index)
                 {
-                    filter_entry.entry_type = new_type;
-                    filter_entry.completed =
-                        matches!(filter_entry.entry_type, EntryType::Task { completed: true });
+                    filter_entry.entry.entry_type = new_type;
                     if date == self.current_date {
                         let _ = self.reload_current_day();
                     }
@@ -49,25 +47,6 @@ impl App {
             }
             InputMode::Edit(EditContext::FilterQuickAdd { entry_type, .. }) => {
                 *entry_type = entry_type.cycle();
-            }
-            InputMode::Edit(EditContext::LaterEdit {
-                source_date,
-                line_index,
-                later_index,
-            }) => {
-                let source_date = *source_date;
-                let line_index = *line_index;
-                let later_index = *later_index;
-                let path = self.active_path();
-
-                if let Ok(Some(new_type)) = storage::cycle_entry_type(source_date, path, line_index)
-                    && let ViewMode::Daily(state) = &mut self.view
-                    && let Some(later_entry) = state.later_entries.get_mut(later_index)
-                {
-                    later_entry.entry_type = new_type;
-                    later_entry.completed =
-                        matches!(later_entry.entry_type, EntryType::Task { completed: true });
-                }
             }
             _ => {}
         }
@@ -110,18 +89,6 @@ impl App {
             }
             EditContext::FilterQuickAdd { date, entry_type } => {
                 self.save_filter_quick_add_with_action(*date, entry_type.clone(), new_content);
-            }
-            EditContext::LaterEdit {
-                source_date,
-                line_index,
-                ..
-            } => {
-                self.save_later_edit_with_action(
-                    *source_date,
-                    *line_index,
-                    new_content,
-                    original_content,
-                );
             }
         }
 
@@ -283,53 +250,6 @@ impl App {
         }
     }
 
-    fn save_later_edit_with_action(
-        &mut self,
-        source_date: chrono::NaiveDate,
-        line_index: usize,
-        new_content: String,
-        original_content: String,
-    ) {
-        let path = self.active_path().to_path_buf();
-
-        if new_content.trim().is_empty() {
-            let _ = storage::delete_entry(source_date, &path, line_index);
-        } else {
-            let entry_type = storage::get_entry_type(source_date, &path, line_index);
-
-            match storage::update_entry_content(source_date, &path, line_index, new_content.clone())
-            {
-                Ok(false) => {
-                    self.set_status(format!(
-                        "Failed to update: no entry at index {line_index} for {source_date}"
-                    ));
-                }
-                Err(e) => {
-                    self.set_status(format!("Failed to save: {e}"));
-                }
-                Ok(true) if original_content != new_content => {
-                    let target = EditTarget {
-                        location: EntryLocation::Later {
-                            source_date,
-                            line_index,
-                        },
-                        original_content,
-                        new_content,
-                        entry_type,
-                    };
-                    let action = EditEntry::new(target);
-                    let _ = self.execute_action(Box::new(action));
-                }
-                Ok(true) => {}
-            }
-        }
-
-        if let ViewMode::Daily(state) = &mut self.view {
-            state.later_entries = storage::collect_later_entries_for_date(self.current_date, &path)
-                .unwrap_or_default();
-        }
-    }
-
     /// Cancel edit mode without saving (Esc)
     pub fn cancel_edit(&mut self) {
         self.edit_buffer = None;
@@ -348,7 +268,6 @@ impl App {
             }
             InputMode::Edit(EditContext::FilterEdit { .. })
             | InputMode::Edit(EditContext::FilterQuickAdd { .. }) => {}
-            InputMode::Edit(EditContext::LaterEdit { .. }) => {}
             _ => {}
         }
     }

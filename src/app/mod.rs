@@ -23,7 +23,8 @@ use crate::config::Config;
 use crate::cursor::CursorBuffer;
 use crate::registry::COMMANDS;
 use crate::storage::{
-    self, DayInfo, Entry, EntryType, FilterEntry, JournalContext, JournalSlot, LaterEntry, Line,
+    self, DayInfo, Entry, EntryType, FilterResult, JournalContext, JournalSlot, Line,
+    ProjectedEntry,
 };
 
 pub const DAILY_HEADER_LINES: usize = 1;
@@ -36,16 +37,16 @@ pub struct DailyState {
     pub selected: usize,
     pub scroll_offset: usize,
     pub original_lines: Option<Vec<Line>>,
-    pub later_entries: Vec<LaterEntry>,
+    pub projected_entries: Vec<ProjectedEntry>,
 }
 
 impl DailyState {
     #[must_use]
-    pub fn new(entry_count: usize, later_entries: Vec<LaterEntry>) -> Self {
+    pub fn new(entry_count: usize, projected_entries: Vec<ProjectedEntry>) -> Self {
         let selected = if entry_count > 0 {
-            later_entries.len() + entry_count - 1
-        } else if !later_entries.is_empty() {
-            later_entries.len() - 1
+            projected_entries.len() + entry_count - 1
+        } else if !projected_entries.is_empty() {
+            projected_entries.len() - 1
         } else {
             0
         };
@@ -54,7 +55,7 @@ impl DailyState {
             selected,
             scroll_offset: 0,
             original_lines: None,
-            later_entries,
+            projected_entries,
         }
     }
 }
@@ -64,7 +65,7 @@ impl DailyState {
 pub struct FilterState {
     pub query: String,
     pub query_buffer: CursorBuffer,
-    pub entries: Vec<FilterEntry>,
+    pub entries: Vec<FilterResult>,
     pub selected: usize,
     pub scroll_offset: usize,
 }
@@ -182,12 +183,7 @@ pub enum EditContext {
         date: NaiveDate,
         entry_type: EntryType,
     },
-    /// Editing a later entry from Daily view
-    LaterEdit {
-        source_date: NaiveDate,
-        line_index: usize,
-        later_index: usize,
-    },
+    // Note: LaterEdit removed - edit is blocked on projected entries
 }
 
 /// Context for confirmation dialogs
@@ -219,9 +215,9 @@ pub enum InsertPosition {
 
 /// The currently selected item, accounting for hidden completed entries
 pub enum SelectedItem<'a> {
-    Later {
+    Projected {
         index: usize,
-        entry: &'a LaterEntry,
+        entry: &'a ProjectedEntry,
     },
     Daily {
         index: usize,
@@ -230,7 +226,7 @@ pub enum SelectedItem<'a> {
     },
     Filter {
         index: usize,
-        entry: &'a FilterEntry,
+        entry: &'a FilterResult,
     },
     None,
 }
@@ -288,7 +284,7 @@ impl App {
         let path = journal_context.active_path().to_path_buf();
         let lines = storage::load_day_lines(date, &path)?;
         let entry_indices = Self::compute_entry_indices(&lines);
-        let later_entries = storage::collect_later_entries_for_date(date, &path)?;
+        let projected_entries = storage::collect_projected_entries_for_date(date, &path)?;
         let in_git_repo = storage::find_git_root().is_some();
         let cached_journal_tags = storage::collect_journal_tags(&path).unwrap_or_default();
         let hide_completed = config.hide_completed;
@@ -297,7 +293,7 @@ impl App {
             current_date: date,
             last_daily_date: date,
             lines,
-            view: ViewMode::Daily(DailyState::new(entry_indices.len(), later_entries)),
+            view: ViewMode::Daily(DailyState::new(entry_indices.len(), projected_entries)),
             entry_indices,
             input_mode: InputMode::Normal,
             edit_buffer: None,

@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 
 use super::super::{App, DeleteTarget, Line, ViewMode};
 use super::types::{Action, ActionDescription};
-use crate::storage::{self, Entry, EntryType, FilterEntry};
+use crate::storage::{self, Entry, EntryType, FilterResult};
 
 fn pluralize(count: usize) -> &'static str {
     if count == 1 { "entry" } else { "entries" }
@@ -37,12 +37,12 @@ impl Action for DeleteEntries {
         self.targets.sort_by(|a, b| {
             let idx_a = match a {
                 DeleteTarget::Daily { line_idx, .. } => *line_idx,
-                DeleteTarget::Later { line_index, .. } => *line_index,
+                DeleteTarget::Projected { line_index, .. } => *line_index,
                 DeleteTarget::Filter { line_index, .. } => *line_index,
             };
             let idx_b = match b {
                 DeleteTarget::Daily { line_idx, .. } => *line_idx,
-                DeleteTarget::Later { line_index, .. } => *line_index,
+                DeleteTarget::Projected { line_index, .. } => *line_index,
                 DeleteTarget::Filter { line_index, .. } => *line_index,
             };
             idx_b.cmp(&idx_a)
@@ -149,21 +149,16 @@ impl Action for RestoreEntries {
                         for (i, (line_idx, entry)) in date_entries.into_iter().enumerate() {
                             let insert_idx = (line_idx + i).min(lines.len());
 
-                            let filter_entry = FilterEntry {
+                            let filter_result = FilterResult {
                                 source_date: date,
                                 line_index: insert_idx,
-                                entry_type: entry.entry_type.clone(),
-                                content: entry.content.clone(),
-                                completed: matches!(
-                                    entry.entry_type,
-                                    EntryType::Task { completed: true }
-                                ),
+                                entry: entry.clone(),
                             };
                             lines.insert(insert_idx, Line::Entry(entry.clone()));
 
                             if let ViewMode::Filter(state) = &mut app.view {
                                 let filter_index = state.entries.len();
-                                state.entries.push(filter_entry);
+                                state.entries.push(filter_result);
                                 state.selected = filter_index;
 
                                 delete_targets.push(DeleteTarget::Filter {
@@ -207,7 +202,7 @@ fn execute_delete_raw(
     let path = app.active_path().to_path_buf();
 
     match target {
-        DeleteTarget::Later {
+        DeleteTarget::Projected {
             source_date,
             line_index,
             entry_type,
@@ -216,8 +211,8 @@ fn execute_delete_raw(
             storage::delete_entry(*source_date, &path, *line_index)?;
 
             if let ViewMode::Daily(state) = &mut app.view {
-                state.later_entries =
-                    storage::collect_later_entries_for_date(app.current_date, &path)?;
+                state.projected_entries =
+                    storage::collect_projected_entries_for_date(app.current_date, &path)?;
             }
             clamp_daily_selection(app);
 

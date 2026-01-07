@@ -28,7 +28,7 @@ fn test_later_entry_appears_on_target_date() {
     );
 }
 
-/// LE-3: Edit later entry updates source
+/// LE-3: Edit is blocked on projected (later) entries, shows status message
 #[test]
 fn test_edit_later_entry() {
     // Start viewing 1/15, with entry created on 1/10 targeting 1/15
@@ -42,17 +42,24 @@ fn test_edit_later_entry() {
         "Later entry should be visible"
     );
 
-    // Edit the later entry
+    // Try to edit the later entry - should be blocked
     ctx.press(KeyCode::Char('i'));
-    ctx.press(KeyCode::End);
-    ctx.type_str(" modified");
-    ctx.press(KeyCode::Enter);
 
-    // Check journal was updated
+    // Should show status message indicating how to go to source
+    assert!(
+        ctx.status_contains("Press o to go to source"),
+        "Edit should be blocked with go-to-source hint"
+    );
+
+    // Journal should be unchanged (edit was blocked)
     let journal = ctx.read_journal();
     assert!(
-        journal.contains("Original @01/15 modified"),
-        "Later entry edit should be persisted"
+        journal.contains("Original @01/15"),
+        "Original entry should be unchanged"
+    );
+    assert!(
+        !journal.contains("modified"),
+        "Entry should not have been modified"
     );
 }
 
@@ -72,20 +79,27 @@ fn test_toggle_later_entry() {
     );
 }
 
-/// LE-5: Delete later entry removes from source
+/// LE-5: Delete is blocked on projected (later) entries, shows status message
 #[test]
 fn test_delete_later_entry() {
     let view_date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let content = "# 2026/01/10\n- [ ] Delete me @01/15\n- [ ] Keep me\n";
     let mut ctx = TestContext::with_journal_content(view_date, content);
 
-    // Delete the later entry
+    // Try to delete the later entry - should be blocked
     ctx.press(KeyCode::Char('d'));
 
+    // Should show status message indicating how to go to source
+    assert!(
+        ctx.status_contains("Press o to go to source"),
+        "Delete should be blocked with go-to-source hint"
+    );
+
+    // Journal should be unchanged (delete was blocked)
     let journal = ctx.read_journal();
     assert!(
-        !journal.contains("Delete me"),
-        "Deleted later entry should be removed"
+        journal.contains("Delete me"),
+        "Entry should not have been deleted"
     );
     assert!(journal.contains("Keep me"), "Other entry should remain");
 }

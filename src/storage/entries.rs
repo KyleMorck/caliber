@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate, Weekday};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EntryType {
@@ -60,22 +60,78 @@ pub enum Line {
     Raw(String),
 }
 
-/// A cross-day entry reference (entry from another day appearing in current view).
-/// Used for both filter results and later entries (@date syntax).
+/// Filter view entry: wraps Entry with location metadata for operations.
 #[derive(Debug, Clone)]
-pub struct CrossDayEntry {
+pub struct FilterResult {
     pub source_date: NaiveDate,
     pub line_index: usize,
-    pub content: String,
-    pub entry_type: EntryType,
-    pub completed: bool,
+    pub entry: Entry,
 }
 
-/// Type alias for filter view entries.
-pub type FilterEntry = CrossDayEntry;
+/// The kind of projected entry (determines display and toggle behavior).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectedKind {
+    /// One-time projection via @MM/DD syntax
+    Later,
+    /// Repeating projection via @every-* syntax
+    Recurring,
+}
 
-/// Type alias for entries appearing via @date syntax.
-pub type LaterEntry = CrossDayEntry;
+/// Daily view projected entry: entry appearing on a different date than its source.
+#[derive(Debug, Clone)]
+pub struct ProjectedEntry {
+    pub source_date: NaiveDate,
+    pub line_index: usize,
+    pub entry: Entry,
+    pub kind: ProjectedKind,
+}
+
+/// Recurring pattern for @every-* syntax.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecurringPattern {
+    /// @every-day - every day
+    Daily,
+    /// @every-weekday - Monday through Friday
+    Weekday,
+    /// @every-monday through @every-sunday
+    Weekly(Weekday),
+    /// @every-1 through @every-31 (day of month)
+    Monthly(u8),
+}
+
+impl RecurringPattern {
+    /// Returns true if this pattern matches the given date.
+    #[must_use]
+    pub fn matches(&self, date: NaiveDate) -> bool {
+        match self {
+            Self::Daily => true,
+            Self::Weekday => !matches!(date.weekday(), Weekday::Sat | Weekday::Sun),
+            Self::Weekly(day) => date.weekday() == *day,
+            Self::Monthly(day) => {
+                let last_day = last_day_of_month(date);
+                if u32::from(*day) > last_day {
+                    date.day() == last_day
+                } else {
+                    date.day() == u32::from(*day)
+                }
+            }
+        }
+    }
+}
+
+/// Returns the last day of the month for the given date.
+fn last_day_of_month(date: NaiveDate) -> u32 {
+    let (year, month) = (date.year(), date.month());
+    let next_month = if month == 12 {
+        NaiveDate::from_ymd_opt(year + 1, 1, 1)
+    } else {
+        NaiveDate::from_ymd_opt(year, month + 1, 1)
+    };
+    next_month
+        .and_then(|d| d.pred_opt())
+        .map(|d| d.day())
+        .unwrap_or(28)
+}
 
 fn parse_line(line: &str) -> Line {
     let trimmed = line.trim_start();

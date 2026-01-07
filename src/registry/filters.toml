@@ -67,6 +67,22 @@ short_text = "Overdue"
 short_description = "Entries with past @date"
 long_description = "Filter entries that have @date patterns targeting a date before today"
 
+[[filters]]
+syntax = "@later"
+category = "date_op"
+help_section = "filters"
+short_text = "Later"
+short_description = "Entries with @date patterns"
+long_description = "Filter entries that have @date patterns (one-time scheduled entries)"
+
+[[filters]]
+syntax = "@recurring"
+category = "date_op"
+help_section = "filters"
+short_text = "Recurring"
+short_description = "Entries with @every-* patterns"
+long_description = "Filter entries with recurring patterns (@every-day, @every-weekday, @every-monday, etc.)"
+
 # =============================================================================
 # Negation Patterns
 # =============================================================================

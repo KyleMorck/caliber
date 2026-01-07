@@ -8,7 +8,7 @@ use ratatui::{
 use regex::Regex;
 use unicode_width::UnicodeWidthStr;
 
-use crate::storage::{EntryType, LATER_DATE_REGEX, NATURAL_DATE_REGEX, TAG_REGEX};
+use crate::storage::{EntryType, LATER_DATE_REGEX, NATURAL_DATE_REGEX, RECURRING_REGEX, TAG_REGEX};
 
 #[must_use]
 pub fn entry_style(entry_type: &EntryType) -> Style {
@@ -90,6 +90,12 @@ pub fn style_content(text: &str, base_style: Style) -> Vec<Span<'static>> {
     }
 
     for cap in NATURAL_DATE_REGEX.captures_iter(text) {
+        if let Some(m) = cap.get(0) {
+            matches.push((m.start(), m.end(), date_color));
+        }
+    }
+
+    for cap in RECURRING_REGEX.captures_iter(text) {
         if let Some(m) = cap.get(0) {
             matches.push((m.start(), m.end(), date_color));
         }

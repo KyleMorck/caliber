@@ -11,24 +11,26 @@ pub use context::{
 
 // Re-export entry types
 pub use entries::{
-    CrossDayEntry, Entry, EntryType, FilterEntry, LaterEntry, Line, parse_lines, serialize_lines,
+    Entry, EntryType, FilterResult, Line, ProjectedEntry, ProjectedKind, RecurringPattern,
+    parse_lines, serialize_lines,
 };
 
 // Re-export persistence functions and types
 pub use persistence::{
-    DayInfo, cycle_entry_type, delete_entry, extract_day_content, get_entry_type, load_day,
-    load_day_lines, load_journal, mutate_entry, parse_day_header, save_day, save_day_lines,
-    save_journal, scan_days_in_range, toggle_entry_complete, update_day_content,
-    update_entry_content,
+    DayInfo, cycle_entry_type, delete_entry, extract_day_content, get_entry_content,
+    get_entry_type, load_day, load_day_lines, load_journal, mutate_entry, parse_day_header,
+    save_day, save_day_lines, save_journal, scan_days_in_range, toggle_entry_complete,
+    update_day_content, update_entry_content,
 };
 
 // Re-export filter types and functions
 pub use filter::{
     FAVORITE_TAG_REGEX, Filter, FilterType, LATER_DATE_REGEX, NATURAL_DATE_REGEX,
-    SAVED_FILTER_REGEX, TAG_REGEX, collect_filtered_entries, collect_journal_tags,
-    collect_later_entries_for_date, expand_favorite_tags, expand_saved_filters, extract_tags,
-    extract_target_date, normalize_natural_dates, parse_filter_date, parse_filter_query,
-    parse_later_date, parse_natural_date,
+    RECURRING_REGEX, SAVED_FILTER_REGEX, TAG_REGEX, collect_filtered_entries, collect_journal_tags,
+    collect_projected_entries_for_date, expand_favorite_tags, expand_saved_filters,
+    extract_recurring_pattern, extract_tags, extract_target_date, normalize_natural_dates,
+    parse_filter_date, parse_filter_query, parse_later_date, parse_natural_date,
+    parse_recurring_pattern,
 };
 
 #[cfg(test)]

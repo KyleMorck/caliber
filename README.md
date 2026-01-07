@@ -384,6 +384,8 @@ These shortcuts work in all text input modes (Edit, Command, and Filter query):
 | `@before:DATE` | Entries before date |
 | `@after:DATE` | Entries after date |
 | `@overdue` | Entries with past @date |
+| `@later` | Entries with @date patterns |
+| `@recurring` | Entries with @every-* patterns |
 | `not:#tag` | Entries without tag |
 | `not:!type` | Exclude entry type |
 | `not:word` | Entries not containing text |

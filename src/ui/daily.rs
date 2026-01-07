@@ -5,7 +5,7 @@ use ratatui::{
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, EditContext, InputMode, ViewMode};
-use crate::storage::{EntryType, Line};
+use crate::storage::{EntryType, Line, ProjectedKind};
 
 use super::shared::{
     date_suffix_style, entry_style, format_date_suffix, style_content, truncate_with_tags,
@@ -39,75 +39,38 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         )));
     }
 
-    let mut visible_later_idx = 0;
+    let mut visible_projected_idx = 0;
 
-    for later_entry in &state.later_entries {
-        if app.hide_completed && later_entry.completed {
+    for projected_entry in &state.projected_entries {
+        let is_completed =
+            matches!(projected_entry.entry.entry_type, EntryType::Task { completed: true });
+        if app.hide_completed && is_completed {
             continue;
         }
 
-        let is_selected = visible_later_idx == state.selected;
-        visible_later_idx += 1;
-        let is_editing = is_selected
-            && matches!(
-                app.input_mode,
-                InputMode::Edit(EditContext::LaterEdit { .. })
-            );
+        let is_selected = visible_projected_idx == state.selected;
+        visible_projected_idx += 1;
 
-        let content_style = entry_style(&later_entry.entry_type);
-
-        let text = if is_editing {
-            if let Some(ref buffer) = app.edit_buffer {
-                buffer.content().to_string()
-            } else {
-                later_entry.content.clone()
-            }
-        } else {
-            later_entry.content.clone()
-        };
-
-        let prefix = later_entry.entry_type.prefix();
+        let content_style = entry_style(&projected_entry.entry.entry_type);
+        let text = projected_entry.entry.content.clone();
+        let prefix = projected_entry.entry.entry_type.prefix();
         let prefix_width = prefix.width();
-        let (source_suffix, source_suffix_width) = format_date_suffix(later_entry.source_date);
+        let (source_suffix, source_suffix_width) = format_date_suffix(projected_entry.source_date);
 
-        if is_editing {
-            let available = width.saturating_sub(prefix_width + source_suffix_width);
-            let wrapped = wrap_text(&text, available);
-            for (i, line_text) in wrapped.iter().enumerate() {
-                if i == 0 {
-                    let rest_of_prefix: String = prefix.chars().skip(1).collect();
-                    let spans = vec![
-                        Span::styled("↪", Style::default().fg(Color::Cyan)),
-                        Span::styled(rest_of_prefix, content_style),
-                        Span::styled(line_text.clone(), content_style),
-                        Span::styled(source_suffix.clone(), date_suffix_style(content_style)),
-                    ];
-                    lines.push(RatatuiLine::from(spans));
-                } else {
-                    let indent = " ".repeat(prefix_width);
-                    lines.push(RatatuiLine::from(Span::styled(
-                        format!("{indent}{line_text}"),
-                        content_style,
-                    )));
-                }
-            }
-        } else {
-            let available = width.saturating_sub(prefix_width + source_suffix_width);
-            let display_text = truncate_with_tags(&text, available);
-            let rest_of_prefix: String = prefix.chars().skip(1).collect();
+        let available = width.saturating_sub(prefix_width + source_suffix_width);
+        let display_text = truncate_with_tags(&text, available);
+        let rest_of_prefix: String = prefix.chars().skip(1).collect();
 
-            // Determine the indicator based on mode
-            let visible_idx = visible_later_idx - 1; // Already incremented
-            let indicator = get_later_entry_indicator(app, is_selected, visible_idx);
+        let visible_idx = visible_projected_idx - 1;
+        let indicator = get_projected_entry_indicator(app, is_selected, visible_idx, &projected_entry.kind);
 
-            let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
-            spans.extend(style_content(&display_text, content_style));
-            spans.push(Span::styled(
-                source_suffix,
-                date_suffix_style(content_style),
-            ));
-            lines.push(RatatuiLine::from(spans));
-        }
+        let mut spans = vec![indicator, Span::styled(rest_of_prefix, content_style)];
+        spans.extend(style_content(&display_text, content_style));
+        spans.push(Span::styled(
+            source_suffix,
+            date_suffix_style(content_style),
+        ));
+        lines.push(RatatuiLine::from(spans));
     }
 
     let mut visible_entry_idx = 0;
@@ -119,7 +82,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 continue;
             }
 
-            let selection_idx = visible_later_idx + visible_entry_idx;
+            let selection_idx = visible_projected_idx + visible_entry_idx;
             visible_entry_idx += 1;
             let is_selected = selection_idx == state.selected;
             let is_editing =
@@ -176,7 +139,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         }
     }
 
-    if visible_later_idx == 0 && visible_entry_idx == 0 {
+    if visible_projected_idx == 0 && visible_entry_idx == 0 {
         let has_hidden = app.hide_completed && app.hidden_completed_count() > 0;
         let message = if has_hidden {
             "(No visible entries - press z to show completed or Enter to add)"
@@ -192,13 +155,22 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     lines
 }
 
-/// Determine the indicator character for a later/projected entry
-fn get_later_entry_indicator(app: &App, is_cursor: bool, visible_idx: usize) -> Span<'static> {
-    // Check if in selection mode and this entry is selected
+/// Determine the indicator character for a projected entry (↪ for Later, ↺ for Recurring)
+fn get_projected_entry_indicator(
+    app: &App,
+    is_cursor: bool,
+    visible_idx: usize,
+    kind: &ProjectedKind,
+) -> Span<'static> {
     let is_selected_in_selection = if let InputMode::Selection(ref state) = app.input_mode {
         state.is_selected(visible_idx)
     } else {
         false
+    };
+
+    let indicator = match kind {
+        ProjectedKind::Later => "↪",
+        ProjectedKind::Recurring => "↺",
     };
 
     if is_cursor {
@@ -206,15 +178,15 @@ fn get_later_entry_indicator(app: &App, is_cursor: bool, visible_idx: usize) -> 
             if is_selected_in_selection {
                 Span::styled("◉", Style::default().fg(Color::Green))
             } else {
-                Span::styled("↪", Style::default().fg(Color::Cyan))
+                Span::styled(indicator, Style::default().fg(Color::Cyan))
             }
         } else {
-            Span::styled("↪", Style::default().fg(Color::Cyan))
+            Span::styled(indicator, Style::default().fg(Color::Cyan))
         }
     } else if is_selected_in_selection {
         Span::styled("○", Style::default().fg(Color::Green))
     } else {
-        Span::styled("↪", Style::default().fg(Color::Red))
+        Span::styled(indicator, Style::default().fg(Color::Red))
     }
 }
 
@@ -227,7 +199,6 @@ fn get_entry_indicator(
     default_first_char: &str,
     default_style: Style,
 ) -> Span<'static> {
-    // Check if in selection mode and this entry is selected
     let is_selected_in_selection = if let InputMode::Selection(ref state) = app.input_mode {
         state.is_selected(visible_idx)
     } else {

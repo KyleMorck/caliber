@@ -2,7 +2,7 @@ use std::io;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::app::{App, ConfirmContext, HintContext, InputMode, InsertPosition, ViewMode};
+use crate::app::{App, ConfirmContext, HintContext, InputMode, InsertPosition, SelectedItem, ViewMode};
 use crate::cursor::CursorBuffer;
 use crate::storage::{add_caliber_to_gitignore, create_project_journal};
 use crate::ui;
@@ -197,7 +197,14 @@ pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match &app.view {
         ViewMode::Daily(_) => match code {
             KeyCode::Enter => app.new_task(InsertPosition::Bottom),
-            KeyCode::Char('o') => app.new_task(InsertPosition::Below),
+            KeyCode::Char('o') => {
+                // On projected entries, go to source; otherwise insert new task below
+                if let SelectedItem::Projected { entry, .. } = app.get_selected_item() {
+                    app.go_to_source(entry.source_date, entry.line_index)?;
+                } else {
+                    app.new_task(InsertPosition::Below);
+                }
+            }
             KeyCode::Char('O') => app.new_task(InsertPosition::Above),
             KeyCode::Char('h' | '[') => app.prev_day()?,
             KeyCode::Char('l' | ']') => app.next_day()?,

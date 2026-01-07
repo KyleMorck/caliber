@@ -110,17 +110,18 @@ fn set_entry_content_raw(app: &mut App, target: &EditTarget) -> io::Result<()> {
     let path = app.active_path().to_path_buf();
 
     match &target.location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             storage::mutate_entry(*source_date, &path, *line_index, |entry| {
                 entry.content = target.original_content.clone();
             })?;
 
             if let ViewMode::Daily(state) = &mut app.view {
-                state.later_entries =
-                    storage::collect_later_entries_for_date(app.current_date, &path)?;
+                state.projected_entries =
+                    storage::collect_projected_entries_for_date(app.current_date, &path)?;
             }
         }
         EntryLocation::Daily { line_idx } => {
@@ -141,7 +142,7 @@ fn set_entry_content_raw(app: &mut App, target: &EditTarget) -> io::Result<()> {
             if let ViewMode::Filter(state) = &mut app.view
                 && let Some(filter_entry) = state.entries.get_mut(*index)
             {
-                filter_entry.content = target.original_content.clone();
+                filter_entry.entry.content = target.original_content.clone();
             }
 
             if *source_date == app.current_date {

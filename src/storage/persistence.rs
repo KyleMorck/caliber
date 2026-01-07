@@ -100,6 +100,23 @@ pub fn get_entry_type(date: NaiveDate, path: &Path, line_index: usize) -> EntryT
         .unwrap_or(EntryType::Task { completed: false })
 }
 
+/// Gets the entry content at a specific line index for a given date.
+/// Returns None if the entry doesn't exist.
+#[must_use]
+pub fn get_entry_content(date: NaiveDate, path: &Path, line_index: usize) -> Option<String> {
+    load_day_lines(date, path)
+        .ok()
+        .and_then(|lines| {
+            lines.get(line_index).and_then(|line| {
+                if let Line::Entry(entry) = line {
+                    Some(entry.content.clone())
+                } else {
+                    None
+                }
+            })
+        })
+}
+
 /// Deletes an entry at a specific line index for a given date.
 pub fn delete_entry(date: NaiveDate, path: &Path, line_index: usize) -> io::Result<()> {
     let mut lines = load_day_lines(date, path)?;

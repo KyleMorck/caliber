@@ -2,7 +2,7 @@ use std::io;
 
 use chrono::{Days, Local, NaiveDate};
 
-use crate::storage::{self, Entry, EntryType, LaterEntry, Line};
+use crate::storage::{self, Entry, EntryType, Line, ProjectedEntry};
 
 use super::{App, DailyState, InputMode, SelectedItem, ViewMode};
 
@@ -13,10 +13,11 @@ impl App {
         !self.hide_completed || !matches!(entry.entry_type, EntryType::Task { completed: true })
     }
 
-    /// Helper to check if a later entry should be shown.
+    /// Helper to check if a projected entry should be shown.
     #[must_use]
-    pub fn should_show_later(&self, entry: &LaterEntry) -> bool {
-        !self.hide_completed || !entry.completed
+    pub fn should_show_projected(&self, entry: &ProjectedEntry) -> bool {
+        !self.hide_completed
+            || !matches!(entry.entry.entry_type, EntryType::Task { completed: true })
     }
 
     #[must_use]
@@ -34,16 +35,20 @@ impl App {
         }
     }
 
-    /// Count visible later entries (accounting for hide_completed).
+    /// Count visible projected entries (accounting for hide_completed).
     #[must_use]
-    pub fn visible_later_count(&self) -> usize {
+    pub fn visible_projected_count(&self) -> usize {
         let ViewMode::Daily(state) = &self.view else {
             return 0;
         };
         if self.hide_completed {
-            state.later_entries.iter().filter(|e| !e.completed).count()
+            state
+                .projected_entries
+                .iter()
+                .filter(|e| self.should_show_projected(e))
+                .count()
         } else {
-            state.later_entries.len()
+            state.projected_entries.len()
         }
     }
 
@@ -65,19 +70,19 @@ impl App {
             .count()
     }
 
-    /// Count visible later entries before the given index (accounting for hide_completed).
+    /// Count visible projected entries before the given index (accounting for hide_completed).
     #[must_use]
-    pub fn visible_later_before(&self, later_index: usize) -> usize {
+    pub fn visible_projected_before(&self, projected_index: usize) -> usize {
         let ViewMode::Daily(state) = &self.view else {
             return 0;
         };
         if self.hide_completed {
-            state.later_entries[..later_index]
+            state.projected_entries[..projected_index]
                 .iter()
-                .filter(|e| !e.completed)
+                .filter(|e| self.should_show_projected(e))
                 .count()
         } else {
-            later_index
+            projected_index
         }
     }
 
@@ -158,14 +163,14 @@ impl App {
             ViewMode::Daily(state) => {
                 let mut visible_idx = 0;
 
-                for (actual_idx, later_entry) in state.later_entries.iter().enumerate() {
-                    if !self.should_show_later(later_entry) {
+                for (actual_idx, projected_entry) in state.projected_entries.iter().enumerate() {
+                    if !self.should_show_projected(projected_entry) {
                         continue;
                     }
                     if visible_idx == state.selected {
-                        return SelectedItem::Later {
+                        return SelectedItem::Projected {
                             index: actual_idx,
-                            entry: later_entry,
+                            entry: projected_entry,
                         };
                     }
                     visible_idx += 1;
@@ -205,13 +210,13 @@ impl App {
             ViewMode::Filter(state) => state.entries.len(),
             ViewMode::Daily(state) => {
                 if !self.hide_completed {
-                    return state.later_entries.len() + self.entry_indices.len();
+                    return state.projected_entries.len() + self.entry_indices.len();
                 }
 
-                let visible_later = state
-                    .later_entries
+                let visible_projected = state
+                    .projected_entries
                     .iter()
-                    .filter(|e| self.should_show_later(e))
+                    .filter(|e| self.should_show_projected(e))
                     .count();
                 let visible_regular = self
                     .entry_indices
@@ -224,7 +229,7 @@ impl App {
                         }
                     })
                     .count();
-                visible_later + visible_regular
+                visible_projected + visible_regular
             }
         }
     }
@@ -235,7 +240,11 @@ impl App {
             return 0;
         };
 
-        let hidden_later = state.later_entries.iter().filter(|e| e.completed).count();
+        let hidden_projected = state
+            .projected_entries
+            .iter()
+            .filter(|e| matches!(e.entry.entry_type, EntryType::Task { completed: true }))
+            .count();
         let hidden_regular = self
             .entry_indices
             .iter()
@@ -247,24 +256,24 @@ impl App {
                 }
             })
             .count();
-        hidden_later + hidden_regular
+        hidden_projected + hidden_regular
     }
 
-    /// Converts an actual entry index to a visible index (accounting for later entries and hidden completed)
+    /// Converts an actual entry index to a visible index (accounting for projected entries and hidden completed)
     #[must_use]
     pub(super) fn actual_to_visible_index(&self, actual_entry_idx: usize) -> usize {
         let ViewMode::Daily(state) = &self.view else {
             return 0;
         };
 
-        let visible_later = if self.hide_completed {
+        let visible_projected = if self.hide_completed {
             state
-                .later_entries
+                .projected_entries
                 .iter()
-                .filter(|e| self.should_show_later(e))
+                .filter(|e| self.should_show_projected(e))
                 .count()
         } else {
-            state.later_entries.len()
+            state.projected_entries.len()
         };
 
         let visible_before = self.entry_indices[..actual_entry_idx]
@@ -282,16 +291,16 @@ impl App {
             })
             .count();
 
-        visible_later + visible_before
+        visible_projected + visible_before
     }
 
-    /// Load a day's data into self, returning later entries for view construction.
-    pub(super) fn load_day(&mut self, date: NaiveDate) -> io::Result<Vec<LaterEntry>> {
+    /// Load a day's data into self, returning projected entries for view construction.
+    pub(super) fn load_day(&mut self, date: NaiveDate) -> io::Result<Vec<ProjectedEntry>> {
         self.current_date = date;
         let path = self.active_path().to_path_buf();
         self.lines = storage::load_day_lines(date, &path)?;
         self.entry_indices = Self::compute_entry_indices(&self.lines);
-        storage::collect_later_entries_for_date(date, &path)
+        storage::collect_projected_entries_for_date(date, &path)
     }
 
     /// Shared cleanup for all view switches - resets input mode and clears undo/redo.
@@ -302,8 +311,8 @@ impl App {
 
     /// Load a day and reset to daily view with proper selection clamping.
     pub(super) fn reset_daily_view(&mut self, date: NaiveDate) -> io::Result<()> {
-        let later_entries = self.load_day(date)?;
-        self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), later_entries));
+        let projected_entries = self.load_day(date)?;
+        self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), projected_entries));
         if self.hide_completed {
             self.clamp_selection_to_visible();
         }
@@ -313,10 +322,10 @@ impl App {
 
     /// Restore daily view without reloading from disk (for returning from filter).
     pub(super) fn restore_daily_view(&mut self) {
-        let later_entries =
-            storage::collect_later_entries_for_date(self.current_date, self.active_path())
+        let projected_entries =
+            storage::collect_projected_entries_for_date(self.current_date, self.active_path())
                 .unwrap_or_default();
-        self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), later_entries));
+        self.view = ViewMode::Daily(DailyState::new(self.entry_indices.len(), projected_entries));
         if self.hide_completed {
             self.clamp_selection_to_visible();
         }
@@ -352,5 +361,25 @@ impl App {
 
     pub fn goto_today(&mut self) -> io::Result<()> {
         self.goto_day(Local::now().date_naive())
+    }
+
+    /// Navigate to the source date and select the entry at the given line index.
+    /// Used for projected entries to jump to their source.
+    pub fn go_to_source(&mut self, source_date: NaiveDate, line_index: usize) -> io::Result<()> {
+        self.goto_day(source_date)?;
+
+        // Find and select the entry at the given line index
+        if let Some(actual_idx) = self
+            .entry_indices
+            .iter()
+            .position(|&idx| idx == line_index)
+        {
+            let visible_idx = self.actual_to_visible_index(actual_idx);
+            if let ViewMode::Daily(state) = &mut self.view {
+                state.selected = visible_idx;
+            }
+        }
+
+        Ok(())
     }
 }

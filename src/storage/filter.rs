@@ -6,7 +6,10 @@ use std::sync::LazyLock;
 use chrono::{Days, NaiveDate};
 use regex::Regex;
 
-use super::entries::{CrossDayEntry, Entry, EntryType, Line, parse_lines};
+use super::entries::{
+    Entry, EntryType, FilterResult, Line, ProjectedEntry, ProjectedKind, RecurringPattern,
+    parse_lines,
+};
 use super::persistence::{load_journal, parse_day_header};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +31,8 @@ pub struct Filter {
     pub before_date: Option<NaiveDate>,
     pub after_date: Option<NaiveDate>,
     pub overdue: bool,
+    pub later: bool,
+    pub recurring: bool,
     pub invalid_tokens: Vec<String>,
 }
 
@@ -56,6 +61,13 @@ pub static FAVORITE_TAG_REGEX: LazyLock<Regex> =
 /// Matches saved filter shortcuts: $name (alphanumeric + underscore)
 pub static SAVED_FILTER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\$(\w+)\b").unwrap());
+
+/// Matches @every-* patterns for recurring entries:
+/// @every-day, @every-weekday, @every-mon..sun (or full names), @every-1..31
+pub static RECURRING_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)@every-(day|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|[1-9]|[12]\d|3[01])(?:\s|$)")
+        .unwrap()
+});
 
 #[must_use]
 pub fn extract_tags(content: &str) -> Vec<String> {
@@ -310,6 +322,38 @@ pub fn expand_saved_filters(
     (result, unknown)
 }
 
+/// Parses an @every-* pattern string (without the @every- prefix) into a RecurringPattern.
+/// Reuses `parse_weekday()` for weekday names to avoid duplication.
+#[must_use]
+pub fn parse_recurring_pattern(pattern_str: &str) -> Option<RecurringPattern> {
+    let lower = pattern_str.to_lowercase();
+    match lower.as_str() {
+        "day" => Some(RecurringPattern::Daily),
+        "weekday" => Some(RecurringPattern::Weekday),
+        _ => {
+            // Try parsing as weekday (reuse existing parse_weekday)
+            if let Some(weekday) = parse_weekday(&lower) {
+                return Some(RecurringPattern::Weekly(weekday));
+            }
+            // Then try as day of month (1-31)
+            lower
+                .parse::<u8>()
+                .ok()
+                .filter(|&d| (1..=31).contains(&d))
+                .map(RecurringPattern::Monthly)
+        }
+    }
+}
+
+/// Extracts the recurring pattern from entry content if it contains an @every-* pattern.
+#[must_use]
+pub fn extract_recurring_pattern(content: &str) -> Option<RecurringPattern> {
+    RECURRING_REGEX
+        .captures(content)
+        .and_then(|cap| cap.get(1))
+        .and_then(|m| parse_recurring_pattern(m.as_str()))
+}
+
 /// Extracts the target date from entry content if it contains an @date pattern.
 #[must_use]
 pub fn extract_target_date(content: &str, today: NaiveDate) -> Option<NaiveDate> {
@@ -358,12 +402,12 @@ fn extract_target_date_prefer_past(content: &str, today: NaiveDate) -> Option<Na
         .and_then(|m| parse_date_prefer_past(m.as_str(), today))
 }
 
-/// Collects all entries with @date matching the target date.
+/// Collects all projected entries (both @later and @recurring) for the target date.
 /// Entries from the target date itself are excluded (they're regular entries).
-pub fn collect_later_entries_for_date(
+pub fn collect_projected_entries_for_date(
     target_date: NaiveDate,
     path: &Path,
-) -> io::Result<Vec<CrossDayEntry>> {
+) -> io::Result<Vec<ProjectedEntry>> {
     let journal = load_journal(path)?;
     let mut entries = Vec::new();
     let mut current_date: Option<NaiveDate> = None;
@@ -384,18 +428,29 @@ pub fn collect_later_entries_for_date(
             }
 
             let parsed = parse_lines(line);
-            if let Some(Line::Entry(entry)) = parsed.first()
-                && let Some(entry_target) = extract_target_date(&entry.content, target_date)
-                && entry_target == target_date
-            {
-                let completed = matches!(entry.entry_type, EntryType::Task { completed: true });
-                entries.push(CrossDayEntry {
-                    source_date,
-                    line_index: line_index_in_day,
-                    content: entry.content.clone(),
-                    entry_type: entry.entry_type.clone(),
-                    completed,
-                });
+            if let Some(Line::Entry(entry)) = parsed.first() {
+                // Check for @later pattern (one-time date projection)
+                if let Some(entry_target) = extract_target_date(&entry.content, target_date)
+                    && entry_target == target_date
+                {
+                    entries.push(ProjectedEntry {
+                        source_date,
+                        line_index: line_index_in_day,
+                        entry: entry.clone(),
+                        kind: ProjectedKind::Later,
+                    });
+                }
+                // Check for @recurring pattern (repeating projection)
+                else if let Some(pattern) = extract_recurring_pattern(&entry.content)
+                    && pattern.matches(target_date)
+                {
+                    entries.push(ProjectedEntry {
+                        source_date,
+                        line_index: line_index_in_day,
+                        entry: entry.clone(),
+                        kind: ProjectedKind::Recurring,
+                    });
+                }
             }
             line_index_in_day += 1;
         }
@@ -450,6 +505,14 @@ pub fn parse_filter_query(query: &str) -> Filter {
         }
         if token == "@overdue" {
             filter.overdue = true;
+            continue;
+        }
+        if token == "@later" {
+            filter.later = true;
+            continue;
+        }
+        if token == "@recurring" {
+            filter.recurring = true;
             continue;
         }
         // Any other @command is invalid
@@ -510,7 +573,7 @@ pub fn parse_filter_query(query: &str) -> Filter {
     filter
 }
 
-pub fn collect_filtered_entries(filter: &Filter, path: &Path) -> io::Result<Vec<CrossDayEntry>> {
+pub fn collect_filtered_entries(filter: &Filter, path: &Path) -> io::Result<Vec<FilterResult>> {
     if !filter.invalid_tokens.is_empty() {
         return Ok(Vec::new());
     }
@@ -554,14 +617,26 @@ pub fn collect_filtered_entries(filter: &Filter, path: &Path) -> io::Result<Vec<
                     }
                 }
 
+                // Later filter: entry must have a @date pattern
+                if filter.later
+                    && !LATER_DATE_REGEX.is_match(&entry.content)
+                    && !NATURAL_DATE_REGEX.is_match(&entry.content)
+                {
+                    line_index_in_day += 1;
+                    continue;
+                }
+
+                // Recurring filter: entry must have an @every-* pattern
+                if filter.recurring && !RECURRING_REGEX.is_match(&entry.content) {
+                    line_index_in_day += 1;
+                    continue;
+                }
+
                 if entry_matches_filter(entry, filter) {
-                    let completed = matches!(entry.entry_type, EntryType::Task { completed: true });
-                    entries.push(CrossDayEntry {
+                    entries.push(FilterResult {
                         source_date,
-                        content: entry.content.clone(),
                         line_index: line_index_in_day,
-                        entry_type: entry.entry_type.clone(),
-                        completed,
+                        entry: entry.clone(),
                     });
                 }
             }

@@ -265,9 +265,10 @@ impl Action for RestoreContent {
 /// Get entry content at a location
 fn get_entry_content(app: &App, location: &EntryLocation) -> io::Result<String> {
     match location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             let lines = storage::load_day_lines(*source_date, app.active_path())?;
             if let Some(Line::Entry(entry)) = lines.get(*line_index) {
@@ -306,9 +307,10 @@ where
     let path = app.active_path().to_path_buf();
 
     match location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             let changed = storage::mutate_entry(*source_date, &path, *line_index, |entry| {
                 if let Some(new_content) = remover(&entry.content) {
@@ -322,8 +324,8 @@ where
             if changed == Some(true)
                 && let ViewMode::Daily(state) = &mut app.view
             {
-                state.later_entries =
-                    storage::collect_later_entries_for_date(app.current_date, &path)?;
+                state.projected_entries =
+                    storage::collect_projected_entries_for_date(app.current_date, &path)?;
             }
         }
         EntryLocation::Daily { line_idx } => {
@@ -351,9 +353,9 @@ where
             if changed == Some(true) {
                 if let ViewMode::Filter(state) = &mut app.view
                     && let Some(filter_entry) = state.entries.get_mut(*index)
-                    && let Some(new_content) = remover(&filter_entry.content)
+                    && let Some(new_content) = remover(&filter_entry.entry.content)
                 {
-                    filter_entry.content = new_content;
+                    filter_entry.entry.content = new_content;
                 }
 
                 if *source_date == app.current_date {
@@ -371,17 +373,18 @@ fn execute_append_tag_raw(app: &mut App, location: &EntryLocation, tag: &str) ->
     let tag_with_hash = format!(" #{tag}");
 
     match location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             storage::mutate_entry(*source_date, &path, *line_index, |entry| {
                 entry.content.push_str(&tag_with_hash);
             })?;
 
             if let ViewMode::Daily(state) = &mut app.view {
-                state.later_entries =
-                    storage::collect_later_entries_for_date(app.current_date, &path)?;
+                state.projected_entries =
+                    storage::collect_projected_entries_for_date(app.current_date, &path)?;
             }
         }
         EntryLocation::Daily { line_idx } => {
@@ -402,7 +405,7 @@ fn execute_append_tag_raw(app: &mut App, location: &EntryLocation, tag: &str) ->
             if let ViewMode::Filter(state) = &mut app.view
                 && let Some(filter_entry) = state.entries.get_mut(*index)
             {
-                filter_entry.content.push_str(&tag_with_hash);
+                filter_entry.entry.content.push_str(&tag_with_hash);
             }
 
             if *source_date == app.current_date {
@@ -418,17 +421,18 @@ fn set_entry_content_raw(app: &mut App, location: &EntryLocation, content: &str)
     let path = app.active_path().to_path_buf();
 
     match location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             storage::mutate_entry(*source_date, &path, *line_index, |entry| {
                 entry.content = content.to_string();
             })?;
 
             if let ViewMode::Daily(state) = &mut app.view {
-                state.later_entries =
-                    storage::collect_later_entries_for_date(app.current_date, &path)?;
+                state.projected_entries =
+                    storage::collect_projected_entries_for_date(app.current_date, &path)?;
             }
         }
         EntryLocation::Daily { line_idx } => {
@@ -449,7 +453,7 @@ fn set_entry_content_raw(app: &mut App, location: &EntryLocation, content: &str)
             if let ViewMode::Filter(state) = &mut app.view
                 && let Some(filter_entry) = state.entries.get_mut(*index)
             {
-                filter_entry.content = content.to_string();
+                filter_entry.entry.content = content.to_string();
             }
 
             if *source_date == app.current_date {

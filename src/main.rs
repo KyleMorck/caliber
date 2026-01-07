@@ -254,7 +254,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             unreachable!()
                         };
                         state.entries.get(*filter_index).map(|filter_entry| {
-                            let prefix_width = filter_entry.entry_type.prefix().len();
+                            let prefix_width = filter_entry.entry.entry_type.prefix().len();
                             let text_width =
                                 content_width.saturating_sub(prefix_width + DATE_SUFFIX_WIDTH);
                             let (cursor_row, cursor_col) = cursor_position_in_wrap(
@@ -292,33 +292,11 @@ fn run_app<B: ratatui::backend::Backend>(
                                 prefix_width,
                                 cursor_row,
                                 cursor_col,
-                                entry_start_line: app.visible_later_count()
+                                entry_start_line: app.visible_projected_count()
                                     + app.visible_entries_before(*entry_index)
                                     + DAILY_HEADER_LINES,
                             }
                         }),
-                    EditContext::LaterEdit { later_index, .. } => {
-                        let ViewMode::Daily(state) = &app.view else {
-                            unreachable!()
-                        };
-                        state.later_entries.get(*later_index).map(|later_entry| {
-                            let prefix_width = later_entry.entry_type.prefix().width();
-                            let text_width =
-                                content_width.saturating_sub(prefix_width + DATE_SUFFIX_WIDTH);
-                            let (cursor_row, cursor_col) = cursor_position_in_wrap(
-                                buffer.content(),
-                                buffer.cursor_display_pos(),
-                                text_width,
-                            );
-                            CursorContext {
-                                prefix_width,
-                                cursor_row,
-                                cursor_col,
-                                entry_start_line: app.visible_later_before(*later_index)
-                                    + DAILY_HEADER_LINES,
-                            }
-                        })
-                    }
                 };
 
                 if let Some(ctx) = cursor_ctx {

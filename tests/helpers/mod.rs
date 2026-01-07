@@ -146,6 +146,14 @@ impl TestContext {
             .find(|line| line.contains(text))
     }
 
+    /// Check if the status message contains the given text
+    pub fn status_contains(&self, text: &str) -> bool {
+        self.app
+            .status_message
+            .as_ref()
+            .is_some_and(|s| s.contains(text))
+    }
+
     /// Get journal file path
     pub fn journal_path(&self) -> PathBuf {
         self.temp_dir.path().join("test_journal.md")

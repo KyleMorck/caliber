@@ -105,21 +105,20 @@ fn execute_cycle_raw(app: &mut App, location: &EntryLocation) -> io::Result<Opti
     let path = app.active_path().to_path_buf();
 
     match location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             let new_type = storage::cycle_entry_type(*source_date, &path, *line_index)?;
             if let Some(ref new_type) = new_type
                 && let ViewMode::Daily(state) = &mut app.view
-                && let Some(later_entry) = state
-                    .later_entries
+                && let Some(projected_entry) = state
+                    .projected_entries
                     .iter_mut()
                     .find(|e| e.source_date == *source_date && e.line_index == *line_index)
             {
-                later_entry.entry_type = new_type.clone();
-                later_entry.completed =
-                    matches!(later_entry.entry_type, EntryType::Task { completed: true });
+                projected_entry.entry.entry_type = new_type.clone();
             }
             Ok(new_type)
         }
@@ -143,9 +142,7 @@ fn execute_cycle_raw(app: &mut App, location: &EntryLocation) -> io::Result<Opti
                 if let ViewMode::Filter(state) = &mut app.view
                     && let Some(filter_entry) = state.entries.get_mut(*index)
                 {
-                    filter_entry.entry_type = new_type.clone();
-                    filter_entry.completed =
-                        matches!(filter_entry.entry_type, EntryType::Task { completed: true });
+                    filter_entry.entry.entry_type = new_type.clone();
                 }
 
                 if *source_date == app.current_date {
@@ -166,21 +163,21 @@ fn set_entry_type_raw(
     let path = app.active_path().to_path_buf();
 
     match location {
-        EntryLocation::Later {
+        EntryLocation::Projected {
             source_date,
             line_index,
+            ..
         } => {
             storage::mutate_entry(*source_date, &path, *line_index, |entry| {
                 entry.entry_type = entry_type.clone();
             })?;
             if let ViewMode::Daily(state) = &mut app.view
-                && let Some(later_entry) = state
-                    .later_entries
+                && let Some(projected_entry) = state
+                    .projected_entries
                     .iter_mut()
                     .find(|e| e.source_date == *source_date && e.line_index == *line_index)
             {
-                later_entry.entry_type = entry_type.clone();
-                later_entry.completed = matches!(entry_type, EntryType::Task { completed: true });
+                projected_entry.entry.entry_type = entry_type.clone();
             }
         }
         EntryLocation::Daily { line_idx } => {
@@ -200,8 +197,7 @@ fn set_entry_type_raw(
             if let ViewMode::Filter(state) = &mut app.view
                 && let Some(filter_entry) = state.entries.get_mut(*index)
             {
-                filter_entry.entry_type = entry_type.clone();
-                filter_entry.completed = matches!(entry_type, EntryType::Task { completed: true });
+                filter_entry.entry.entry_type = entry_type.clone();
             }
 
             if *source_date == app.current_date {
