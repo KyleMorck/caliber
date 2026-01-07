@@ -3,6 +3,7 @@ use std::io;
 use chrono::Local;
 
 use crate::config::{Config, resolve_path};
+use crate::dispatch::Keymap;
 use crate::storage::JournalSlot;
 
 use super::{App, ConfirmContext, InputMode};
@@ -37,6 +38,7 @@ impl App {
             JournalSlot::Hub => Config::load_hub()?,
             JournalSlot::Project => Config::load_merged()?,
         };
+        self.keymap = Keymap::new(&self.config.keys).unwrap_or_default();
         self.hide_completed = self.config.hide_completed;
 
         self.reset_journal_view()?;
@@ -78,6 +80,7 @@ impl App {
             JournalSlot::Hub => Config::load_hub()?,
             JournalSlot::Project => Config::load_merged()?,
         };
+        self.keymap = Keymap::new(&self.config.keys).unwrap_or_default();
         self.hide_completed = self.config.hide_completed;
         self.set_status("Config reloaded");
         Ok(())

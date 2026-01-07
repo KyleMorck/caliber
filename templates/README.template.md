@@ -266,12 +266,6 @@ Press `\` to open the calendar picker.
 
 <!-- GENERATED:DATE_KEYS -->
 
-### Text Editing
-
-These shortcuts work in all text input modes (Edit, Command, and Filter query):
-
-<!-- GENERATED:TEXT_EDITING_KEYS -->
-
 ### Commands
 
 <!-- GENERATED:COMMANDS -->

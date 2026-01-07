@@ -1,19 +1,7 @@
-use crate::registry::{COMMANDS, Command, FILTER_SYNTAX, FilterCategory, FilterSyntax};
-
-/// Date values available for autocomplete after @before: or @after:
-pub static DATE_VALUES: &[(&str, &str)] = &[
-    ("d", "Relative days (d1, d7, d30). Append + for future."),
-    ("today", "Today"),
-    ("tomorrow", "Tomorrow"),
-    ("yesterday", "Yesterday"),
-    ("mon", "Monday"),
-    ("tue", "Tuesday"),
-    ("wed", "Wednesday"),
-    ("thu", "Thursday"),
-    ("fri", "Friday"),
-    ("sat", "Saturday"),
-    ("sun", "Sunday"),
-];
+use crate::registry::{
+    COMMANDS, Command, DATE_VALUES, DateScope, DateValue, FILTER_SYNTAX, FilterCategory,
+    FilterSyntax,
+};
 
 /// What kind of hints to display
 #[derive(Clone, Debug, PartialEq)]
@@ -52,7 +40,7 @@ pub enum HintContext {
     DateValues {
         prefix: String,
         op: &'static str,
-        matches: Vec<(&'static str, &'static str)>,
+        matches: Vec<&'static DateValue>,
     },
     /// Saved filter hints ($name)
     SavedFilters {
@@ -338,17 +326,20 @@ impl HintContext {
         if let Some(rest) = value_lower.strip_prefix('d')
             && Self::is_valid_relative_days(rest)
         {
-            return Self::DateValues {
-                prefix: value_prefix.to_string(),
-                op,
-                matches: vec![("d", "Relative days (d1, d7, d30). Append + for future.")],
-            };
+            let d_value = DATE_VALUES.iter().find(|dv| dv.syntax == "d");
+            if let Some(dv) = d_value {
+                return Self::DateValues {
+                    prefix: value_prefix.to_string(),
+                    op,
+                    matches: vec![dv],
+                };
+            }
         }
 
-        let matches: Vec<(&'static str, &'static str)> = DATE_VALUES
+        let matches: Vec<&'static DateValue> = DATE_VALUES
             .iter()
-            .filter(|(syntax, _)| syntax.starts_with(&value_lower))
-            .copied()
+            .filter(|dv| dv.scopes.contains(&DateScope::Filter))
+            .filter(|dv| dv.syntax.starts_with(&value_lower))
             .collect();
 
         if matches.is_empty() {
@@ -389,7 +380,7 @@ impl HintContext {
                 prefix, matches, ..
             } => matches
                 .first()
-                .map(|(s, _)| Self::suffix_after(s, prefix.len())),
+                .map(|dv| Self::suffix_after(dv.syntax, prefix.len())),
             Self::SavedFilters { prefix, matches } => {
                 matches.first().map(|f| Self::suffix_after(f, prefix.len()))
             }

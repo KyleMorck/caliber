@@ -1,0 +1,114 @@
+# Date value definitions for autocomplete
+# Used in entry @dates and filter @before:/@after: values
+
+# =============================================================================
+# Relative Dates (entry + filter)
+# =============================================================================
+
+[[date_value]]
+syntax = "d"
+display = "d"
+scopes = ["entry", "filter"]
+help = "Relative days"
+readme = "Relative day offsets (d1, d7, d30)."
+completion_hint = "Relative days (d1, d7, d30). Use + suffix in filters for future."
+
+[[date_value]]
+syntax = "today"
+display = "today"
+scopes = ["entry", "filter"]
+help = "Today"
+readme = "Today's date."
+completion_hint = "Today's date."
+
+[[date_value]]
+syntax = "tomorrow"
+display = "tomorrow"
+scopes = ["entry", "filter"]
+help = "Tomorrow"
+readme = "Tomorrow's date."
+completion_hint = "Tomorrow's date."
+
+[[date_value]]
+syntax = "yesterday"
+display = "yesterday"
+scopes = ["entry", "filter"]
+help = "Yesterday"
+readme = "Yesterday's date."
+completion_hint = "Yesterday's date."
+
+[[date_value]]
+syntax = "mon"
+display = "mon"
+scopes = ["entry", "filter"]
+help = "Monday"
+readme = "Monday."
+completion_hint = "Monday. In entries: next Monday. In filters: use + for future."
+
+[[date_value]]
+syntax = "tue"
+display = "tue"
+scopes = ["entry", "filter"]
+help = "Tuesday"
+readme = "Tuesday."
+completion_hint = "Tuesday. In entries: next Tuesday. In filters: use + for future."
+
+[[date_value]]
+syntax = "wed"
+display = "wed"
+scopes = ["entry", "filter"]
+help = "Wednesday"
+readme = "Wednesday."
+completion_hint = "Wednesday. In entries: next Wednesday. In filters: use + for future."
+
+[[date_value]]
+syntax = "thu"
+display = "thu"
+scopes = ["entry", "filter"]
+help = "Thursday"
+readme = "Thursday."
+completion_hint = "Thursday. In entries: next Thursday. In filters: use + for future."
+
+[[date_value]]
+syntax = "fri"
+display = "fri"
+scopes = ["entry", "filter"]
+help = "Friday"
+readme = "Friday."
+completion_hint = "Friday. In entries: next Friday. In filters: use + for future."
+
+[[date_value]]
+syntax = "sat"
+display = "sat"
+scopes = ["entry", "filter"]
+help = "Saturday"
+readme = "Saturday."
+completion_hint = "Saturday. In entries: next Saturday. In filters: use + for future."
+
+[[date_value]]
+syntax = "sun"
+display = "sun"
+scopes = ["entry", "filter"]
+help = "Sunday"
+readme = "Sunday."
+completion_hint = "Sunday. In entries: next Sunday. In filters: use + for future."
+
+# =============================================================================
+# Recurring Patterns (entry only)
+# =============================================================================
+
+[[date_value]]
+syntax = "@every-"
+display = "@every-[1-31]"
+scopes = ["entry"]
+help = "Recurring day of month"
+readme = "Recurring on a specific day of month (@every-1, @every-15, etc.)."
+completion_hint = "Recurring on day of month (@every-1 through @every-31)."
+
+[[date_value]]
+syntax = "@every-mon"
+display = "@every-[day]"
+scopes = ["entry"]
+help = "Recurring day of week"
+readme = "Recurring on a specific day of week (@every-mon, @every-tue, etc.)."
+completion_hint = "Recurring on day of week (@every-mon, @every-tue, @every-wed, etc.)."

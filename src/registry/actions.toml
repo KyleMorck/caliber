@@ -1,0 +1,647 @@
+# Action definitions
+# Order matters: TOML order = display order in footer, help, and README
+
+# =============================================================================
+# Daily Mode + Shared Keys (interleaved for optimal display order)
+# =============================================================================
+
+# --- Entry Creation ---
+
+[[action]]
+key_action_id = "new_entry_bottom"
+default_keys = ["ret"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+footer = { modes = ["normal_daily"], text = "New entry" }
+help = "New entry at end"
+readme = "Create a new entry at the bottom of the list"
+
+[[action]]
+key_action_id = "new_entry_below"
+default_keys = ["o"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "New entry below"
+readme = "Create a new entry below the selected one"
+
+[[action]]
+key_action_id = "new_entry_above"
+default_keys = ["O"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "New entry above"
+readme = "Create a new entry above the selected one"
+
+# --- Entry Editing ---
+
+[[action]]
+key_action_id = "edit_entry"
+default_keys = ["i"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+footer = { modes = ["normal_daily"], text = "Edit" }
+help = "Edit selected"
+readme = "Edit the currently selected entry"
+
+[[action]]
+key_action_id = "toggle_entry"
+default_keys = ["c"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+footer = { modes = ["normal_daily", "normal_filter"], text = "Toggle" }
+help = "Toggle task complete"
+readme = "Toggle task completion status"
+
+[[action]]
+key_action_id = "delete_entry"
+default_keys = ["d"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+footer = { modes = ["normal_filter"], text = "Delete" }
+help = "Delete entry"
+readme = "Delete the selected entry"
+
+[[action]]
+key_action_id = "yank_entry"
+default_keys = ["y"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Yank to clipboard"
+readme = "Copy the selected entry to clipboard"
+
+[[action]]
+key_action_id = "paste"
+default_keys = ["p"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Paste from clipboard"
+readme = "Paste clipboard content as entries below cursor"
+
+[[action]]
+key_action_id = "undo"
+default_keys = ["u"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Undo last action"
+readme = "Undo the last action"
+
+[[action]]
+key_action_id = "redo"
+default_keys = ["U"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Redo undone action"
+readme = "Redo the last undone action"
+
+# --- Tag Operations ---
+
+[[action]]
+key_action_id = "remove_last_tag"
+default_keys = ["x"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Remove last tag"
+readme = "Remove the last trailing tag from the selected entry"
+
+[[action]]
+key_action_id = "remove_all_tags"
+default_keys = ["X"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Remove all tags"
+readme = "Remove all trailing tags from the selected entry"
+
+# --- Navigation ---
+
+[[action]]
+key_action_id = "move_down"
+default_keys = ["j", "down"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Navigate down"
+readme = "Move selection to the next entry"
+
+[[action]]
+key_action_id = "move_up"
+default_keys = ["k", "up"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Navigate up"
+readme = "Move selection to the previous entry"
+
+[[action]]
+key_action_id = "jump_to_first"
+default_keys = ["g"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Jump to first"
+readme = "Jump to the first entry"
+
+[[action]]
+key_action_id = "jump_to_last"
+default_keys = ["G"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Jump to last"
+readme = "Jump to the last entry"
+
+[[action]]
+key_action_id = "prev_day"
+default_keys = ["h", "["]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Previous day"
+readme = "Navigate to the previous day"
+
+[[action]]
+key_action_id = "next_day"
+default_keys = ["l", "]"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Next day"
+readme = "Navigate to the next day"
+
+[[action]]
+key_action_id = "goto_today"
+default_keys = ["t"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Go to today"
+readme = "Navigate to today's entries"
+
+# --- View Management ---
+
+[[action]]
+key_action_id = "toggle_hide_completed"
+default_keys = ["z"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Toggle hide completed"
+readme = "Toggle visibility of completed tasks"
+
+[[action]]
+key_action_id = "tidy_entries"
+default_keys = ["T"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Tidy entries"
+readme = "Tidy entries into pre-configured order by type"
+
+[[action]]
+key_action_id = "enter_reorder_mode"
+default_keys = ["r"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Reorder mode"
+readme = "Enter reorder mode to manually arrange entries"
+
+[[action]]
+key_action_id = "enter_selection_mode"
+default_keys = ["v"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Selection mode"
+readme = "Enter selection mode for multi-entry operations"
+
+[[action]]
+key_action_id = "quick_filter_tag"
+default_keys = ["0-9"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Filter favorite tag"
+readme = "Quick filter by favorite tag (configured in config.toml)"
+
+[[action]]
+key_action_id = "append_favorite_tag"
+default_keys = ["S-0-9"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Append favorite tag"
+readme = "Append favorite tag to the selected entry (configured in config.toml)"
+
+[[action]]
+key_action_id = "cycle_entry_type_normal"
+default_keys = ["S-tab"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Cycle entry type"
+readme = "Cycle through entry types (task → note → event)"
+
+# --- Mode Switching ---
+
+[[action]]
+key_action_id = "return_to_filter"
+default_keys = ["tab"]
+contexts = ["daily_normal"]
+help_sections = ["daily"]
+help = "Return to filter"
+readme = "Return to the previous filter view"
+
+[[action]]
+key_action_id = "toggle_journal"
+default_keys = ["`"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Toggle Hub/Project journal"
+readme = "Switch between Hub and Project journal"
+
+[[action]]
+key_action_id = "enter_filter_mode"
+default_keys = ["/"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+footer = { modes = ["normal_daily"], text = "Filter" }
+help = "Filter mode"
+readme = "Enter filter mode to search entries"
+
+[[action]]
+key_action_id = "enter_command_mode"
+default_keys = [":"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Command mode"
+readme = "Enter command mode for :quit, :open, etc."
+
+[[action]]
+key_action_id = "show_help"
+default_keys = ["?"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+footer = { modes = ["normal_daily", "normal_filter"], text = "Help" }
+help = "Show help"
+readme = "Display the help overlay with all keybindings"
+
+[[action]]
+key_action_id = "open_datepicker"
+default_keys = ["\\"]
+contexts = ["shared_normal"]
+help_sections = ["daily", "filter"]
+help = "Open datepicker"
+readme = "Open the calendar datepicker to navigate to a specific date"
+
+# =============================================================================
+# Filter Normal Mode
+# =============================================================================
+
+[[action]]
+key_action_id = "filter_quick_add"
+default_keys = ["ret"]
+contexts = ["filter_normal"]
+help_sections = ["filter"]
+help = "Quick add to today"
+readme = "Add a new entry to today matching the current filter type"
+
+[[action]]
+key_action_id = "refresh_filter"
+default_keys = ["r"]
+contexts = ["filter_normal"]
+help_sections = ["filter"]
+footer = { modes = ["normal_filter"], text = "Refresh" }
+help = "Refresh results"
+readme = "Refresh the filter results"
+
+[[action]]
+key_action_id = "exit_filter"
+default_keys = ["esc", "tab"]
+contexts = ["filter_normal"]
+help_sections = ["filter"]
+footer = { modes = ["normal_filter"], text = "Exit" }
+help = "Exit to daily"
+readme = "Exit filter view and return to daily view"
+
+# =============================================================================
+# Edit Mode
+# =============================================================================
+
+[[action]]
+key_action_id = "save_edit"
+default_keys = ["ret"]
+contexts = ["edit"]
+help_sections = ["edit"]
+footer = { modes = ["edit"], text = "Save" }
+help = "Save and exit"
+readme = "Save the entry and exit edit mode"
+
+[[action]]
+key_action_id = "save_and_new"
+default_keys = ["tab"]
+contexts = ["edit"]
+help_sections = ["edit"]
+footer = { modes = ["edit"], text = "Save+new" }
+help = "Save and new"
+readme = "Save the current entry and create a new one"
+
+[[action]]
+key_action_id = "cycle_entry_type"
+default_keys = ["S-tab"]
+contexts = ["edit"]
+help_sections = ["edit"]
+footer = { modes = ["edit"], text = "Type" }
+help = "Toggle entry type"
+readme = "Cycle through entry types (task, note, event)"
+
+[[action]]
+key_action_id = "cancel_edit"
+default_keys = ["esc"]
+contexts = ["edit"]
+help_sections = ["edit"]
+footer = { modes = ["edit"], text = "Cancel" }
+help = "Cancel"
+readme = "Cancel editing without saving"
+
+# =============================================================================
+# Reorder Mode
+# =============================================================================
+
+[[action]]
+key_action_id = "reorder_move_down"
+default_keys = ["j", "down"]
+contexts = ["reorder"]
+help_sections = ["reorder"]
+footer = { modes = ["reorder"], text = "Move down" }
+help = "Move entry down"
+readme = "Move the selected entry down in the list"
+
+[[action]]
+key_action_id = "reorder_move_up"
+default_keys = ["k", "up"]
+contexts = ["reorder"]
+help_sections = ["reorder"]
+help = "Move entry up"
+readme = "Move the selected entry up in the list"
+
+[[action]]
+key_action_id = "reorder_save"
+default_keys = ["r", "ret"]
+contexts = ["reorder"]
+help_sections = ["reorder"]
+footer = { modes = ["reorder"], text = "Save" }
+help = "Save"
+readme = "Save the new order"
+
+[[action]]
+key_action_id = "reorder_cancel"
+default_keys = ["esc"]
+contexts = ["reorder"]
+help_sections = ["reorder"]
+footer = { modes = ["reorder"], text = "Cancel" }
+help = "Cancel"
+readme = "Cancel reordering and restore original order"
+
+# =============================================================================
+# Selection Mode
+# =============================================================================
+
+[[action]]
+key_action_id = "selection_toggle"
+default_keys = ["v"]
+contexts = ["selection"]
+help_sections = ["selection"]
+footer = { modes = ["selection"], text = "Toggle selection" }
+help = "Toggle selection"
+readme = "Toggle selection on the current entry"
+
+[[action]]
+key_action_id = "selection_extend_range"
+default_keys = ["V"]
+contexts = ["selection"]
+help_sections = ["selection"]
+footer = { modes = ["selection"], text = "Select Range" }
+help = "Select range"
+readme = "Select all entries between last selection and cursor"
+
+[[action]]
+key_action_id = "selection_move_down"
+default_keys = ["j", "down"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Move cursor down"
+readme = "Move cursor down without changing selection"
+
+[[action]]
+key_action_id = "selection_move_up"
+default_keys = ["k", "up"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Move cursor up"
+readme = "Move cursor up without changing selection"
+
+[[action]]
+key_action_id = "selection_jump_to_first"
+default_keys = ["g"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Jump to first"
+readme = "Jump to first selectable entry"
+
+[[action]]
+key_action_id = "selection_jump_to_last"
+default_keys = ["G"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Jump to last"
+readme = "Jump to last entry"
+
+[[action]]
+key_action_id = "selection_delete"
+default_keys = ["d"]
+contexts = ["selection"]
+help_sections = ["selection"]
+footer = { modes = ["selection"], text = "Delete" }
+help = "Delete selected"
+readme = "Delete all selected entries"
+
+[[action]]
+key_action_id = "selection_toggle_complete"
+default_keys = ["c"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Toggle completion"
+readme = "Toggle completion status of all selected entries"
+
+[[action]]
+key_action_id = "selection_yank"
+default_keys = ["y"]
+contexts = ["selection"]
+help_sections = ["selection"]
+footer = { modes = ["selection"], text = "Yank" }
+help = "Yank selected"
+readme = "Copy all selected entries to clipboard"
+
+[[action]]
+key_action_id = "selection_remove_last_tag"
+default_keys = ["x"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Remove last tag"
+readme = "Remove the last trailing tag from all selected entries"
+
+[[action]]
+key_action_id = "selection_remove_all_tags"
+default_keys = ["X"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Remove all tags"
+readme = "Remove all trailing tags from all selected entries"
+
+[[action]]
+key_action_id = "selection_append_tag"
+default_keys = ["S-0-9"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Append favorite tag"
+readme = "Append favorite tag to all selected entries"
+
+[[action]]
+key_action_id = "selection_cycle_type"
+default_keys = ["S-tab"]
+contexts = ["selection"]
+help_sections = ["selection"]
+help = "Cycle entry type"
+readme = "Cycle through entry types on all selected entries"
+
+[[action]]
+key_action_id = "selection_exit"
+default_keys = ["esc"]
+contexts = ["selection"]
+help_sections = ["selection"]
+footer = { modes = ["selection"], text = "Exit" }
+help = "Exit selection"
+readme = "Exit selection mode and return to normal mode"
+
+# =============================================================================
+# Help Popup
+# =============================================================================
+
+[[action]]
+key_action_id = "help_scroll_down"
+default_keys = ["j", "down"]
+contexts = ["help"]
+help_sections = ["help"]
+help = "Scroll down"
+readme = "Scroll the help content down"
+
+[[action]]
+key_action_id = "help_scroll_up"
+default_keys = ["k", "up"]
+contexts = ["help"]
+help_sections = ["help"]
+help = "Scroll up"
+readme = "Scroll the help content up"
+
+[[action]]
+key_action_id = "close_help"
+default_keys = ["?", "esc"]
+contexts = ["help"]
+help_sections = ["help"]
+help = "Close help"
+readme = "Close the help overlay"
+
+# =============================================================================
+# Datepicker Mode
+# =============================================================================
+
+[[action]]
+key_action_id = "datepicker_move_left"
+default_keys = ["h", "left"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Previous day"
+readme = "Move selection to the previous day"
+
+[[action]]
+key_action_id = "datepicker_move_right"
+default_keys = ["l", "right"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Next day"
+readme = "Move selection to the next day"
+
+[[action]]
+key_action_id = "datepicker_move_up"
+default_keys = ["k", "up"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Previous week"
+readme = "Move selection up one week"
+
+[[action]]
+key_action_id = "datepicker_move_down"
+default_keys = ["j", "down"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Next week"
+readme = "Move selection down one week"
+
+[[action]]
+key_action_id = "datepicker_prev_month"
+default_keys = ["["]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Previous month"
+readme = "Navigate to the previous month"
+
+[[action]]
+key_action_id = "datepicker_next_month"
+default_keys = ["]"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Next month"
+readme = "Navigate to the next month"
+
+[[action]]
+key_action_id = "datepicker_prev_year"
+default_keys = ["Y"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Previous year"
+readme = "Navigate to the previous year"
+
+[[action]]
+key_action_id = "datepicker_next_year"
+default_keys = ["y"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Next year"
+readme = "Navigate to the next year"
+
+[[action]]
+key_action_id = "datepicker_today"
+default_keys = ["t"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Jump to today"
+readme = "Jump to today's date in the calendar"
+
+[[action]]
+key_action_id = "datepicker_confirm"
+default_keys = ["ret"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Navigate to date"
+readme = "Navigate to the selected date"
+
+[[action]]
+key_action_id = "datepicker_cancel"
+default_keys = ["\\", "esc"]
+contexts = ["datepicker"]
+help_sections = ["date"]
+help = "Close datepicker"
+readme = "Close datepicker without navigating"
+
+# Footer-only entries for compact datepicker popup (not shown in help)
+[[action]]
+key_action_id = "datepicker_footer_nav_month"
+default_keys = ["[]"]
+contexts = ["datepicker"]
+footer = { modes = ["datepicker"], text = "Month" }
+help = "Month"
+readme = "Navigate months"
+
+[[action]]
+key_action_id = "datepicker_footer_nav_year"
+default_keys = ["y/Y"]
+contexts = ["datepicker"]
+footer = { modes = ["datepicker"], text = "Year" }
+help = "Year"
+readme = "Navigate years"

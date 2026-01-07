@@ -312,11 +312,9 @@ fn selection_skips_projected_entries() {
     ctx.press(KeyCode::Char('v'));
     assert!(matches!(ctx.app.input_mode, InputMode::Selection(_)));
 
-    // g should jump to first LOCAL entry (index 1), not projected entry
     ctx.press(KeyCode::Char('g'));
     assert_eq!(ctx.selected_index(), 1);
 
-    // k should not move up into projected entries
     ctx.press(KeyCode::Char('k'));
     assert_eq!(ctx.selected_index(), 1);
 }

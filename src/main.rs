@@ -52,14 +52,11 @@ fn main() -> Result<(), io::Error> {
             JournalSlot::Project,
         )
     } else if let Some(path) = storage::detect_project_journal() {
-        // Existing project journal detected
         (Some(path), JournalSlot::Project)
     } else {
-        // No project journal, start in Hub
         (None, JournalSlot::Hub)
     };
 
-    // Load config appropriate for the starting journal context
     let config = match active_slot {
         JournalSlot::Hub => Config::load_hub().unwrap_or_default(),
         JournalSlot::Project => Config::load_merged().unwrap_or_default(),
@@ -310,7 +307,6 @@ fn run_app<B: ratatui::backend::Backend>(
             let content = Paragraph::new(lines.clone()).scroll((app.scroll_offset() as u16, 0));
             f.render_widget(content, content_area);
 
-            // Render scroll indicator on bottom border if content is scrollable
             let total_lines = lines.len();
             let scroll_offset = app.scroll_offset();
             let can_scroll_up = scroll_offset > 0;
@@ -352,7 +348,6 @@ fn run_app<B: ratatui::backend::Backend>(
             let footer = Paragraph::new(ui::render_footer(&app));
             f.render_widget(footer, chunks[1]);
 
-            // Render hint overlay above footer (if active)
             ui::render_hint_overlay(f, &app.hint_state, chunks[1]);
 
             let (indicator, indicator_color) = match app.active_journal() {
@@ -399,7 +394,7 @@ fn run_app<B: ratatui::backend::Backend>(
 
                 f.render_widget(Clear, popup_area);
 
-                let total = ui::get_help_total_lines();
+                let total = ui::get_help_total_lines(&app.keymap);
                 let max_scroll = total.saturating_sub(app.help_visible_height);
                 let can_scroll_up = app.help_scroll > 0;
                 let can_scroll_down = app.help_scroll < max_scroll;
@@ -420,7 +415,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 f.render_widget(help_block, popup_area);
 
                 let help_content =
-                    ui::render_help_content(app.help_scroll, app.help_visible_height);
+                    ui::render_help_content(&app.keymap, app.help_scroll, app.help_visible_height);
                 let help_paragraph = Paragraph::new(help_content);
                 f.render_widget(help_paragraph, inner_area);
 
@@ -448,7 +443,6 @@ fn run_app<B: ratatui::backend::Backend>(
                 f.render_widget(footer, footer_area);
             }
 
-            // Render confirm dialog if active
             if let InputMode::Confirm(context) = &app.input_mode {
                 let (title, messages): (&str, &[&str]) = match context {
                     ConfirmContext::CreateProjectJournal => (
@@ -487,9 +481,8 @@ fn run_app<B: ratatui::backend::Backend>(
                 f.render_widget(paragraph, inner_area);
             }
 
-            // Render datepicker if active
             if let InputMode::Datepicker(ref state) = app.input_mode {
-                ui::render_datepicker(f, state, size);
+                ui::render_datepicker(f, state, &app.keymap, size);
             }
         })?;
 
@@ -499,14 +492,14 @@ fn run_app<B: ratatui::backend::Backend>(
             app.status_message = None;
 
             if app.show_help {
-                handlers::handle_help_key(&mut app, key.code);
+                handlers::handle_help_key(&mut app, key);
             } else {
                 match &app.input_mode {
                     InputMode::Command => handlers::handle_command_key(&mut app, key)?,
                     InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
                     InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
                     InputMode::QueryInput => handlers::handle_query_input_key(&mut app, key)?,
-                    InputMode::Reorder => handlers::handle_reorder_key(&mut app, key.code),
+                    InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
                     InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
                     InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
                     InputMode::Datepicker(_) => handlers::handle_datepicker_key(&mut app, key)?,

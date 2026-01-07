@@ -266,7 +266,7 @@ Now `/$next` expands to `!tasks #next`. Combine them: `$t #work` expands to `!ta
 | `r` | Reorder mode |
 | `v` | Selection mode |
 | `0-9` | Filter favorite tag |
-| `Shift+0-9` | Append favorite tag |
+| `S-0-9` | Append favorite tag |
 | `Shift+Tab` | Cycle entry type |
 | `Tab` | Return to filter |
 | `` ` `` | Toggle Hub/Project journal |
@@ -295,7 +295,7 @@ Now `/$next` expands to `!tasks #next`. Combine them: `$t #work` expands to `!ta
 | `G` | Jump to last |
 | `v` | Selection mode |
 | `0-9` | Filter favorite tag |
-| `Shift+0-9` | Append favorite tag |
+| `S-0-9` | Append favorite tag |
 | `Shift+Tab` | Cycle entry type |
 | `` ` `` | Toggle Hub/Project journal |
 | `/` | Filter mode |
@@ -339,12 +339,14 @@ Press `v` for batch operations on multiple entries.
 | `V` | Select range |
 | `j`/`↓` | Move cursor down |
 | `k`/`↑` | Move cursor up |
+| `g` | Jump to first |
+| `G` | Jump to last |
 | `d` | Delete selected |
 | `c` | Toggle completion |
 | `y` | Yank selected |
 | `x` | Remove last tag |
 | `X` | Remove all tags |
-| `Shift+0-9` | Append favorite tag |
+| `S-0-9` | Append favorite tag |
 | `Shift+Tab` | Cycle entry type |
 | `Esc` | Exit selection |
 
@@ -368,34 +370,14 @@ Press `\` to open the calendar picker.
 | `\`/`Esc` | Close datepicker |
 
 
-### Text Editing
-
-These shortcuts work in all text input modes (Edit, Command, and Filter query):
-
-| Key | Action |
-|-----|--------|
-| `←` | Move cursor left |
-| `→` | Move cursor right |
-| `Alt+B`/`Ctrl+←` | Move cursor one word left |
-| `Alt+F`/`Ctrl+→` | Move cursor one word right |
-| `Home`/`Ctrl+A` | Move cursor to start |
-| `End`/`Ctrl+E` | Move cursor to end |
-| `Backspace` | Delete char before cursor |
-| `Delete` | Delete char after cursor |
-| `Ctrl+W` | Delete word before cursor |
-| `Alt+D` | Delete word after cursor |
-| `Ctrl+U` | Delete to start |
-| `Ctrl+K` | Delete to end |
-
-
 ### Commands
 
 | Key | Action |
 |-----|--------|
-| `:config` | Edit config in $EDITOR |
-| `:journal` | Edit journal in $EDITOR |
-| `:scratchpad` | Edit scratchpad in $EDITOR |
-| `:quit` | Quit application |
+| `:config [hub|project]` | Edit config in $EDITOR |
+| `:journal [hub|project]` | Edit journal in $EDITOR |
+| `:scratchpad ` | Edit scratchpad in $EDITOR |
+| `:quit ` | Quit application |
 
 
 ### Filter Syntax

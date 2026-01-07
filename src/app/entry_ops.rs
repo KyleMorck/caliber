@@ -365,27 +365,27 @@ impl App {
         self.execute_action(Box::new(action))
     }
 
-    #[cfg(not(test))]
+    fn is_test_environment() -> bool {
+        // cfg(test) only works for unit tests in this crate.
+        // For integration tests, we check CALIBER_SKIP_CLIPBOARD which TestContext sets.
+        cfg!(test) || std::env::var("CALIBER_SKIP_CLIPBOARD").is_ok()
+    }
+
     pub(super) fn copy_to_clipboard(text: &str) -> Result<(), arboard::Error> {
+        if Self::is_test_environment() {
+            return Ok(());
+        }
         let mut clipboard = arboard::Clipboard::new()?;
         clipboard.set_text(text)?;
         Ok(())
     }
 
-    #[cfg(test)]
-    pub(super) fn copy_to_clipboard(_text: &str) -> Result<(), arboard::Error> {
-        Ok(())
-    }
-
-    #[cfg(not(test))]
     fn read_from_clipboard() -> Result<String, arboard::Error> {
+        if Self::is_test_environment() {
+            return Ok(String::new());
+        }
         let mut clipboard = arboard::Clipboard::new()?;
         clipboard.get_text()
-    }
-
-    #[cfg(test)]
-    fn read_from_clipboard() -> Result<String, arboard::Error> {
-        Ok(String::new())
     }
 
     /// Paste clipboard content as entries below current selection

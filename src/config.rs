@@ -56,6 +56,8 @@ pub struct Config {
     pub header_date_format: String,
     #[serde(default)]
     pub hide_completed: bool,
+    #[serde(default)]
+    pub keys: HashMap<String, HashMap<String, String>>,
 }
 
 /// Raw config for deserialization - all fields are Option to distinguish "not set" from "set to default"
@@ -69,6 +71,7 @@ struct RawConfig {
     pub default_filter: Option<String>,
     pub header_date_format: Option<String>,
     pub hide_completed: Option<bool>,
+    pub keys: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 impl RawConfig {
@@ -84,22 +87,21 @@ impl RawConfig {
                 .header_date_format
                 .unwrap_or_else(default_header_date_format),
             hide_completed: self.hide_completed.unwrap_or(false),
+            keys: self.keys.unwrap_or_default(),
         }
     }
 
     fn merge_over(self, base: RawConfig) -> RawConfig {
         RawConfig {
-            // hub_file is NEVER overridden from context config
             hub_file: base.hub_file,
-            // Scalars: use context if set, otherwise base
             scratchpad_file: self.scratchpad_file.or(base.scratchpad_file),
             tidy_order: self.tidy_order.or(base.tidy_order),
             default_filter: self.default_filter.or(base.default_filter),
             header_date_format: self.header_date_format.or(base.header_date_format),
             hide_completed: self.hide_completed.or(base.hide_completed),
-            // HashMaps: merge (context values override matching base keys)
             favorite_tags: Some(merge_hashmaps(base.favorite_tags, self.favorite_tags)),
             filters: Some(merge_hashmaps(base.filters, self.filters)),
+            keys: Some(merge_keys(base.keys, self.keys)),
         }
     }
 }
@@ -111,6 +113,23 @@ fn merge_hashmaps(
     match (base, overlay) {
         (Some(mut b), Some(o)) => {
             b.extend(o);
+            b
+        }
+        (Some(b), None) => b,
+        (None, Some(o)) => o,
+        (None, None) => HashMap::new(),
+    }
+}
+
+fn merge_keys(
+    base: Option<HashMap<String, HashMap<String, String>>>,
+    overlay: Option<HashMap<String, HashMap<String, String>>>,
+) -> HashMap<String, HashMap<String, String>> {
+    match (base, overlay) {
+        (Some(mut b), Some(o)) => {
+            for (context, keys) in o {
+                b.entry(context).or_default().extend(keys);
+            }
             b
         }
         (Some(b), None) => b,

@@ -19,10 +19,14 @@ pub struct TestContext {
 
 impl TestContext {
     pub fn new() -> Self {
+        // SAFETY: Tests run single-threaded per test file, env var is set before any other work
+        unsafe { std::env::set_var("CALIBER_SKIP_CLIPBOARD", "1") };
         Self::with_date(NaiveDate::from_ymd_opt(2026, 1, 15).unwrap())
     }
 
     pub fn with_date(date: NaiveDate) -> Self {
+        // SAFETY: Tests run single-threaded per test file, env var is set before any other work
+        unsafe { std::env::set_var("CALIBER_SKIP_CLIPBOARD", "1") };
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let journal_path = temp_dir.path().join("test_journal.md");
         std::fs::write(&journal_path, "").expect("Failed to create journal");
@@ -40,6 +44,8 @@ impl TestContext {
     }
 
     pub fn with_config_and_content(date: NaiveDate, content: &str, config: Config) -> Self {
+        // SAFETY: Tests run single-threaded per test file, env var is set before any other work
+        unsafe { std::env::set_var("CALIBER_SKIP_CLIPBOARD", "1") };
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let journal_path = temp_dir.path().join("test_journal.md");
         std::fs::write(&journal_path, content).expect("Failed to write journal");
@@ -68,7 +74,7 @@ impl TestContext {
 
     fn handle_key_event(&mut self, key: KeyEvent) {
         if self.app.show_help {
-            handlers::handle_help_key(&mut self.app, key.code);
+            handlers::handle_help_key(&mut self.app, key);
         } else {
             match &self.app.input_mode {
                 InputMode::Command => {
@@ -84,7 +90,7 @@ impl TestContext {
                     let _ = handlers::handle_query_input_key(&mut self.app, key);
                 }
                 InputMode::Reorder => {
-                    handlers::handle_reorder_key(&mut self.app, key.code);
+                    handlers::handle_reorder_key(&mut self.app, key);
                 }
                 InputMode::Confirm(_) => {
                     let _ = handlers::handle_confirm_key(&mut self.app, key.code);

@@ -5,136 +5,121 @@
 # Entry Type Filters
 # =============================================================================
 
-[[filters]]
+[[filter]]
 syntax = "!tasks"
 category = "entry_type"
-help_section = "filters"
-short_text = "Tasks"
-short_description = "Incomplete tasks"
-long_description = "Filter to show only incomplete tasks (- [ ] entries)"
+help = "Incomplete tasks"
+readme = "Filter to show only incomplete tasks (- [ ] entries)"
+completion_hint = "Filter to show only incomplete tasks (- [ ] entries)"
 
-[[filters]]
+[[filter]]
 syntax = "!completed"
 category = "entry_type"
-help_section = "filters"
-short_text = "Completed"
-short_description = "Completed tasks"
-long_description = "Filter to show only completed tasks (- [x] entries)"
+help = "Completed tasks"
+readme = "Filter to show only completed tasks (- [x] entries)"
+completion_hint = "Filter to show only completed tasks (- [x] entries)"
 
-[[filters]]
+[[filter]]
 syntax = "!notes"
 category = "entry_type"
-help_section = "filters"
-short_text = "Notes"
-short_description = "Notes only"
-long_description = "Filter to show only notes (- entries without checkbox)"
+help = "Notes only"
+readme = "Filter to show only notes (- entries without checkbox)"
+completion_hint = "Filter to show only notes (- entries without checkbox)"
 
-[[filters]]
+[[filter]]
 syntax = "!events"
 category = "entry_type"
-help_section = "filters"
-short_text = "Events"
-short_description = "Events only"
-long_description = "Filter to show only events (* entries)"
+help = "Events only"
+readme = "Filter to show only events (* entries)"
+completion_hint = "Filter to show only events (* entries)"
 
 # =============================================================================
 # Date Operation Filters
 # =============================================================================
 
-[[filters]]
+[[filter]]
 syntax = "@before:"
 display = "@before:DATE"
 category = "date_op"
-help_section = "filters"
-short_text = "Before"
-short_description = "Entries before date"
-long_description = "Filter entries from days on or before DATE (inclusive). Supports natural dates."
+help = "Entries before date"
+readme = "Filter entries from days on or before DATE (inclusive). Supports natural dates."
+completion_hint = "Filter entries from days on or before DATE (inclusive). Supports natural dates."
 
-[[filters]]
+[[filter]]
 syntax = "@after:"
 display = "@after:DATE"
 category = "date_op"
-help_section = "filters"
-short_text = "After"
-short_description = "Entries after date"
-long_description = "Filter entries from days on or after DATE (inclusive). Supports natural dates."
+help = "Entries after date"
+readme = "Filter entries from days on or after DATE (inclusive). Supports natural dates."
+completion_hint = "Filter entries from days on or after DATE (inclusive). Supports natural dates."
 
-[[filters]]
+[[filter]]
 syntax = "@overdue"
 category = "date_op"
-help_section = "filters"
-short_text = "Overdue"
-short_description = "Entries with past @date"
-long_description = "Filter entries that have @date patterns targeting a date before today"
+help = "Entries with past @date"
+readme = "Filter entries that have @date patterns targeting a date before today"
+completion_hint = "Filter entries that have @date patterns targeting a date before today"
 
-[[filters]]
+[[filter]]
 syntax = "@later"
 category = "date_op"
-help_section = "filters"
-short_text = "Later"
-short_description = "Entries with @date patterns"
-long_description = "Filter entries that have @date patterns (one-time scheduled entries)"
+help = "Entries with @date patterns"
+readme = "Filter entries that have @date patterns (one-time scheduled entries)"
+completion_hint = "Filter entries that have @date patterns (one-time scheduled entries)"
 
-[[filters]]
+[[filter]]
 syntax = "@recurring"
 category = "date_op"
-help_section = "filters"
-short_text = "Recurring"
-short_description = "Entries with @every-* patterns"
-long_description = "Filter entries with recurring patterns (@every-day, @every-weekday, @every-monday, etc.)"
+help = "Entries with @every-* patterns"
+readme = "Filter entries with recurring patterns (@every-day, @every-weekday, @every-monday, etc.)"
+completion_hint = "Filter entries with recurring patterns (@every-day, @every-weekday, @every-monday, etc.)"
 
 # =============================================================================
 # Negation Patterns
 # =============================================================================
 
-[[filters]]
+[[filter]]
 syntax = "not:#tag"
 category = "negation"
-help_section = "filters"
-short_text = "Not tag"
-short_description = "Entries without tag"
-long_description = "Exclude entries that contain the specified tag"
+help = "Entries without tag"
+readme = "Exclude entries that contain the specified tag"
+completion_hint = "Exclude entries that contain the specified tag"
 
-[[filters]]
+[[filter]]
 syntax = "not:!type"
 category = "negation"
-help_section = "filters"
-short_text = "Not type"
-short_description = "Exclude entry type"
-long_description = "Exclude entries of the specified type (tasks, notes, or events)"
+help = "Exclude entry type"
+readme = "Exclude entries of the specified type (tasks, notes, or events)"
+completion_hint = "Exclude entries of the specified type (tasks, notes, or events)"
 
-[[filters]]
+[[filter]]
 syntax = "not:word"
 category = "negation"
-help_section = "filters"
-short_text = "Not text"
-short_description = "Entries not containing text"
-long_description = "Exclude entries that contain the specified text"
+help = "Entries not containing text"
+readme = "Exclude entries that contain the specified text"
+completion_hint = "Exclude entries that contain the specified text"
 
 # =============================================================================
 # Other Patterns (for documentation)
 # =============================================================================
 
-[[filters]]
+[[filter]]
 syntax = "#tag"
 category = "tag"
-help_section = "filters"
-short_text = "Tag"
-short_description = "Entries with tag"
-long_description = "Filter entries that contain the specified tag"
+help = "Entries with tag"
+readme = "Filter entries that contain the specified tag"
+completion_hint = "Filter entries that contain the specified tag"
 
-[[filters]]
+[[filter]]
 syntax = "$name"
 category = "saved_filter"
-help_section = "filters"
-short_text = "Saved"
-short_description = "Saved filter"
-long_description = "Expand a saved filter defined in config.toml"
+help = "Saved filter"
+readme = "Expand a saved filter defined in config.toml"
+completion_hint = "Expand a saved filter defined in config.toml"
 
-[[filters]]
+[[filter]]
 syntax = "word"
 category = "text_search"
-help_section = "filters"
-short_text = "Search"
-short_description = "Entries containing text"
-long_description = "Filter entries that contain the specified text (case-insensitive)"
+help = "Entries containing text"
+readme = "Filter entries that contain the specified text (case-insensitive)"
+completion_hint = "Filter entries that contain the specified text (case-insensitive)"

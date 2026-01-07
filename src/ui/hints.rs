@@ -58,7 +58,6 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
 
     if let HintContext::GuidanceMessage { message } = effective {
         let mut lines: Vec<Line<'static>> = Vec::new();
-        // Push message to bottom
         for _ in 0..max_rows.saturating_sub(1) {
             lines.push(Line::from(""));
         }
@@ -71,18 +70,18 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
 
     let description: Option<&str> = match effective {
         HintContext::Commands { prefix, matches } if !prefix.is_empty() => {
-            matches.first().map(|c| c.long_description)
+            matches.first().map(|c| c.completion_hint)
         }
-        HintContext::SubArgs { command, .. } => Some(command.long_description),
+        HintContext::SubArgs { command, .. } => Some(command.completion_hint),
         HintContext::FilterTypes { prefix, matches } if !prefix.is_empty() => {
-            matches.first().map(|f| f.long_description)
+            matches.first().map(|f| f.completion_hint)
         }
         HintContext::DateOps { prefix, matches } if !prefix.is_empty() => {
-            matches.first().map(|f| f.long_description)
+            matches.first().map(|f| f.completion_hint)
         }
         HintContext::DateValues {
             prefix, matches, ..
-        } if !prefix.is_empty() => matches.first().map(|(_, desc)| *desc),
+        } if !prefix.is_empty() => matches.first().map(|dv| dv.completion_hint),
         HintContext::DateValues { .. } => Some("Dates default to past. Append + for future."),
         _ => None,
     };
@@ -123,10 +122,9 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
             .iter()
             .map(|f| format!("{}{}", negation_prefix, f.syntax))
             .collect(),
-        HintContext::DateValues { matches, .. } => matches
-            .iter()
-            .map(|(syntax, _)| (*syntax).to_string())
-            .collect(),
+        HintContext::DateValues { matches, .. } => {
+            matches.iter().map(|dv| dv.syntax.to_string()).collect()
+        }
         HintContext::SavedFilters { matches, .. } => matches
             .iter()
             .map(|f| format!("{}${f}", negation_prefix))

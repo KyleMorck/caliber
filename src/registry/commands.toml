@@ -1,42 +1,34 @@
 # Command definitions (: commands)
 # Each entry defines a command with its subargs and help text variants
 
-[[commands]]
+[[command]]
 name = "config"
 args = "[hub|project]"
 subargs = [
   { options = ["hub", "project"] },
 ]
-key = ":config"
-help_section = "commands"
-short_text = "Edit config"
-short_description = "Edit config in $EDITOR"
-long_description = "Edit configuration file. Defaults to base config, use 'hub' or 'project' for scoped configs."
+help = "Edit config in $EDITOR"
+readme = "Edit configuration file. Defaults to base config, use 'hub' or 'project' for scoped configs."
+completion_hint = "Edit configuration file. Defaults to base config, use 'hub' or 'project' for scoped configs."
 
-[[commands]]
+[[command]]
 name = "journal"
 args = "[hub|project]"
 subargs = [
   { options = ["hub", "project"] },
 ]
-key = ":journal"
-help_section = "commands"
-short_text = "Edit journal"
-short_description = "Edit journal in $EDITOR"
-long_description = "Edit journal file. Defaults to current context, use 'hub' or 'project' for specific journal."
+help = "Edit journal in $EDITOR"
+readme = "Edit journal file. Defaults to current context, use 'hub' or 'project' for specific journal."
+completion_hint = "Edit journal file. Defaults to current context, use 'hub' or 'project' for specific journal."
 
-[[commands]]
+[[command]]
 name = "scratchpad"
-key = ":scratchpad"
-help_section = "commands"
-short_text = "Edit scratchpad"
-short_description = "Edit scratchpad in $EDITOR"
-long_description = "Edit scratchpad file for temporary notes."
+help = "Edit scratchpad in $EDITOR"
+readme = "Edit scratchpad file for temporary notes."
+completion_hint = "Edit scratchpad file for temporary notes."
 
-[[commands]]
+[[command]]
 name = "quit"
-key = ":quit"
-help_section = "commands"
-short_text = "Quit"
-short_description = "Quit application"
-long_description = "Save and exit the application."
+help = "Quit application"
+readme = "Save and exit the application."
+completion_hint = "Save and exit the application."

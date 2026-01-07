@@ -21,6 +21,7 @@ use chrono::{Datelike, Local, NaiveDate};
 
 use crate::config::Config;
 use crate::cursor::CursorBuffer;
+use crate::dispatch::Keymap;
 use crate::registry::COMMANDS;
 use crate::storage::{
     self, DayInfo, Entry, EntryType, JournalContext, JournalSlot, Line, RawEntry,
@@ -253,7 +254,7 @@ pub struct App {
     pub hint_state: HintContext,
     pub cached_journal_tags: Vec<String>,
     pub executor: actions::ActionExecutor,
-    /// Original content when entering edit mode (for undo support)
+    pub keymap: Keymap,
     original_edit_content: Option<String>,
 }
 
@@ -289,6 +290,11 @@ impl App {
         let cached_journal_tags = storage::collect_journal_tags(&path).unwrap_or_default();
         let hide_completed = config.hide_completed;
 
+        let keymap = Keymap::new(&config.keys).unwrap_or_else(|e| {
+            eprintln!("Invalid key config: {e}");
+            Keymap::default()
+        });
+
         let mut app = Self {
             current_date: date,
             last_daily_date: date,
@@ -312,6 +318,7 @@ impl App {
             hint_state: HintContext::Inactive,
             cached_journal_tags,
             executor: actions::ActionExecutor::new(),
+            keymap,
             original_edit_content: None,
         };
 

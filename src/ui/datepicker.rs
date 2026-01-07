@@ -10,7 +10,24 @@ use ratatui::{
 use time::{Date, Month};
 
 use crate::app::DatepickerState;
-use crate::registry::{FooterMode, footer_actions};
+use crate::dispatch::Keymap;
+use crate::registry::{FooterMode, KeyContext, footer_actions};
+
+fn format_key_for_display(key: &str) -> String {
+    match key {
+        "down" => "↓".to_string(),
+        "up" => "↑".to_string(),
+        "left" => "←".to_string(),
+        "right" => "→".to_string(),
+        "ret" => "Enter".to_string(),
+        "esc" => "Esc".to_string(),
+        "tab" => "Tab".to_string(),
+        "backtab" => "S-Tab".to_string(),
+        "backspace" => "Bksp".to_string(),
+        " " => "Space".to_string(),
+        _ => key.to_string(),
+    }
+}
 
 /// Convert chrono NaiveDate to time::Date (required by ratatui calendar)
 fn to_time_date(date: NaiveDate) -> Date {
@@ -35,7 +52,7 @@ fn centered_fixed_rect(width: u16, height: u16, area: Rect) -> Rect {
     }
 }
 
-pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, area: Rect) {
+pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, keymap: &Keymap, area: Rect) {
     // Fixed size popup - calendar is ~22 chars wide, we add padding
     let popup_width: u16 = 26;
     let popup_height: u16 = 11;
@@ -75,7 +92,6 @@ pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, area: Rect) {
         }
     }
 
-    // Style for today (cyan)
     if today.month() == state.display_month.month()
         && today.year() == state.display_month.year()
         && today != state.selected
@@ -83,7 +99,6 @@ pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, area: Rect) {
         events.add(to_time_date(today), Style::new().fg(Color::Cyan).not_dim());
     }
 
-    // Style for selected date (same priority as above, plus today)
     let selected_info = state.day_cache.get(&state.selected);
     let selected_style = if state.selected == today {
         Style::new().fg(Color::Cyan).reversed().not_dim()
@@ -116,16 +131,34 @@ pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, area: Rect) {
 
         let mut spans: Vec<Span> = Vec::new();
         for action in footer_actions(FooterMode::Datepicker) {
-            let key_display = match action.alt_key {
-                Some(alt) => format!("{}/{}", action.key, alt),
-                None => action.key.to_string(),
+            let keys = keymap.keys_for_action(KeyContext::Datepicker, action.id);
+            let key_display = if keys.is_empty() {
+                match action.default_keys {
+                    [first, second, ..] => {
+                        format!(
+                            "{}/{}",
+                            format_key_for_display(first),
+                            format_key_for_display(second)
+                        )
+                    }
+                    [first] => format_key_for_display(first),
+                    [] => String::new(),
+                }
+            } else if keys.len() == 1 {
+                format_key_for_display(&keys[0])
+            } else {
+                format!(
+                    "{}/{}",
+                    format_key_for_display(&keys[0]),
+                    format_key_for_display(&keys[1])
+                )
             };
             spans.push(Span::styled(
                 format!(" {key_display}"),
                 Style::new().fg(Color::Gray),
             ));
             spans.push(Span::styled(
-                format!(" {}", action.short_text),
+                format!(" {}", action.footer_text),
                 Style::new().dim(),
             ));
         }

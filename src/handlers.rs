@@ -6,11 +6,11 @@ use crate::app::{
     App, ConfirmContext, HintContext, InputMode, InsertPosition, SelectedItem, ViewMode,
 };
 use crate::cursor::CursorBuffer;
+use crate::dispatch::KeySpec;
+use crate::registry::{KeyActionId, KeyContext};
 use crate::storage::{add_caliber_to_gitignore, create_project_journal};
 use crate::ui;
 
-/// Maps shifted number characters to their digit equivalent for favorite tag shortcuts.
-/// Shift+1='!', Shift+2='@', ..., Shift+0=')'
 fn shifted_char_to_digit(c: char) -> Option<char> {
     match c {
         '!' => Some('1'),
@@ -27,24 +27,160 @@ fn shifted_char_to_digit(c: char) -> Option<char> {
     }
 }
 
-pub fn handle_help_key(app: &mut App, key: KeyCode) {
-    let total_lines = ui::get_help_total_lines();
-    let max_scroll = total_lines.saturating_sub(app.help_visible_height);
-
-    match key {
-        KeyCode::Char('?') | KeyCode::Esc => {
-            app.show_help = false;
-            app.help_scroll = 0;
+fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
+    use KeyActionId::*;
+    match action {
+        MoveDown => app.move_down(),
+        MoveUp => app.move_up(),
+        JumpToFirst => app.jump_to_first(),
+        JumpToLast => app.jump_to_last(),
+        EditEntry => app.edit_current_entry(),
+        ToggleEntry => {
+            app.toggle_current_entry()?;
         }
-        KeyCode::Down | KeyCode::Char('j') => {
+        DeleteEntry => {
+            app.delete_current_entry()?;
+        }
+        YankEntry => app.yank_current_entry(),
+        Paste => {
+            app.paste_from_clipboard()?;
+        }
+        Undo => app.undo(),
+        Redo => {
+            app.redo()?;
+        }
+        RemoveLastTag => {
+            app.remove_last_tag_from_current_entry()?;
+        }
+        RemoveAllTags => {
+            app.remove_all_tags_from_current_entry()?;
+        }
+        ToggleJournal => {
+            app.toggle_journal()?;
+        }
+        EnterSelectionMode => app.enter_selection_mode(),
+        CycleEntryTypeNormal => {
+            app.cycle_current_entry_type()?;
+        }
+        ShowHelp => {
+            app.show_help = true;
+        }
+        EnterFilterMode => app.enter_filter_input(),
+        EnterCommandMode => {
+            app.input_mode = InputMode::Command;
+            app.update_hints();
+        }
+        OpenDatepicker => app.open_datepicker(),
+        NewEntryBottom => app.new_task(InsertPosition::Bottom),
+        NewEntryBelow => {
+            if let SelectedItem::Projected { entry, .. } = app.get_selected_item() {
+                app.go_to_source(entry.source_date, entry.line_index)?;
+            } else {
+                app.new_task(InsertPosition::Below);
+            }
+        }
+        NewEntryAbove => app.new_task(InsertPosition::Above),
+        PrevDay => {
+            app.prev_day()?;
+        }
+        NextDay => {
+            app.next_day()?;
+        }
+        GotoToday => {
+            app.goto_today()?;
+        }
+        TidyEntries => app.tidy_entries(),
+        EnterReorderMode => app.enter_reorder_mode(),
+        ToggleHideCompleted => app.toggle_hide_completed(),
+        ReturnToFilter => {
+            app.return_to_filter()?;
+        }
+        FilterQuickAdd => app.filter_quick_add(),
+        RefreshFilter => {
+            app.refresh_filter()?;
+        }
+        ExitFilter => app.exit_filter(),
+        SaveEdit => {
+            app.clear_hints();
+            app.exit_edit();
+        }
+        SaveAndNew => {
+            app.clear_hints();
+            app.commit_and_add_new();
+        }
+        CycleEntryType => app.cycle_edit_entry_type(),
+        CancelEdit => {
+            app.clear_hints();
+            app.cancel_edit();
+        }
+        ReorderMoveDown => app.reorder_move_down(),
+        ReorderMoveUp => app.reorder_move_up(),
+        ReorderSave => app.exit_reorder_mode(true),
+        ReorderCancel => app.exit_reorder_mode(false),
+        SelectionToggle => app.selection_toggle_current(),
+        SelectionExtendRange => app.selection_extend_to_cursor(),
+        SelectionMoveDown => app.selection_move_down(),
+        SelectionMoveUp => app.selection_move_up(),
+        SelectionJumpToFirst => app.selection_jump_to_first(),
+        SelectionJumpToLast => app.selection_jump_to_last(),
+        SelectionDelete => {
+            app.delete_selected()?;
+        }
+        SelectionToggleComplete => {
+            app.toggle_selected()?;
+        }
+        SelectionYank => app.yank_selected(),
+        SelectionRemoveLastTag => {
+            app.remove_last_tag_from_selected()?;
+        }
+        SelectionRemoveAllTags => {
+            app.remove_all_tags_from_selected()?;
+        }
+        SelectionCycleType => {
+            app.cycle_selected_entry_types()?;
+        }
+        SelectionExit => app.exit_selection_mode(),
+        HelpScrollDown => {
+            let total_lines = ui::get_help_total_lines(&app.keymap);
+            let max_scroll = total_lines.saturating_sub(app.help_visible_height);
             if app.help_scroll < max_scroll {
                 app.help_scroll += 1;
             }
         }
-        KeyCode::Up | KeyCode::Char('k') => {
+        HelpScrollUp => {
             app.help_scroll = app.help_scroll.saturating_sub(1);
         }
-        _ => {}
+        CloseHelp => {
+            app.show_help = false;
+            app.help_scroll = 0;
+        }
+        DatepickerMoveLeft => app.datepicker_move(-1, 0),
+        DatepickerMoveRight => app.datepicker_move(1, 0),
+        DatepickerMoveUp => app.datepicker_move(0, -1),
+        DatepickerMoveDown => app.datepicker_move(0, 1),
+        DatepickerPrevMonth => app.datepicker_prev_month(),
+        DatepickerNextMonth => app.datepicker_next_month(),
+        DatepickerPrevYear => app.datepicker_prev_year(),
+        DatepickerNextYear => app.datepicker_next_year(),
+        DatepickerToday => app.datepicker_goto_today(),
+        DatepickerConfirm => {
+            app.confirm_datepicker()?;
+        }
+        DatepickerCancel => app.close_datepicker(),
+        NoOp
+        | QuickFilterTag
+        | AppendFavoriteTag
+        | SelectionAppendTag
+        | DatepickerFooterNavMonth
+        | DatepickerFooterNavYear => {}
+    }
+    Ok(true)
+}
+
+pub fn handle_help_key(app: &mut App, key: KeyEvent) {
+    let spec = KeySpec::from_event(&key);
+    if let Some(action) = app.keymap.get(KeyContext::Help, &spec) {
+        let _ = dispatch_action(app, action);
     }
 }
 
@@ -95,140 +231,36 @@ pub fn handle_command_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     let KeyEvent { code, .. } = key;
 
-    // Shared keys (work in both Daily and Filter views)
-    match code {
-        KeyCode::Char('?') => {
-            app.show_help = true;
-            return Ok(());
+    if let KeyCode::Char(c @ ('1'..='9' | '0')) = code {
+        if let Some(tag) = app.config.get_favorite_tag(c) {
+            app.quick_filter(&format!("#{tag}"))?;
         }
-        KeyCode::Char(':') => {
-            app.input_mode = InputMode::Command;
-            app.update_hints(); // Show all commands immediately
-            return Ok(());
-        }
-        KeyCode::Char('/') => {
-            app.enter_filter_input();
-            return Ok(());
-        }
-        KeyCode::Char('\\') => {
-            app.open_datepicker();
-            return Ok(());
-        }
-        KeyCode::Char('i') => {
-            app.edit_current_entry();
-            return Ok(());
-        }
-        KeyCode::Char('c') => {
-            app.toggle_current_entry()?;
-            return Ok(());
-        }
-        KeyCode::Char('d') => {
-            app.delete_current_entry()?;
-            return Ok(());
-        }
-        KeyCode::Char('x') => {
-            app.remove_last_tag_from_current_entry()?;
-            return Ok(());
-        }
-        KeyCode::Char('X') => {
-            app.remove_all_tags_from_current_entry()?;
-            return Ok(());
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            app.move_up();
-            return Ok(());
-        }
-        KeyCode::Down | KeyCode::Char('j') => {
-            app.move_down();
-            return Ok(());
-        }
-        KeyCode::Char('g') => {
-            app.jump_to_first();
-            return Ok(());
-        }
-        KeyCode::Char('G') => {
-            app.jump_to_last();
-            return Ok(());
-        }
-        KeyCode::Char('u') => {
-            app.undo();
-            return Ok(());
-        }
-        KeyCode::Char('U') => {
-            app.redo()?;
-            return Ok(());
-        }
-        KeyCode::Char('`') => {
-            app.toggle_journal()?;
-            return Ok(());
-        }
-        KeyCode::Char('v') => {
-            app.enter_selection_mode();
-            return Ok(());
-        }
-        KeyCode::Char('y') => {
-            app.yank_current_entry();
-            return Ok(());
-        }
-        KeyCode::Char('p') => {
-            app.paste_from_clipboard()?;
-            return Ok(());
-        }
-        KeyCode::Char(c @ ('1'..='9' | '0')) => {
-            if let Some(tag) = app.config.get_favorite_tag(c) {
-                app.quick_filter(&format!("#{tag}"))?;
-            }
-            return Ok(());
-        }
-        // Shift+number appends favorite tag to current entry
-        KeyCode::Char(c) if shifted_char_to_digit(c).is_some() => {
-            let digit = shifted_char_to_digit(c).unwrap();
-            if let Some(tag) = app.config.get_favorite_tag(digit).map(str::to_string) {
-                app.append_tag_to_current_entry(&tag)?;
-            }
-            return Ok(());
-        }
-        KeyCode::BackTab => {
-            app.cycle_current_entry_type()?;
-            return Ok(());
-        }
-        _ => {}
+        return Ok(());
     }
 
-    // View-specific keys
-    match &app.view {
-        ViewMode::Daily(_) => match code {
-            KeyCode::Enter => app.new_task(InsertPosition::Bottom),
-            KeyCode::Char('o') => {
-                // On projected entries, go to source; otherwise insert new task below
-                if let SelectedItem::Projected { entry, .. } = app.get_selected_item() {
-                    app.go_to_source(entry.source_date, entry.line_index)?;
-                } else {
-                    app.new_task(InsertPosition::Below);
-                }
-            }
-            KeyCode::Char('O') => app.new_task(InsertPosition::Above),
-            KeyCode::Char('h' | '[') => app.prev_day()?,
-            KeyCode::Char('l' | ']') => app.next_day()?,
-            KeyCode::Char('t') => app.goto_today()?,
-            KeyCode::Char('T') => app.tidy_entries(),
-            KeyCode::Char('r') => app.enter_reorder_mode(),
-            KeyCode::Char('z') => app.toggle_hide_completed(),
-            KeyCode::Tab => app.return_to_filter()?,
-            _ => {}
-        },
-        ViewMode::Filter(_) => match code {
-            KeyCode::Esc | KeyCode::Tab => app.exit_filter(),
-            KeyCode::Char('r') => app.refresh_filter()?,
-            KeyCode::Enter => app.filter_quick_add(),
-            _ => {}
-        },
+    if let KeyCode::Char(c) = code
+        && let Some(digit) = shifted_char_to_digit(c)
+    {
+        if let Some(tag) = app.config.get_favorite_tag(digit).map(str::to_string) {
+            app.append_tag_to_current_entry(&tag)?;
+        }
+        return Ok(());
     }
+
+    let spec = KeySpec::from_event(&key);
+    let context = match &app.view {
+        ViewMode::Daily(_) => KeyContext::DailyNormal,
+        ViewMode::Filter(_) => KeyContext::FilterNormal,
+    };
+
+    if let Some(action) = app.keymap.get(context, &spec) {
+        dispatch_action(app, action)?;
+    }
+
     Ok(())
 }
 
 pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
-    // Edit-specific keys first
     match key.code {
         KeyCode::BackTab => {
             app.cycle_edit_entry_type();
@@ -262,7 +294,6 @@ pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
     }
 
     if let Some(ref mut buffer) = app.edit_buffer {
-        // Special case: empty buffer backspace cancels edit
         if key.code == KeyCode::Backspace
             && key.modifiers.is_empty()
             && !buffer.delete_char_before()
@@ -325,24 +356,18 @@ pub fn handle_query_input_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     Ok(())
 }
 
-pub fn handle_reorder_key(app: &mut App, key: KeyCode) {
-    match key {
-        KeyCode::Char('r') | KeyCode::Enter => app.exit_reorder_mode(true),
-        KeyCode::Esc => app.exit_reorder_mode(false),
-        KeyCode::Up | KeyCode::Char('k') => app.reorder_move_up(),
-        KeyCode::Down | KeyCode::Char('j') => app.reorder_move_down(),
-        _ => {}
+pub fn handle_reorder_key(app: &mut App, key: KeyEvent) {
+    let spec = KeySpec::from_event(&key);
+    if let Some(action) = app.keymap.get(KeyContext::Reorder, &spec) {
+        let _ = dispatch_action(app, action);
     }
 }
 
-/// Shared text input handler for CursorBuffer
-/// Returns true if the key was handled
 fn handle_text_input(buffer: &mut CursorBuffer, key: KeyEvent) -> bool {
     let KeyEvent {
         code, modifiers, ..
     } = key;
 
-    // Ctrl modifiers
     if modifiers.contains(KeyModifiers::CONTROL) {
         match code {
             KeyCode::Char('a') => buffer.move_to_start(),
@@ -357,7 +382,6 @@ fn handle_text_input(buffer: &mut CursorBuffer, key: KeyEvent) -> bool {
         return true;
     }
 
-    // Alt modifiers
     if modifiers.contains(KeyModifiers::ALT) {
         match code {
             KeyCode::Char('b') => buffer.move_word_left(),
@@ -369,7 +393,6 @@ fn handle_text_input(buffer: &mut CursorBuffer, key: KeyEvent) -> bool {
         return true;
     }
 
-    // No modifiers (or shift only for chars)
     match code {
         KeyCode::Left => buffer.move_left(),
         KeyCode::Right => buffer.move_right(),
@@ -395,26 +418,22 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
 
     match key {
         KeyCode::Char('y') | KeyCode::Char('Y') => match context {
-            ConfirmContext::CreateProjectJournal => {
-                match create_project_journal() {
-                    Ok(path) => {
-                        app.journal_context.set_project_path(path);
-                        // Ask about .gitignore next
-                        app.input_mode = InputMode::Confirm(ConfirmContext::AddToGitignore);
-                    }
-                    Err(e) => {
-                        app.set_status(format!("Failed to create project journal: {e}"));
-                        app.input_mode = InputMode::Normal;
-                    }
+            ConfirmContext::CreateProjectJournal => match create_project_journal() {
+                Ok(path) => {
+                    app.journal_context.set_project_path(path);
+                    app.input_mode = InputMode::Confirm(ConfirmContext::AddToGitignore);
                 }
-            }
+                Err(e) => {
+                    app.set_status(format!("Failed to create project journal: {e}"));
+                    app.input_mode = InputMode::Normal;
+                }
+            },
             ConfirmContext::AddToGitignore => {
                 if let Err(e) = add_caliber_to_gitignore() {
                     app.set_status(format!("Failed to update .gitignore: {e}"));
                 } else {
                     app.set_status("Project journal created and added to .gitignore");
                 }
-                // Switch to project journal
                 app.switch_to_project()?;
                 app.input_mode = InputMode::Normal;
             }
@@ -426,7 +445,6 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
             }
             ConfirmContext::AddToGitignore => {
                 app.set_status("Project journal created (not added to .gitignore)");
-                // Still switch to project journal
                 app.switch_to_project()?;
                 app.input_mode = InputMode::Normal;
             }
@@ -442,84 +460,31 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
         code, modifiers, ..
     } = key;
 
-    // Shift+V selects range from anchor to cursor
     if modifiers.contains(KeyModifiers::SHIFT) && code == KeyCode::Char('V') {
         app.selection_extend_to_cursor();
         return Ok(());
     }
 
-    match code {
-        KeyCode::Esc => {
-            app.exit_selection_mode();
+    if let KeyCode::Char(c) = code
+        && let Some(digit) = shifted_char_to_digit(c)
+    {
+        if let Some(tag) = app.config.get_favorite_tag(digit).map(str::to_string) {
+            app.append_tag_to_selected(&tag)?;
         }
-        KeyCode::Char('v') => {
-            app.selection_toggle_current();
-        }
-        // Navigation (without extending)
-        KeyCode::Down | KeyCode::Char('j') => {
-            app.selection_move_down();
-        }
-        KeyCode::Up | KeyCode::Char('k') => {
-            app.selection_move_up();
-        }
-        KeyCode::Char('g') => {
-            app.selection_jump_to_first();
-        }
-        KeyCode::Char('G') => {
-            app.selection_jump_to_last();
-        }
-        // Batch operations
-        KeyCode::Char('d') => {
-            app.delete_selected()?;
-        }
-        KeyCode::Char('c') => {
-            app.toggle_selected()?;
-        }
-        KeyCode::Char('y') => {
-            app.yank_selected();
-        }
-        KeyCode::Char('x') => {
-            app.remove_last_tag_from_selected()?;
-        }
-        KeyCode::Char('X') => {
-            app.remove_all_tags_from_selected()?;
-        }
-        // Shift+number appends favorite tag to all selected entries
-        KeyCode::Char(c) if shifted_char_to_digit(c).is_some() => {
-            let digit = shifted_char_to_digit(c).unwrap();
-            if let Some(tag) = app.config.get_favorite_tag(digit).map(str::to_string) {
-                app.append_tag_to_selected(&tag)?;
-            }
-        }
-        KeyCode::BackTab => {
-            app.cycle_selected_entry_types()?;
-        }
-        _ => {}
+        return Ok(());
+    }
+
+    let spec = KeySpec::from_event(&key);
+    if let Some(action) = app.keymap.get(KeyContext::Selection, &spec) {
+        dispatch_action(app, action)?;
     }
     Ok(())
 }
 
 pub fn handle_datepicker_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
-    let KeyEvent { code, .. } = key;
-
-    match code {
-        // Day navigation
-        KeyCode::Left | KeyCode::Char('h') => app.datepicker_move(-1, 0),
-        KeyCode::Right | KeyCode::Char('l') => app.datepicker_move(1, 0),
-        KeyCode::Up | KeyCode::Char('k') => app.datepicker_move(0, -1),
-        KeyCode::Down | KeyCode::Char('j') => app.datepicker_move(0, 1),
-        // Month navigation
-        KeyCode::Char('[') => app.datepicker_prev_month(),
-        KeyCode::Char(']') => app.datepicker_next_month(),
-        // Year navigation
-        KeyCode::Char('y') => app.datepicker_next_year(),
-        KeyCode::Char('Y') => app.datepicker_prev_year(),
-        // Jump to today
-        KeyCode::Char('t') => app.datepicker_goto_today(),
-        // Confirm/Cancel
-        KeyCode::Enter => app.confirm_datepicker()?,
-        KeyCode::Esc | KeyCode::Char('\\') => app.close_datepicker(),
-        _ => {}
+    let spec = KeySpec::from_event(&key);
+    if let Some(action) = app.keymap.get(KeyContext::Datepicker, &spec) {
+        dispatch_action(app, action)?;
     }
     Ok(())
 }

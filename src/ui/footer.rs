@@ -5,7 +5,8 @@ use ratatui::{
 };
 
 use crate::app::{App, InputMode, ViewMode};
-use crate::registry::{FooterMode, KeyAction, footer_actions};
+use crate::dispatch::Keymap;
+use crate::registry::{FooterMode, KeyAction, KeyContext, footer_actions};
 
 pub fn render_footer(app: &App) -> RatatuiLine<'static> {
     match (&app.view, &app.input_mode) {
@@ -23,9 +24,11 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 Span::raw(buffer.to_string()),
             ])
         }
-        (_, InputMode::Edit(_)) => build_footer_line(" EDIT ", Color::Green, FooterMode::Edit),
+        (_, InputMode::Edit(_)) => {
+            build_footer_line(" EDIT ", Color::Green, FooterMode::Edit, &app.keymap)
+        }
         (_, InputMode::Reorder) => {
-            build_footer_line(" REORDER ", Color::Yellow, FooterMode::Reorder)
+            build_footer_line(" REORDER ", Color::Yellow, FooterMode::Reorder, &app.keymap)
         }
         (_, InputMode::Confirm(_)) => RatatuiLine::from(vec![
             Span::styled(
@@ -43,41 +46,100 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
                 &format!(" SELECT ({count}) "),
                 Color::Green,
                 FooterMode::Selection,
+                &app.keymap,
             )
         }
         (_, InputMode::Datepicker(_)) => {
-            build_footer_line(" DATE ", Color::Cyan, FooterMode::Datepicker)
+            build_footer_line(" DATE ", Color::Cyan, FooterMode::Datepicker, &app.keymap)
         }
         (ViewMode::Daily(_), InputMode::Normal) => {
-            build_footer_line(" DAILY ", Color::Cyan, FooterMode::NormalDaily)
+            build_footer_line(" DAILY ", Color::Cyan, FooterMode::NormalDaily, &app.keymap)
         }
-        (ViewMode::Filter(_), InputMode::Normal) => {
-            build_footer_line(" FILTER ", Color::Magenta, FooterMode::NormalFilter)
-        }
+        (ViewMode::Filter(_), InputMode::Normal) => build_footer_line(
+            " FILTER ",
+            Color::Magenta,
+            FooterMode::NormalFilter,
+            &app.keymap,
+        ),
     }
 }
 
-fn build_footer_line(mode_name: &str, color: Color, mode: FooterMode) -> RatatuiLine<'static> {
+fn footer_mode_to_context(mode: FooterMode) -> KeyContext {
+    match mode {
+        FooterMode::NormalDaily => KeyContext::DailyNormal,
+        FooterMode::NormalFilter => KeyContext::FilterNormal,
+        FooterMode::Edit => KeyContext::Edit,
+        FooterMode::Reorder => KeyContext::Reorder,
+        FooterMode::Selection => KeyContext::Selection,
+        FooterMode::Datepicker => KeyContext::Datepicker,
+    }
+}
+
+fn build_footer_line(
+    mode_name: &str,
+    color: Color,
+    mode: FooterMode,
+    keymap: &Keymap,
+) -> RatatuiLine<'static> {
     let mut spans = vec![Span::styled(
         mode_name.to_string(),
         Style::default().fg(Color::Black).bg(color),
     )];
 
+    let context = footer_mode_to_context(mode);
+
     for action in footer_actions(mode) {
-        spans.extend(action_spans(action));
+        spans.extend(action_spans(action, keymap, context));
     }
 
     RatatuiLine::from(spans)
 }
 
-fn action_spans(action: &KeyAction) -> [Span<'static>; 2] {
-    let key_display = match action.alt_key {
-        Some(alt) => format!("{}/{}", action.key, alt),
-        None => action.key.to_string(),
+fn format_key_for_display(key: &str) -> String {
+    match key {
+        "down" => "↓".to_string(),
+        "up" => "↑".to_string(),
+        "left" => "←".to_string(),
+        "right" => "→".to_string(),
+        "ret" => "Enter".to_string(),
+        "esc" => "Esc".to_string(),
+        "tab" => "Tab".to_string(),
+        "backtab" => "S-Tab".to_string(),
+        "backspace" => "Bksp".to_string(),
+        " " => "Space".to_string(),
+        _ => key.to_string(),
+    }
+}
+
+fn action_spans(action: &KeyAction, keymap: &Keymap, context: KeyContext) -> [Span<'static>; 2] {
+    let keys = keymap.keys_for_action(context, action.id);
+
+    let key_display = if keys.is_empty() {
+        // Fall back to default_keys if no keys bound (shouldn't happen normally)
+        match action.default_keys {
+            [first, second, ..] => {
+                format!(
+                    "{}/{}",
+                    format_key_for_display(first),
+                    format_key_for_display(second)
+                )
+            }
+            [first] => format_key_for_display(first),
+            [] => String::new(),
+        }
+    } else if keys.len() == 1 {
+        format_key_for_display(&keys[0])
+    } else {
+        format!(
+            "{}/{}",
+            format_key_for_display(&keys[0]),
+            format_key_for_display(&keys[1])
+        )
     };
+
     [
         Span::styled(format!("  {key_display}"), Style::default().fg(Color::Gray)),
-        Span::styled(format!(" {} ", action.short_text), Style::default().dim()),
+        Span::styled(format!(" {} ", action.footer_text), Style::default().dim()),
     ]
 }
 
