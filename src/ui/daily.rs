@@ -77,7 +77,7 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
                 if i == 0 {
                     let rest_of_prefix: String = prefix.chars().skip(1).collect();
                     let spans = vec![
-                        Span::styled("↪", Style::default().fg(Color::Blue)),
+                        Span::styled("↪", Style::default().fg(Color::Cyan)),
                         Span::styled(rest_of_prefix, content_style),
                         Span::styled(line_text.clone(), content_style),
                         Span::styled(source_suffix.clone(), date_suffix_style(content_style)),
@@ -94,7 +94,6 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
         } else {
             let available = width.saturating_sub(prefix_width + source_suffix_width);
             let display_text = truncate_with_tags(&text, available);
-            let first_char = prefix.chars().next().unwrap_or('-').to_string();
             let rest_of_prefix: String = prefix.chars().skip(1).collect();
 
             // Determine the indicator based on mode
@@ -207,10 +206,10 @@ fn get_later_entry_indicator(app: &App, is_cursor: bool, visible_idx: usize) -> 
             if is_selected_in_selection {
                 Span::styled("◉", Style::default().fg(Color::Green))
             } else {
-                Span::styled("↪", Style::default().fg(Color::Blue))
+                Span::styled("↪", Style::default().fg(Color::Cyan))
             }
         } else {
-            Span::styled("↪", Style::default().fg(Color::Blue))
+            Span::styled("↪", Style::default().fg(Color::Cyan))
         }
     } else if is_selected_in_selection {
         Span::styled("○", Style::default().fg(Color::Green))
