@@ -491,7 +491,7 @@ fn run_app<B: ratatui::backend::Backend>(
             }
 
             if let InputMode::Datepicker(ref state) = app.input_mode {
-                ui::render_datepicker(f, state, &app.keymap, size);
+                ui::render_datepicker(f, state, size);
             }
 
             if let InputMode::ProjectPicker(ref state) = app.input_mode {

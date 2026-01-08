@@ -2,32 +2,14 @@ use chrono::{Datelike, Local, NaiveDate};
 use ratatui::widgets::calendar::{CalendarEventStore, Monthly};
 use ratatui::{
     Frame,
-    layout::{Alignment, Rect},
+    layout::Rect,
     style::{Color, Style, Stylize},
-    text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    text::Span,
+    widgets::{Block, Borders, Clear},
 };
 use time::{Date, Month};
 
 use crate::app::DatepickerState;
-use crate::dispatch::Keymap;
-use crate::registry::{FooterMode, KeyContext, footer_actions};
-
-fn format_key_for_display(key: &str) -> String {
-    match key {
-        "down" => "↓".to_string(),
-        "up" => "↑".to_string(),
-        "left" => "←".to_string(),
-        "right" => "→".to_string(),
-        "ret" => "Enter".to_string(),
-        "esc" => "Esc".to_string(),
-        "tab" => "Tab".to_string(),
-        "backtab" => "S-Tab".to_string(),
-        "backspace" => "Bksp".to_string(),
-        " " => "Space".to_string(),
-        _ => key.to_string(),
-    }
-}
 
 /// Convert chrono NaiveDate to time::Date (required by ratatui calendar)
 fn to_time_date(date: NaiveDate) -> Date {
@@ -52,10 +34,10 @@ fn centered_fixed_rect(width: u16, height: u16, area: Rect) -> Rect {
     }
 }
 
-pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, keymap: &Keymap, area: Rect) {
-    // Fixed size popup - calendar is ~22 chars wide, we add padding
-    let popup_width: u16 = 26;
-    let popup_height: u16 = 11;
+pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, area: Rect) {
+    // Fixed size popup - calendar is 20 chars wide (Su Mo Tu We Th Fr Sa)
+    let popup_width: u16 = 24;
+    let popup_height: u16 = 10;
 
     let popup_area = centered_fixed_rect(popup_width, popup_height, area);
 
@@ -120,51 +102,4 @@ pub fn render_datepicker(f: &mut Frame, state: &DatepickerState, keymap: &Keymap
         .default_style(Style::new().fg(Color::Gray).dim());
 
     f.render_widget(calendar, inner_area);
-
-    if inner_area.height >= 2 {
-        let footer_area = Rect {
-            x: inner_area.x,
-            y: inner_area.y + inner_area.height.saturating_sub(1),
-            width: inner_area.width,
-            height: 1,
-        };
-
-        let mut spans: Vec<Span> = Vec::new();
-        for action in footer_actions(FooterMode::Datepicker) {
-            let keys = keymap.keys_for_action(KeyContext::Datepicker, action.id);
-            let key_display = if keys.is_empty() {
-                match action.default_keys {
-                    [first, second, ..] => {
-                        format!(
-                            "{}/{}",
-                            format_key_for_display(first),
-                            format_key_for_display(second)
-                        )
-                    }
-                    [first] => format_key_for_display(first),
-                    [] => String::new(),
-                }
-            } else if keys.len() == 1 {
-                format_key_for_display(&keys[0])
-            } else {
-                format!(
-                    "{}/{}",
-                    format_key_for_display(&keys[0]),
-                    format_key_for_display(&keys[1])
-                )
-            };
-            spans.push(Span::styled(
-                format!(" {key_display}"),
-                Style::new().fg(Color::Gray),
-            ));
-            spans.push(Span::styled(
-                format!(" {}", action.footer_text),
-                Style::new().dim(),
-            ));
-        }
-
-        let footer = Paragraph::new(Line::from(spans)).alignment(Alignment::Center);
-
-        f.render_widget(footer, footer_area);
-    }
 }

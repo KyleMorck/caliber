@@ -2,43 +2,19 @@
 # Each entry defines a command with its subargs and help text variants
 
 [[command]]
-name = "config"
-args = "[hub|project]"
-subargs = [
-  { options = ["hub", "project"] },
-]
-help = "Edit config in $EDITOR"
-readme = "Edit configuration file. Defaults to base config, use 'hub' or 'project' for scoped configs."
-completion_hint = "Edit configuration file. Defaults to base config, use 'hub' or 'project' for scoped configs."
-
-[[command]]
-name = "journal"
-args = "[hub|project]"
-subargs = [
-  { options = ["hub", "project"] },
-]
-help = "Edit journal in $EDITOR"
-readme = "Edit journal file. Defaults to current context, use 'hub' or 'project' for specific journal."
-completion_hint = "Edit journal file. Defaults to current context, use 'hub' or 'project' for specific journal."
+name = "projects"
+help = "Open project manager"
+readme = "Open project manager"
+completion_hint = "Open project manager"
 
 [[command]]
 name = "scratchpad"
-help = "Edit scratchpad in $EDITOR"
-readme = "Edit scratchpad file for temporary notes."
-completion_hint = "Edit scratchpad file for temporary notes."
+help = "Open scratchpad for quick notes"
+readme = "Open scratchpad for quick notes"
+completion_hint = "Open scratchpad for quick notes"
 
 [[command]]
 name = "quit"
 help = "Quit application"
 readme = "Save and exit the application."
 completion_hint = "Save and exit the application."
-
-[[command]]
-name = "project"
-args = "[init|remove|<id>]"
-subargs = [
-  { options = ["init", "remove"] },
-]
-help = "Manage projects"
-readme = "Manage projects. `init` creates and registers project in current folder, `remove` unregisters current or specified project, `<id>` switches to registered project."
-completion_hint = "Manage projects: init, remove, or project ID to switch"

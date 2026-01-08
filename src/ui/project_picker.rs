@@ -40,25 +40,26 @@ pub fn render_project_picker(f: &mut Frame, state: &ProjectPickerState, area: Re
         return;
     }
 
-    let query_area = Rect {
+    // List area at top
+    let list_area = Rect {
         x: inner.x,
         y: inner.y,
+        width: inner.width,
+        height: inner.height.saturating_sub(2),
+    };
+
+    // Query input at bottom
+    let query_area = Rect {
+        x: inner.x,
+        y: inner.y + inner.height.saturating_sub(1),
         width: inner.width,
         height: 1,
     };
     let query_line = Line::from(vec![
         Span::styled("> ", Style::new().fg(Color::Cyan)),
-        Span::raw(state.query.content().to_string()),
+        Span::styled(state.query.content().to_string(), Style::new().fg(Color::Cyan)),
     ]);
     f.render_widget(Paragraph::new(query_line), query_area);
-
-    // List area (leave 1 line for query, 1 for separator, 1 for footer)
-    let list_area = Rect {
-        x: inner.x,
-        y: inner.y + 2,
-        width: inner.width,
-        height: inner.height.saturating_sub(3),
-    };
 
     let mut lines = Vec::new();
     for (i, &project_idx) in state.filtered_indices.iter().enumerate() {
@@ -74,9 +75,9 @@ pub fn render_project_picker(f: &mut Frame, state: &ProjectPickerState, area: Re
         let name_style = if !project.available {
             Style::new().dim()
         } else if is_selected {
-            Style::new().fg(Color::Cyan)
+            Style::new().fg(Color::Yellow)
         } else {
-            Style::new()
+            Style::new().fg(Color::Yellow).dim()
         };
 
         let mut spans = vec![

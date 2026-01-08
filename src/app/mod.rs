@@ -22,7 +22,6 @@ use chrono::{Datelike, Local, NaiveDate};
 use crate::config::Config;
 use crate::cursor::CursorBuffer;
 use crate::dispatch::Keymap;
-use crate::registry::COMMANDS;
 use crate::storage::{
     self, DayInfo, Entry, EntryType, JournalContext, JournalSlot, Line, RawEntry,
 };
@@ -635,36 +634,9 @@ impl App {
     }
 
     /// Check if the current command buffer is ready to execute.
-    /// Returns false only if we have a known command that requires subargs but none provided yet.
-    /// Unknown commands and invalid args should still execute (to show appropriate errors).
     #[must_use]
     pub fn command_is_complete(&self) -> bool {
-        let input = self.command_buffer.content();
-        let mut parts = input.splitn(2, ' ');
-        let cmd_part = parts.next().unwrap_or("");
-        let arg_part = parts.next();
-
-        // Find matching command
-        let Some(cmd) = COMMANDS.iter().find(|c| c.name == cmd_part) else {
-            // Unknown command - let execute_command show the error
-            return true;
-        };
-
-        if cmd.subargs.is_empty() {
-            return true;
-        }
-
-        // Subargs are optional if args field starts with '['
-        let subargs_optional = cmd.args.is_some_and(|a| a.starts_with('['));
-        if subargs_optional {
-            return true;
-        }
-
-        // Invalid args should still execute to show error
-        match arg_part {
-            None | Some("") => false,
-            Some(_) => true,
-        }
+        true
     }
 
     #[must_use]

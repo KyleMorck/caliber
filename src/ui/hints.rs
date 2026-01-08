@@ -72,7 +72,6 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
         HintContext::Commands { prefix, matches } if !prefix.is_empty() => {
             matches.first().map(|c| c.completion_hint)
         }
-        HintContext::SubArgs { command, .. } => Some(command.completion_hint),
         HintContext::FilterTypes { prefix, matches } if !prefix.is_empty() => {
             matches.first().map(|f| f.completion_hint)
         }
@@ -88,7 +87,7 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
 
     let hint_color = match effective {
         HintContext::Tags { .. } => Color::Yellow,
-        HintContext::Commands { .. } | HintContext::SubArgs { .. } => Color::Blue,
+        HintContext::Commands { .. } => Color::Cyan,
         HintContext::FilterTypes { .. }
         | HintContext::DateOps { .. }
         | HintContext::DateValues { .. }
@@ -113,7 +112,6 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
         HintContext::Commands { matches, .. } => {
             matches.iter().map(|cmd| format!(":{}", cmd.name)).collect()
         }
-        HintContext::SubArgs { matches, .. } => matches.iter().map(|s| (*s).to_string()).collect(),
         HintContext::FilterTypes { matches, .. } => matches
             .iter()
             .map(|f| format!("{}{}", negation_prefix, f.syntax))

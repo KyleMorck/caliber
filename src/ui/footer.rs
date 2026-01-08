@@ -11,8 +11,11 @@ use crate::registry::{FooterMode, KeyAction, KeyContext, footer_actions};
 pub fn render_footer(app: &App) -> RatatuiLine<'static> {
     match (&app.view, &app.input_mode) {
         (_, InputMode::Command) => RatatuiLine::from(vec![
-            Span::styled(":", Style::default().fg(Color::Blue)),
-            Span::raw(app.command_buffer.content().to_string()),
+            Span::styled(":", Style::default().fg(Color::Cyan)),
+            Span::styled(
+                app.command_buffer.content().to_string(),
+                Style::default().fg(Color::Cyan),
+            ),
         ]),
         (_, InputMode::QueryInput) => {
             let buffer = match &app.view {

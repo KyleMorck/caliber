@@ -631,7 +631,7 @@ readme = "Navigate to the selected date"
 
 [[action]]
 key_action_id = "datepicker_cancel"
-default_keys = ["\\", "esc"]
+default_keys = ["\\", "esc", "backspace"]
 contexts = ["datepicker"]
 help_sections = ["date"]
 help = "Close datepicker"

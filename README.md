@@ -369,18 +369,16 @@ Press `\` to open the calendar picker.
 | `y` | Next year |
 | `t` | Jump to today |
 | `Enter` | Navigate to date |
-| `\`/`Esc` | Close datepicker |
+| `\`/`Esc`/`Bksp` | Close datepicker |
 
 
 ### Commands
 
 | Key | Action |
 |-----|--------|
-| `:config [hub|project]` | Edit config in $EDITOR |
-| `:journal [hub|project]` | Edit journal in $EDITOR |
-| `:scratchpad ` | Edit scratchpad in $EDITOR |
+| `:projects ` | Open project manager |
+| `:scratchpad ` | Open scratchpad for quick notes |
 | `:quit ` | Quit application |
-| `:project [init|remove|<id>]` | Manage projects |
 
 
 ### Filter Syntax

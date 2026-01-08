@@ -91,16 +91,6 @@ impl App {
         Ok(())
     }
 
-    pub fn reload_config(&mut self) -> io::Result<()> {
-        let config = match self.active_journal() {
-            JournalSlot::Hub => Config::load_hub()?,
-            JournalSlot::Project => Config::load_merged()?,
-        };
-        self.apply_config(config);
-        self.set_status("Config reloaded");
-        Ok(())
-    }
-
     pub fn switch_to_registered_project(&mut self, id: &str) -> io::Result<()> {
         let registry = ProjectRegistry::load();
         let project = registry.find_by_id(id).ok_or_else(|| {

@@ -210,7 +210,12 @@ pub fn handle_command_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
             app.clear_hints();
             app.input_mode = InputMode::Normal;
         }
-        KeyCode::Right if !matches!(app.hint_state, HintContext::Inactive) => {
+        KeyCode::Right
+            if !matches!(
+                app.hint_state,
+                HintContext::Inactive | HintContext::Commands { .. }
+            ) =>
+        {
             if app.accept_hint() {
                 if !app.input_needs_continuation() {
                     app.command_buffer.insert_char(' ');

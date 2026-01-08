@@ -8,14 +8,15 @@ use helpers::TestContext;
 use caliber::config::Config;
 
 #[test]
-fn command_hint_completes_with_right_arrow() {
+fn command_hints_show_but_do_not_autocomplete() {
     let mut ctx = TestContext::new();
 
     ctx.press(KeyCode::Char(':'));
     ctx.type_str("qu");
     ctx.press(KeyCode::Right);
 
-    assert_eq!(ctx.app.command_buffer.content(), "quit ");
+    // Commands show hints but right arrow doesn't autocomplete
+    assert_eq!(ctx.app.command_buffer.content(), "qu");
 }
 
 #[test]

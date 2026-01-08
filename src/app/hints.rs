@@ -20,12 +20,6 @@ pub enum HintContext {
         prefix: String,
         matches: Vec<&'static Command>,
     },
-    /// Subargument hints for a command
-    SubArgs {
-        prefix: String,
-        matches: Vec<&'static str>,
-        command: &'static Command,
-    },
     /// Filter type hints (!tasks, !notes, etc.)
     FilterTypes {
         prefix: String,
@@ -79,65 +73,10 @@ impl HintContext {
     }
 
     fn compute_command_hints(input: &str) -> Self {
-        let trimmed = input.trim_start();
-        let has_trailing_space = trimmed.ends_with(' ');
-        let prefix = trimmed.trim_end();
-        let words: Vec<&str> = prefix.split_whitespace().collect();
-        let first_word = words.first().copied().unwrap_or("");
+        let prefix = input.trim();
 
-        let matched_command = COMMANDS.iter().find(|c| c.name == first_word);
-
-        if let Some(cmd) = matched_command {
-            if !cmd.subargs.is_empty() {
-                let num_complete_args = words.len().saturating_sub(1);
-
-                let (arg_position, current_arg) = if has_trailing_space {
-                    (num_complete_args, "")
-                } else if num_complete_args > 0 {
-                    (num_complete_args - 1, words.last().copied().unwrap_or(""))
-                } else {
-                    return Self::Commands {
-                        prefix: first_word.to_string(),
-                        matches: vec![cmd],
-                    };
-                };
-
-                let max_args = cmd.subargs.len();
-
-                if arg_position < max_args {
-                    let subarg = &cmd.subargs[arg_position];
-                    let matches: Vec<&'static str> = subarg
-                        .options
-                        .iter()
-                        .filter(|opt| opt.starts_with(current_arg))
-                        .copied()
-                        .collect();
-
-                    if !has_trailing_space
-                        && matches.len() == 1
-                        && matches[0] == current_arg
-                        && arg_position + 1 >= max_args
-                    {
-                        return Self::Inactive;
-                    }
-
-                    if !matches.is_empty() {
-                        return Self::SubArgs {
-                            prefix: current_arg.to_string(),
-                            matches,
-                            command: cmd,
-                        };
-                    }
-                    return Self::Inactive;
-                } else {
-                    return Self::Inactive;
-                }
-            }
-
-            return Self::Commands {
-                prefix: first_word.to_string(),
-                matches: vec![cmd],
-            };
+        if prefix.contains(' ') {
+            return Self::Inactive;
         }
 
         let matches: Vec<&'static Command> = COMMANDS
@@ -367,9 +306,6 @@ impl HintContext {
             Self::Commands { prefix, matches } => matches
                 .first()
                 .map(|c| Self::suffix_after(c.name, prefix.len())),
-            Self::SubArgs {
-                prefix, matches, ..
-            } => matches.first().map(|o| Self::suffix_after(o, prefix.len())),
             Self::FilterTypes { prefix, matches } => matches
                 .first()
                 .map(|f| Self::suffix_after(f.syntax, 1 + prefix.len())),
