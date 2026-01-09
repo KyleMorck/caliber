@@ -60,21 +60,19 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
                 let available = width.saturating_sub(prefix_width + date_suffix_width);
                 let wrapped = wrap_text(&text, available);
                 for (i, line_text) in wrapped.iter().enumerate() {
+                    let mut spans = if i == 0 {
+                        vec![Span::styled(prefix.to_string(), content_style)]
+                    } else {
+                        vec![Span::styled(" ".repeat(prefix_width), content_style)]
+                    };
+                    spans.extend(style_content(line_text, content_style));
                     if i == 0 {
-                        let mut spans = vec![Span::styled(prefix.to_string(), content_style)];
-                        spans.push(Span::styled(line_text.clone(), content_style));
                         spans.push(Span::styled(
                             date_suffix.clone(),
                             date_suffix_style(content_style),
                         ));
-                        lines.push(RatatuiLine::from(spans));
-                    } else {
-                        let indent = " ".repeat(prefix_width);
-                        lines.push(RatatuiLine::from(Span::styled(
-                            format!("{indent}{line_text}"),
-                            content_style,
-                        )));
                     }
+                    lines.push(RatatuiLine::from(spans));
                 }
             } else {
                 let sel_prefix = match &filter_entry.entry_type {
@@ -142,16 +140,18 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
         let available = width.saturating_sub(prefix_width);
         let wrapped = wrap_text(&text, available);
 
+        let content_style = entry_style(entry_type);
         if wrapped.is_empty() {
-            lines.push(RatatuiLine::from(Span::raw(prefix.to_string())));
+            lines.push(RatatuiLine::from(Span::styled(prefix.to_string(), content_style)));
         } else {
             for (i, line_text) in wrapped.iter().enumerate() {
-                if i == 0 {
-                    lines.push(RatatuiLine::from(format!("{prefix}{line_text}")));
+                let mut spans = if i == 0 {
+                    vec![Span::styled(prefix.to_string(), content_style)]
                 } else {
-                    let indent = " ".repeat(prefix_width);
-                    lines.push(RatatuiLine::from(format!("{indent}{line_text}")));
-                }
+                    vec![Span::styled(" ".repeat(prefix_width), content_style)]
+                };
+                spans.extend(style_content(line_text, content_style));
+                lines.push(RatatuiLine::from(spans));
             }
         }
     }

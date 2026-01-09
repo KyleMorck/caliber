@@ -113,18 +113,13 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
             if is_editing {
                 let wrapped = wrap_text(&text, width.saturating_sub(prefix_width));
                 for (i, line_text) in wrapped.iter().enumerate() {
-                    if i == 0 {
-                        lines.push(RatatuiLine::from(Span::styled(
-                            format!("{prefix}{line_text}"),
-                            content_style,
-                        )));
+                    let mut spans = if i == 0 {
+                        vec![Span::styled(prefix.to_string(), content_style)]
                     } else {
-                        let indent = " ".repeat(prefix_width);
-                        lines.push(RatatuiLine::from(Span::styled(
-                            format!("{indent}{line_text}"),
-                            content_style,
-                        )));
-                    }
+                        vec![Span::styled(" ".repeat(prefix_width), content_style)]
+                    };
+                    spans.extend(style_content(line_text, content_style));
+                    lines.push(RatatuiLine::from(spans));
                 }
             } else {
                 let first_char = prefix.chars().next().unwrap_or('-').to_string();
