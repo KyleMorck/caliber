@@ -24,7 +24,7 @@ pub fn render_footer(app: &App) -> RatatuiLine<'static> {
             build_footer_line(" EDIT ", Color::Green, FooterMode::Edit, &app.keymap)
         }
         (_, InputMode::Reorder) => {
-            build_footer_line(" REORDER ", Color::Yellow, FooterMode::Reorder, &app.keymap)
+            build_footer_line(" REORDER ", Color::Green, FooterMode::Reorder, &app.keymap)
         }
         (_, InputMode::Confirm(_)) => RatatuiLine::from(vec![
             Span::styled(
