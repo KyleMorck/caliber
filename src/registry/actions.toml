@@ -694,7 +694,7 @@ readme = "Open the selected project journal"
 
 [[action]]
 key_action_id = "project_interface_cancel"
-default_keys = ["+", "esc"]
+default_keys = [".", "esc"]
 contexts = ["project_interface"]
 help_sections = ["project"]
 footer = { modes = ["project_interface"], text = "Close" }

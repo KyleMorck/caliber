@@ -80,9 +80,9 @@ fn date_interface_toggle_closes_even_with_input_focus_and_text() {
 }
 
 #[test]
-fn project_interface_opens_with_plus() {
+fn project_interface_opens_with_period() {
     let mut ctx = TestContext::new();
-    ctx.press(KeyCode::Char('+'));
+    ctx.press(KeyCode::Char('.'));
 
     assert!(matches!(
         ctx.app.input_mode,
@@ -91,22 +91,22 @@ fn project_interface_opens_with_plus() {
 }
 
 #[test]
-fn project_interface_closes_with_plus() {
+fn project_interface_closes_with_period() {
     let mut ctx = TestContext::new();
-    ctx.press(KeyCode::Char('+'));
+    ctx.press(KeyCode::Char('.'));
     assert!(matches!(
         ctx.app.input_mode,
         InputMode::Interface(InterfaceContext::Project(_))
     ));
 
-    ctx.press(KeyCode::Char('+'));
+    ctx.press(KeyCode::Char('.'));
     assert!(matches!(ctx.app.input_mode, InputMode::Normal));
 }
 
 #[test]
 fn project_interface_closes_with_esc() {
     let mut ctx = TestContext::new();
-    ctx.press(KeyCode::Char('+'));
+    ctx.press(KeyCode::Char('.'));
     assert!(matches!(
         ctx.app.input_mode,
         InputMode::Interface(InterfaceContext::Project(_))
@@ -119,7 +119,7 @@ fn project_interface_closes_with_esc() {
 #[test]
 fn project_interface_navigation_keeps_interface_open() {
     let mut ctx = TestContext::new();
-    ctx.press(KeyCode::Char('+'));
+    ctx.press(KeyCode::Char('.'));
     ctx.press(KeyCode::Char('j'));
     ctx.press(KeyCode::Char('k'));
 

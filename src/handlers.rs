@@ -103,6 +103,7 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         }
         ExitFilter => app.exit_filter(),
         SaveEdit => {
+            app.accept_hint();
             app.clear_hints();
             app.exit_edit();
         }
@@ -114,6 +115,13 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         CancelEdit => {
             app.clear_hints();
             app.cancel_edit();
+        }
+        Autocomplete => {
+            app.accept_hint();
+            if let Some(ref mut buffer) = app.edit_buffer {
+                buffer.insert_char(' ');
+            }
+            app.update_hints();
         }
         ReorderMoveDown => app.reorder_move_down(),
         ReorderMoveUp => app.reorder_move_up(),
@@ -180,8 +188,7 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         | AppendFavoriteTag
         | SelectionAppendTag
         | DateInterfaceFooterNavMonth
-        | DateInterfaceFooterNavYear
-        | Autocomplete => {}
+        | DateInterfaceFooterNavYear => {}
     }
     Ok(true)
 }
@@ -275,37 +282,10 @@ pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 }
 
 pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
-    match key.code {
-        KeyCode::BackTab => {
-            app.cycle_edit_entry_type();
-            return;
-        }
-        KeyCode::Tab => {
-            app.accept_hint();
-            // Always add space in edit mode (colon continuation only applies to prompts)
-            if let Some(ref mut buffer) = app.edit_buffer {
-                buffer.insert_char(' ');
-            }
-            app.update_hints();
-            return;
-        }
-        KeyCode::Enter => {
-            app.accept_hint();
-            app.clear_hints();
-            app.exit_edit();
-            return;
-        }
-        KeyCode::Down => {
-            app.clear_hints();
-            app.commit_and_add_new();
-            return;
-        }
-        KeyCode::Esc => {
-            app.clear_hints();
-            app.cancel_edit();
-            return;
-        }
-        _ => {}
+    let spec = KeySpec::from_event(&key);
+    if let Some(action) = app.keymap.get(KeyContext::Edit, &spec) {
+        let _ = dispatch_action(app, action);
+        return;
     }
 
     if let Some(ref mut buffer) = app.edit_buffer {
@@ -426,12 +406,8 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
         code, modifiers, ..
     } = key;
 
-    if modifiers.contains(KeyModifiers::SHIFT) && code == KeyCode::Char('V') {
-        app.selection_extend_to_cursor();
-        return Ok(());
-    }
-
     if let KeyCode::Char(c) = code
+        && modifiers.contains(KeyModifiers::SHIFT)
         && let Some(digit) = shifted_char_to_digit(c)
     {
         if let Some(tag) = app.config.get_favorite_tag(digit).map(str::to_string) {
@@ -448,19 +424,6 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 }
 
 pub fn handle_interface_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
-    // Toggle key closes interface even with input focus
-    match (&app.input_mode, key.code) {
-        (InputMode::Interface(InterfaceContext::Date(_)), KeyCode::Char('\\')) => {
-            app.close_interface();
-            return Ok(());
-        }
-        (InputMode::Interface(InterfaceContext::Project(_)), KeyCode::Char('+')) => {
-            app.close_interface();
-            return Ok(());
-        }
-        _ => {}
-    }
-
     // Dispatch to context-specific handler
     match &app.input_mode {
         InputMode::Interface(InterfaceContext::Date(_)) => handle_date_interface_key(app, key),
@@ -474,13 +437,22 @@ pub fn handle_interface_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 
 fn handle_date_interface_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     if app.date_interface_input_focused() {
+        // Check keymap for cancel action before handling text input
+        // Skip backspace here - it has conditional behavior (only closes when input empty)
+        if !matches!(key.code, KeyCode::Backspace) {
+            let spec = KeySpec::from_event(&key);
+            if let Some(KeyActionId::DateInterfaceCancel) =
+                app.keymap.get(KeyContext::DateInterface, &spec)
+            {
+                app.close_date_interface();
+                return Ok(());
+            }
+        }
+
         // Input is focused - handle text editing
         match key.code {
             KeyCode::Enter => {
                 app.date_interface_submit_input()?;
-            }
-            KeyCode::Esc => {
-                app.close_date_interface();
             }
             KeyCode::Tab => {
                 app.date_interface_toggle_focus();

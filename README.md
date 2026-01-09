@@ -381,7 +381,7 @@ Press `+` to open the project switcher.
 | `k`/`↑` | Previous project |
 | `j`/`↓` | Next project |
 | `Enter` | Open project |
-| `+`/`Esc` | Close project interface |
+| `.`/`Esc` | Close project interface |
 
 
 ### Commands

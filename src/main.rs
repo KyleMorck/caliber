@@ -23,7 +23,8 @@ use caliber::app::{
 use caliber::config::{self, Config, resolve_path};
 use caliber::cursor::cursor_position_in_wrap;
 use caliber::storage::{JournalContext, JournalSlot, Line};
-use caliber::ui::{CursorContext, ensure_selected_visible, set_edit_cursor};
+use caliber::registry::{KeyActionId, KeyContext};
+use caliber::ui::{CursorContext, ensure_selected_visible, format_key_for_display, set_edit_cursor};
 use caliber::{handlers, storage, ui};
 
 fn main() -> Result<(), io::Error> {
@@ -424,16 +425,23 @@ fn run_app<B: ratatui::backend::Backend>(
                     width: inner_area.width,
                     height: 1,
                 };
+
+                let close_keys = app.keymap.keys_for_action(KeyContext::Help, KeyActionId::CloseHelp);
+                let close_key = close_keys
+                    .first()
+                    .map(|k| format_key_for_display(k))
+                    .unwrap_or_else(|| "?".to_string());
+
                 let footer_line = if arrows.is_empty() {
                     ratatui::text::Line::from(vec![
-                        ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
+                        ratatui::text::Span::styled(close_key.clone(), Style::default().fg(Color::White)),
                         ratatui::text::Span::styled(" close ", Style::default().dim()),
                     ])
                 } else {
                     ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled(arrows, Style::default().fg(Color::White)),
                         ratatui::text::Span::styled(" scroll  ", Style::default().dim()),
-                        ratatui::text::Span::styled("?", Style::default().fg(Color::White)),
+                        ratatui::text::Span::styled(close_key, Style::default().fg(Color::White)),
                         ratatui::text::Span::styled(" close ", Style::default().dim()),
                     ])
                 };
