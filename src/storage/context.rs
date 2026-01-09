@@ -94,31 +94,6 @@ pub fn detect_project_journal() -> Option<PathBuf> {
     None
 }
 
-/// Creates .caliber/journal.md if missing, registers if not registered.
-/// Uses git root if available, otherwise current directory.
-pub fn create_project_journal() -> io::Result<PathBuf> {
-    use crate::storage::ProjectRegistry;
-
-    let root = find_git_root().unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-
-    let caliber_dir = root.join(".caliber");
-    fs::create_dir_all(&caliber_dir)?;
-
-    let journal_path = caliber_dir.join("journal.md");
-    if !journal_path.exists() {
-        fs::write(&journal_path, "")?;
-    }
-
-    let mut registry = ProjectRegistry::load();
-    if registry.find_by_path(&caliber_dir).is_none()
-        && let Ok(_info) = registry.register(caliber_dir.clone())
-    {
-        let _ = registry.save();
-    }
-
-    Ok(journal_path)
-}
-
 /// Adds .caliber/ to .gitignore if not already present.
 pub fn add_caliber_to_gitignore() -> io::Result<()> {
     let root = find_git_root()

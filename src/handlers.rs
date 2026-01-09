@@ -9,7 +9,7 @@ use crate::app::{
 use crate::cursor::CursorBuffer;
 use crate::dispatch::KeySpec;
 use crate::registry::{KeyActionId, KeyContext};
-use crate::storage::add_caliber_to_gitignore;
+use crate::storage::{self, add_caliber_to_gitignore};
 use crate::ui;
 
 fn shifted_char_to_digit(c: char) -> Option<char> {
@@ -444,8 +444,41 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
     match key {
         KeyCode::Char('y') | KeyCode::Char('Y') => match context {
             ConfirmContext::CreateProjectJournal => {
-                if let Err(e) = app.init_project() {
+                let root = if app.in_git_repo {
+                    storage::find_git_root().unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+                } else {
+                    std::env::current_dir()?
+                };
+
+                let caliber_dir = root.join(".caliber");
+                if let Err(e) = std::fs::create_dir_all(&caliber_dir) {
                     app.set_status(format!("Failed to create project: {e}"));
+                    app.input_mode = InputMode::Normal;
+                    return Ok(());
+                }
+
+                let journal_path = caliber_dir.join("journal.md");
+                if !journal_path.exists()
+                    && let Err(e) = std::fs::write(&journal_path, "")
+                {
+                    app.set_status(format!("Failed to create journal: {e}"));
+                    app.input_mode = InputMode::Normal;
+                    return Ok(());
+                }
+
+                let mut registry = storage::ProjectRegistry::load();
+                if registry.find_by_path(&caliber_dir).is_none() {
+                    let _ = registry.register(caliber_dir);
+                    let _ = registry.save();
+                }
+
+                app.journal_context.set_project_path(journal_path);
+
+                if app.in_git_repo {
+                    app.input_mode = InputMode::Confirm(ConfirmContext::AddToGitignore);
+                } else {
+                    app.switch_to_project()?;
+                    app.set_status("Project initialized");
                     app.input_mode = InputMode::Normal;
                 }
             }

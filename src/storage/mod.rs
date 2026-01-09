@@ -7,8 +7,7 @@ mod project_registry;
 
 // Re-export context types and functions
 pub use context::{
-    JournalContext, JournalSlot, add_caliber_to_gitignore, create_project_journal,
-    detect_project_journal, find_git_root,
+    JournalContext, JournalSlot, add_caliber_to_gitignore, detect_project_journal, find_git_root,
 };
 
 // Re-export entry types

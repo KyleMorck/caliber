@@ -142,3 +142,47 @@ fn backtick_prompts_project_journal_creation() {
 
     assert!(matches!(app.input_mode, InputMode::Normal));
 }
+
+#[test]
+fn project_creation_preserves_existing_journal() {
+    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
+    let temp_dir = TempDir::new().unwrap();
+
+    Command::new("git")
+        .args(["init"])
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to init git repo");
+
+    let caliber_dir = temp_dir.path().join(".caliber");
+    fs::create_dir_all(&caliber_dir).unwrap();
+    let project_journal = caliber_dir.join("journal.md");
+    fs::write(&project_journal, "# 2026/01/15\n- [ ] Existing entry\n").unwrap();
+
+    let global_path = temp_dir.path().join("global.md");
+    fs::write(&global_path, "").unwrap();
+
+    let context = storage::JournalContext::new(global_path, None, JournalSlot::Hub);
+
+    let config = Config::default();
+    let mut app = App::new_with_context(config, date, context).unwrap();
+    app.in_git_repo = true;
+
+    std::env::set_current_dir(temp_dir.path()).unwrap();
+
+    let event = KeyEvent::new(KeyCode::Char('`'), KeyModifiers::NONE);
+    let _ = caliber::handlers::handle_normal_key(&mut app, event);
+
+    if matches!(app.input_mode, InputMode::Confirm(_)) {
+        let _ = caliber::handlers::handle_confirm_key(&mut app, KeyCode::Char('y'));
+    }
+    if matches!(app.input_mode, InputMode::Confirm(_)) {
+        let _ = caliber::handlers::handle_confirm_key(&mut app, KeyCode::Char('n'));
+    }
+
+    let content = fs::read_to_string(&project_journal).unwrap();
+    assert!(
+        content.contains("Existing entry"),
+        "Journal was overwritten! Content: {content}"
+    );
+}

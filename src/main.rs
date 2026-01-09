@@ -1,3 +1,4 @@
+use std::fs;
 use std::io;
 use std::path::PathBuf;
 
@@ -31,18 +32,7 @@ fn main() -> Result<(), io::Error> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.get(1).map(String::as_str) == Some("init") {
-        return match args.get(2).map(String::as_str) {
-            Some("project") => init_project(),
-            None => init_config(),
-            Some(other) => {
-                eprintln!("Unknown subcommand: init {other}");
-                eprintln!("Usage: caliber init [project]");
-                Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Unknown subcommand",
-                ))
-            }
-        };
+        return init_config();
     }
 
     let cli_file = args.get(1).map(PathBuf::from);
@@ -109,19 +99,6 @@ fn init_config() -> io::Result<()> {
     }
 }
 
-fn init_project() -> io::Result<()> {
-    match storage::create_project_journal() {
-        Ok(path) => {
-            println!("Created and registered project at: {}", path.display());
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("Failed to create project: {e}");
-            Err(e)
-        }
-    }
-}
-
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     config: Config,
@@ -130,12 +107,39 @@ fn run_app<B: ratatui::backend::Backend>(
     let date = chrono::Local::now().date_naive();
     let mut app = App::new_with_context(config, date, journal_context)?;
 
-    // Auto-init project in git repo if config enabled
+    // Project initialization flow for git repositories
     if app.in_git_repo
-        && app.journal_context.project_path().is_none()
-        && app.config.auto_init_project
+        && let Some(git_root) = storage::find_git_root()
     {
-        let _ = app.init_project();
+        let caliber_dir = git_root.join(".caliber");
+
+        // Auto-register existing projects
+        if caliber_dir.exists() {
+            let mut registry = storage::ProjectRegistry::load();
+            if registry.find_by_path(&caliber_dir).is_none() {
+                let _ = registry.register(caliber_dir.clone());
+                let _ = registry.save();
+            }
+        }
+
+        // Auto-init new projects if enabled
+        if app.journal_context.project_path().is_none() && app.config.auto_init_project {
+            fs::create_dir_all(&caliber_dir)?;
+
+            let journal_path = caliber_dir.join("journal.md");
+            if !journal_path.exists() {
+                fs::write(&journal_path, "")?;
+            }
+
+            let mut registry = storage::ProjectRegistry::load();
+            if registry.find_by_path(&caliber_dir).is_none() {
+                let _ = registry.register(caliber_dir.clone());
+                let _ = registry.save();
+            }
+
+            app.journal_context.set_project_path(journal_path);
+            app.input_mode = InputMode::Confirm(ConfirmContext::AddToGitignore);
+        }
     }
 
     loop {
