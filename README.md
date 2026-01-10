@@ -368,21 +368,11 @@ Press `\` to open the calendar interface.
 | `→`/`l` | Move right |
 | `Tab` | Toggle focus |
 | `Enter` | Submit/Select |
-| `]` | Next month |
 | `[` | Previous month |
-| `}` | Next year |
+| `]` | Next month |
 | `{` | Previous year |
+| `}` | Next year |
 | `t` | Go to today |
-| `←`/`h` | Previous day |
-| `→`/`l` | Next day |
-| `↑`/`k` | Previous week |
-| `↓`/`j` | Next week |
-| `[` | Previous month |
-| `]` | Next month |
-| `Y` | Previous year |
-| `y` | Next year |
-| `t` | Jump to today |
-| `Enter` | Navigate to date |
 | `Esc` | Cancel |
 
 

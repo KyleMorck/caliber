@@ -604,36 +604,40 @@ help = "Hide project"
 readme = "Hide project from registry (when list focused)"
 
 [[action]]
-key_action_id = "interface_next_month"
-default_keys = ["]"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Next month"
-readme = "Navigate to next month (when calendar focused)"
-
-[[action]]
 key_action_id = "interface_prev_month"
 default_keys = ["["]
 contexts = ["date_interface"]
 help_sections = ["date"]
+footer = { modes = ["date_interface"], text = "← Month" }
 help = "Previous month"
 readme = "Navigate to previous month (when calendar focused)"
 
 [[action]]
-key_action_id = "interface_next_year"
-default_keys = ["}"]
+key_action_id = "interface_next_month"
+default_keys = ["]"]
 contexts = ["date_interface"]
 help_sections = ["date"]
-help = "Next year"
-readme = "Navigate to next year (when calendar focused)"
+footer = { modes = ["date_interface"], text = "→ Month" }
+help = "Next month"
+readme = "Navigate to next month (when calendar focused)"
 
 [[action]]
 key_action_id = "interface_prev_year"
 default_keys = ["{"]
 contexts = ["date_interface"]
 help_sections = ["date"]
+footer = { modes = ["date_interface"], text = "← Year" }
 help = "Previous year"
 readme = "Navigate to previous year (when calendar focused)"
+
+[[action]]
+key_action_id = "interface_next_year"
+default_keys = ["}"]
+contexts = ["date_interface"]
+help_sections = ["date"]
+footer = { modes = ["date_interface"], text = "→ Year" }
+help = "Next year"
+readme = "Navigate to next year (when calendar focused)"
 
 [[action]]
 key_action_id = "interface_today"
@@ -643,94 +647,6 @@ help_sections = ["date"]
 footer = { modes = ["date_interface"], text = "Today" }
 help = "Go to today"
 readme = "Navigate to today's date (when calendar focused)"
-
-# =============================================================================
-# Date Interface Mode (Legacy - to be removed)
-# =============================================================================
-
-[[action]]
-key_action_id = "date_interface_move_left"
-default_keys = ["left", "h"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Previous day"
-readme = "Move selection to the previous day"
-
-[[action]]
-key_action_id = "date_interface_move_right"
-default_keys = ["right", "l"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Next day"
-readme = "Move selection to the next day"
-
-[[action]]
-key_action_id = "date_interface_move_up"
-default_keys = ["up", "k"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Previous week"
-readme = "Move selection up one week"
-
-[[action]]
-key_action_id = "date_interface_move_down"
-default_keys = ["down", "j"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Next week"
-readme = "Move selection down one week"
-
-[[action]]
-key_action_id = "date_interface_prev_month"
-default_keys = ["["]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "Prev month" }
-help = "Previous month"
-readme = "Navigate to the previous month"
-
-[[action]]
-key_action_id = "date_interface_next_month"
-default_keys = ["]"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "Next month" }
-help = "Next month"
-readme = "Navigate to the next month"
-
-[[action]]
-key_action_id = "date_interface_prev_year"
-default_keys = ["Y"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "Prev year" }
-help = "Previous year"
-readme = "Navigate to the previous year"
-
-[[action]]
-key_action_id = "date_interface_next_year"
-default_keys = ["y"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "Next year" }
-help = "Next year"
-readme = "Navigate to the next year"
-
-[[action]]
-key_action_id = "date_interface_today"
-default_keys = ["t"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Jump to today"
-readme = "Jump to today's date in the calendar"
-
-[[action]]
-key_action_id = "date_interface_confirm"
-default_keys = ["ret"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-help = "Navigate to date"
-readme = "Navigate to the selected date"
 
 # =============================================================================
 # Project Interface Mode
@@ -817,6 +733,5 @@ key_action_id = "cancel"
 default_keys = ["esc"]
 contexts = ["edit", "reorder", "selection", "filter_normal", "filter_prompt", "command_prompt", "date_interface", "project_interface", "tag_interface", "help"]
 help_sections = ["edit", "reorder", "selection", "filter", "date", "project", "tag"]
-footer = { modes = ["edit", "reorder", "selection", "normal_filter", "date_interface", "project_interface", "tag_interface"], text = "Cancel" }
 help = "Cancel"
 readme = "Cancel the current operation and return to normal mode"

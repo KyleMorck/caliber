@@ -213,18 +213,6 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         HelpScrollUp => {
             app.help_scroll = app.help_scroll.saturating_sub(1);
         }
-        DateInterfaceMoveLeft => app.date_interface_move(-1, 0),
-        DateInterfaceMoveRight => app.date_interface_move(1, 0),
-        DateInterfaceMoveUp => app.date_interface_move(0, -1),
-        DateInterfaceMoveDown => app.date_interface_move(0, 1),
-        DateInterfacePrevMonth => app.date_interface_prev_month(),
-        DateInterfaceNextMonth => app.date_interface_next_month(),
-        DateInterfacePrevYear => app.date_interface_prev_year(),
-        DateInterfaceNextYear => app.date_interface_next_year(),
-        DateInterfaceToday => app.date_interface_goto_today(),
-        DateInterfaceConfirm => {
-            app.confirm_date_interface()?;
-        }
         ProjectInterfaceMoveUp => app.project_interface_move_up(),
         ProjectInterfaceMoveDown => app.project_interface_move_down(),
         ProjectInterfaceSelect => {

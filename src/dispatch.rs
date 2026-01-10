@@ -141,7 +141,8 @@ impl KeySpec {
 
         // For printable characters, shift is implicit in the character (O vs o, ! vs 1)
         // so we don't include it in modifiers. This makes "O" in registry match Shift+O.
-        let shift = if matches!(key, Key::Char(_)) {
+        // For BackTab, crossterm sends SHIFT+BackTab but we normalize to just BackTab.
+        let shift = if matches!(key, Key::Char(_) | Key::BackTab) {
             false
         } else {
             event.modifiers.contains(KeyModifiers::SHIFT)
@@ -507,16 +508,6 @@ fn parse_action_id(s: &str) -> Option<KeyActionId> {
         "selection_jump_to_last" => Some(KeyActionId::SelectionJumpToLast),
         "help_scroll_down" => Some(KeyActionId::HelpScrollDown),
         "help_scroll_up" => Some(KeyActionId::HelpScrollUp),
-        "date_interface_move_left" => Some(KeyActionId::DateInterfaceMoveLeft),
-        "date_interface_move_right" => Some(KeyActionId::DateInterfaceMoveRight),
-        "date_interface_move_up" => Some(KeyActionId::DateInterfaceMoveUp),
-        "date_interface_move_down" => Some(KeyActionId::DateInterfaceMoveDown),
-        "date_interface_prev_month" => Some(KeyActionId::DateInterfacePrevMonth),
-        "date_interface_next_month" => Some(KeyActionId::DateInterfaceNextMonth),
-        "date_interface_prev_year" => Some(KeyActionId::DateInterfacePrevYear),
-        "date_interface_next_year" => Some(KeyActionId::DateInterfaceNextYear),
-        "date_interface_today" => Some(KeyActionId::DateInterfaceToday),
-        "date_interface_confirm" => Some(KeyActionId::DateInterfaceConfirm),
         "project_interface_move_up" => Some(KeyActionId::ProjectInterfaceMoveUp),
         "project_interface_move_down" => Some(KeyActionId::ProjectInterfaceMoveDown),
         "project_interface_select" => Some(KeyActionId::ProjectInterfaceSelect),
