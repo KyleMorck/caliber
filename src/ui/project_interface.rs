@@ -22,7 +22,7 @@ pub fn render_project_interface(
         return;
     }
 
-    render_popup_frame(f, &layout, "Projects");
+    render_popup_frame(f, &layout, "Manage Projects");
 
     let visible_height = layout.content_area.height as usize;
     let total_items = state.projects.len();

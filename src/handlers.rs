@@ -167,6 +167,7 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
             app.exit_edit();
         }
         SaveAndNew => {
+            app.accept_hint();
             app.clear_hints();
             app.commit_and_add_new();
         }
@@ -576,8 +577,20 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 pub fn handle_interface_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match &app.input_mode {
         InputMode::Interface(InterfaceContext::Date(_)) => handle_date_interface(app, key),
-        InputMode::Interface(InterfaceContext::Project(_)) => handle_project_interface(app, key),
-        InputMode::Interface(InterfaceContext::Tag(_)) => handle_tag_interface(app, key),
+        InputMode::Interface(InterfaceContext::Project(_)) => handle_list_interface(
+            app,
+            key,
+            '.',
+            KeyContext::ProjectInterface,
+            App::project_interface_select,
+        ),
+        InputMode::Interface(InterfaceContext::Tag(_)) => handle_list_interface(
+            app,
+            key,
+            ',',
+            KeyContext::TagInterface,
+            App::tag_interface_select,
+        ),
         _ => Ok(()),
     }
 }
@@ -613,35 +626,20 @@ fn handle_date_interface(app: &mut App, key: KeyEvent) -> io::Result<()> {
     Ok(())
 }
 
-fn handle_project_interface(app: &mut App, key: KeyEvent) -> io::Result<()> {
+fn handle_list_interface(
+    app: &mut App,
+    key: KeyEvent,
+    toggle_key: char,
+    context: KeyContext,
+    select_fn: fn(&mut App) -> io::Result<()>,
+) -> io::Result<()> {
     match key.code {
-        KeyCode::Esc | KeyCode::Char('.') => {
-            app.cancel_interface();
-        }
-        KeyCode::Enter => {
-            app.project_interface_select()?;
-        }
+        KeyCode::Esc => app.cancel_interface(),
+        KeyCode::Char(c) if c == toggle_key => app.cancel_interface(),
+        KeyCode::Enter => select_fn(app)?,
         _ => {
             let spec = KeySpec::from_event(&key);
-            if let Some(action) = app.keymap.get(KeyContext::ProjectInterface, &spec) {
-                dispatch_action(app, action)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-fn handle_tag_interface(app: &mut App, key: KeyEvent) -> io::Result<()> {
-    match key.code {
-        KeyCode::Esc | KeyCode::Char(',') => {
-            app.cancel_interface();
-        }
-        KeyCode::Enter => {
-            app.tag_interface_select()?;
-        }
-        _ => {
-            let spec = KeySpec::from_event(&key);
-            if let Some(action) = app.keymap.get(KeyContext::TagInterface, &spec) {
+            if let Some(action) = app.keymap.get(context, &spec) {
                 dispatch_action(app, action)?;
             }
         }

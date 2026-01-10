@@ -17,7 +17,7 @@ pub fn render_tag_interface(f: &mut Frame, state: &TagInterfaceState, area: Rect
         return;
     }
 
-    render_popup_frame(f, &layout, "Tags");
+    render_popup_frame(f, &layout, "Manage Tags");
 
     let visible_height = layout.content_area.height as usize;
     let total_items = state.tags.len();

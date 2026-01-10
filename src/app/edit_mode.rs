@@ -7,10 +7,12 @@ use super::actions::{CreateEntry, CreateTarget, EditEntry, EditTarget};
 use super::{App, EditContext, EntryLocation, InputMode, InsertPosition, ViewMode};
 
 impl App {
-    /// Preprocesses content before saving: expands favorite tags and normalizes dates.
+    /// Preprocesses content before saving: expands favorite tags, normalizes dates, and trims trailing whitespace.
     fn preprocess_content(&self, content: &str) -> String {
         let content = storage::expand_favorite_tags(content, &self.config.favorite_tags);
         storage::normalize_relative_dates(&content, Local::now().date_naive())
+            .trim_end()
+            .to_string()
     }
 
     /// Cycle entry type while editing (BackTab)
@@ -268,20 +270,15 @@ impl App {
         self.edit_buffer = None;
         self.original_edit_content = None;
 
-        match std::mem::replace(&mut self.input_mode, InputMode::Normal) {
-            InputMode::Edit(EditContext::Daily { entry_index }) => {
-                if let Some(entry) = self.get_daily_entry(entry_index)
-                    && entry.content.is_empty()
-                {
-                    self.delete_at_index_daily(entry_index);
-                    if let ViewMode::Daily(state) = &mut self.view {
-                        state.scroll_offset = 0;
-                    }
-                }
+        if let InputMode::Edit(EditContext::Daily { entry_index }) =
+            std::mem::replace(&mut self.input_mode, InputMode::Normal)
+            && let Some(entry) = self.get_daily_entry(entry_index)
+            && entry.content.is_empty()
+        {
+            self.delete_at_index_daily(entry_index);
+            if let ViewMode::Daily(state) = &mut self.view {
+                state.scroll_offset = 0;
             }
-            InputMode::Edit(EditContext::FilterEdit { .. })
-            | InputMode::Edit(EditContext::FilterQuickAdd { .. }) => {}
-            _ => {}
         }
     }
 
