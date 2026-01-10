@@ -3,4 +3,5 @@
 CLAUDE.md
 .claude/
 .DS_STORE
-.caliber/
+/.caliber/
+test/.tmp/

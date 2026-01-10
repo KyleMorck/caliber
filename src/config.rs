@@ -290,10 +290,14 @@ fn expand_tilde(path: &str) -> PathBuf {
 }
 
 pub fn get_config_dir() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".config")
-        .join("caliber")
+    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+        PathBuf::from(xdg).join("caliber")
+    } else {
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".config")
+            .join("caliber")
+    }
 }
 
 pub fn get_config_path() -> PathBuf {
