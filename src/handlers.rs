@@ -214,14 +214,6 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         HelpScrollUp => {
             app.help_scroll = app.help_scroll.saturating_sub(1);
         }
-        ProjectInterfaceMoveUp | TagInterfaceMoveUp => app.interface_move_up(),
-        ProjectInterfaceMoveDown | TagInterfaceMoveDown => app.interface_move_down(),
-        ProjectInterfaceSelect => {
-            app.project_interface_select()?;
-        }
-        TagInterfaceSelect => {
-            app.tag_interface_select()?;
-        }
         InterfaceMoveUp => app.interface_move_up(),
         InterfaceMoveDown => app.interface_move_down(),
         InterfaceMoveLeft => app.interface_move_left(),
@@ -237,8 +229,6 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         InterfaceNextYear => app.date_interface_next_year(),
         InterfacePrevYear => app.date_interface_prev_year(),
         InterfaceToday => app.date_interface_goto_today(),
-        ProjectInterfaceRemove => app.interface_delete(),
-        ProjectInterfaceHide => app.interface_hide(),
         Cancel => match &app.input_mode {
             InputMode::Edit(_) => {
                 app.clear_hints();

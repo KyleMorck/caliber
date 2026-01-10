@@ -587,7 +587,7 @@ readme = "Rename tag throughout journal (when list focused)"
 
 [[action]]
 key_action_id = "interface_hide"
-default_keys = ["H"]
+default_keys = ["h"]
 contexts = ["project_interface"]
 help_sections = ["project"]
 footer = { modes = ["project_interface"], text = "Hide" }
@@ -638,82 +638,6 @@ help_sections = ["date"]
 footer = { modes = ["date_interface"], text = "Today" }
 help = "Go to today"
 readme = "Navigate to today's date (when calendar focused)"
-
-# =============================================================================
-# Project Interface Mode
-# =============================================================================
-
-[[action]]
-key_action_id = "project_interface_move_up"
-default_keys = ["up"]
-contexts = ["project_interface"]
-help_sections = ["project"]
-help = "Previous project"
-readme = "Move selection to the previous project"
-
-[[action]]
-key_action_id = "project_interface_move_down"
-default_keys = ["down"]
-contexts = ["project_interface"]
-help_sections = ["project"]
-help = "Next project"
-readme = "Move selection to the next project"
-
-[[action]]
-key_action_id = "project_interface_select"
-default_keys = ["ret"]
-contexts = ["project_interface"]
-help_sections = ["project"]
-footer = { modes = ["project_interface"], text = "Select" }
-help = "Open project"
-readme = "Open the selected project journal"
-
-[[action]]
-key_action_id = "project_interface_remove"
-default_keys = ["d"]
-contexts = ["project_interface"]
-help_sections = ["project"]
-footer = { modes = ["project_interface"], text = "Remove" }
-help = "Remove from registry"
-readme = "Remove the selected project from the registry (does not delete files)"
-
-[[action]]
-key_action_id = "project_interface_hide"
-default_keys = ["h"]
-contexts = ["project_interface"]
-help_sections = ["project"]
-footer = { modes = ["project_interface"], text = "Hide" }
-help = "Hide project"
-readme = "Hide the selected project from the registry interface"
-
-# =============================================================================
-# Tag Interface Mode
-# =============================================================================
-
-[[action]]
-key_action_id = "tag_interface_move_up"
-default_keys = ["up", "k"]
-contexts = ["tag_interface"]
-help_sections = ["tag"]
-help = "Previous tag"
-readme = "Move selection to the previous tag"
-
-[[action]]
-key_action_id = "tag_interface_move_down"
-default_keys = ["down", "j"]
-contexts = ["tag_interface"]
-help_sections = ["tag"]
-help = "Next tag"
-readme = "Move selection to the next tag"
-
-[[action]]
-key_action_id = "tag_interface_select"
-default_keys = ["ret"]
-contexts = ["tag_interface"]
-help_sections = ["tag"]
-footer = { modes = ["tag_interface"], text = "Filter" }
-help = "Filter by tag"
-readme = "Apply quick filter for the selected tag"
 
 # =============================================================================
 # Unified Cancel Action
