@@ -5,8 +5,11 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
+use unicode_width::UnicodeWidthStr;
 
 use crate::cursor::CursorBuffer;
+
+use super::shared::truncate_text;
 
 pub const POPUP_WIDTH: u16 = 26;
 pub const POPUP_HEIGHT: u16 = 11;
@@ -158,4 +161,36 @@ pub fn render_scroll_indicators(
             Paragraph::new(Span::styled(arrows, Style::new().dim())).alignment(Alignment::Right);
         f.render_widget(indicator, layout.scroll_indicator_area);
     }
+}
+
+#[must_use]
+pub fn build_list_item_line(
+    prefix: &str,
+    content: &str,
+    suffix: &str,
+    content_width: usize,
+    content_style: Style,
+    suffix_style: Style,
+) -> Line<'static> {
+    let prefix_width = prefix.width();
+    let suffix_width = suffix.width();
+
+    let available_for_content = content_width.saturating_sub(prefix_width + suffix_width);
+    let content_display = truncate_text(content, available_for_content);
+    let content_display_width = content_display.width();
+
+    let padding_width = content_width.saturating_sub(prefix_width + content_display_width + suffix_width);
+    let padding = " ".repeat(padding_width);
+
+    let mut spans = vec![
+        Span::styled(prefix.to_string(), content_style),
+        Span::styled(content_display, content_style),
+        Span::styled(padding, content_style),
+    ];
+
+    if !suffix.is_empty() {
+        spans.push(Span::styled(suffix.to_string(), suffix_style));
+    }
+
+    Line::from(spans)
 }
