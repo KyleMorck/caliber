@@ -3,10 +3,12 @@ use ratatui::widgets::calendar::{CalendarEventStore, Monthly};
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::Paragraph,
 };
+
+use super::theme;
 use time::{Date, Month};
 
 use crate::app::DateInterfaceState;
@@ -47,13 +49,13 @@ pub fn render_date_interface(f: &mut Frame, state: &DateInterfaceState, area: Re
         }
         if info.has_entries || info.has_calendar_events {
             let style = if info.has_incomplete_tasks {
-                Style::new().fg(Color::Yellow).not_dim()
+                Style::new().fg(theme::DATE_TASK).not_dim()
             } else if info.has_events {
-                Style::new().fg(Color::Magenta).not_dim()
+                Style::new().fg(theme::DATE_EVENT).not_dim()
             } else if info.has_calendar_events {
-                Style::new().fg(Color::Blue).not_dim()
+                Style::new().fg(theme::DATE_CALENDAR).not_dim()
             } else {
-                Style::new().fg(Color::Gray).not_dim()
+                Style::new().fg(theme::DATE_OTHER).not_dim()
             };
             events.add(to_time_date(*date), style);
         }
@@ -63,21 +65,27 @@ pub fn render_date_interface(f: &mut Frame, state: &DateInterfaceState, area: Re
         && today.year() == state.display_month.year()
         && today != state.selected
     {
-        events.add(to_time_date(today), Style::new().fg(Color::Cyan).not_dim());
+        events.add(
+            to_time_date(today),
+            Style::new().fg(theme::DATE_TODAY).not_dim(),
+        );
     }
 
     let selected_info = state.day_cache.get(&state.selected);
     let selected_style = if state.selected == today {
-        Style::new().fg(Color::Cyan).reversed().not_dim()
+        Style::new().fg(theme::DATE_TODAY).reversed().not_dim()
     } else if selected_info
         .map(|i| i.has_incomplete_tasks)
         .unwrap_or(false)
     {
-        Style::new().fg(Color::Yellow).reversed().not_dim()
+        Style::new().fg(theme::DATE_TASK).reversed().not_dim()
     } else if selected_info.map(|i| i.has_events).unwrap_or(false) {
-        Style::new().fg(Color::Magenta).reversed().not_dim()
-    } else if selected_info.map(|i| i.has_calendar_events).unwrap_or(false) {
-        Style::new().fg(Color::Blue).reversed().not_dim()
+        Style::new().fg(theme::DATE_EVENT).reversed().not_dim()
+    } else if selected_info
+        .map(|i| i.has_calendar_events)
+        .unwrap_or(false)
+    {
+        Style::new().fg(theme::DATE_CALENDAR).reversed().not_dim()
     } else {
         Style::new().reversed().not_dim()
     };
@@ -91,8 +99,8 @@ pub fn render_date_interface(f: &mut Frame, state: &DateInterfaceState, area: Re
     };
 
     let calendar = Monthly::new(to_time_date(state.display_month), events)
-        .show_weekdays_header(Style::new().fg(Color::Gray).dim().bold())
-        .default_style(Style::new().fg(Color::Gray).dim());
+        .show_weekdays_header(Style::new().fg(theme::DATE_OTHER).dim().bold())
+        .default_style(Style::new().fg(theme::DATE_OTHER).dim());
 
     f.render_widget(calendar, calendar_area);
 
@@ -105,11 +113,11 @@ pub fn render_date_interface(f: &mut Frame, state: &DateInterfaceState, area: Re
 
     let dim = Style::new().dim();
     let legend_line = Line::from(vec![
-        Span::styled("● ", Style::new().fg(Color::Yellow)),
+        Span::styled("● ", Style::new().fg(theme::DATE_TASK)),
         Span::styled("tasks  ", dim),
-        Span::styled("● ", Style::new().fg(Color::Magenta)),
+        Span::styled("● ", Style::new().fg(theme::DATE_EVENT)),
         Span::styled("events  ", dim),
-        Span::styled("● ", Style::new().fg(Color::Blue)),
+        Span::styled("● ", Style::new().fg(theme::DATE_CALENDAR)),
         Span::styled("cal", dim),
     ]);
 

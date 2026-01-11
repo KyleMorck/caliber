@@ -531,11 +531,8 @@ impl App {
         }
 
         let project = self.get_current_project_info();
-        let visible_ids = get_visible_calendar_ids(
-            &self.config,
-            &self.active_journal(),
-            project.as_ref(),
-        );
+        let visible_ids =
+            get_visible_calendar_ids(&self.config, &self.active_journal(), project.as_ref());
 
         if visible_ids.is_empty() {
             self.calendar_store.clear();

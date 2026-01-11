@@ -1,6 +1,8 @@
 use std::io;
 
-use super::{App, InputMode, InterfaceContext, LastInteraction, ProjectInterfaceState, TagInterfaceState};
+use super::{
+    App, InputMode, InterfaceContext, LastInteraction, ProjectInterfaceState, TagInterfaceState,
+};
 
 /// Visible height for list interfaces (must match PopupLayout content area)
 pub const LIST_VISIBLE_HEIGHT: usize = 8;
@@ -126,16 +128,14 @@ impl App {
     /// Unified submit/select action (context-aware)
     pub fn interface_submit(&mut self) -> io::Result<()> {
         match &self.input_mode {
-            InputMode::Interface(InterfaceContext::Date(state)) => {
-                match state.last_interaction {
-                    LastInteraction::Typed if !state.query.is_empty() => {
-                        self.date_interface_submit_input()?;
-                    }
-                    _ => {
-                        self.confirm_date_interface()?;
-                    }
+            InputMode::Interface(InterfaceContext::Date(state)) => match state.last_interaction {
+                LastInteraction::Typed if !state.query.is_empty() => {
+                    self.date_interface_submit_input()?;
                 }
-            }
+                _ => {
+                    self.confirm_date_interface()?;
+                }
+            },
             InputMode::Interface(InterfaceContext::Project(_)) => {
                 self.project_interface_select()?;
             }

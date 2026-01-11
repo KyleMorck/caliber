@@ -1,14 +1,18 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::Paragraph,
 };
 
+use super::theme;
+
 use crate::app::TagInterfaceState;
 
-use super::interface_popup::{PopupLayout, build_list_item_line, render_popup_frame, render_scroll_indicators};
+use super::interface_popup::{
+    PopupLayout, build_list_item_line, render_popup_frame, render_scroll_indicators,
+};
 
 pub fn render_tag_interface(f: &mut Frame, state: &TagInterfaceState, area: Rect) {
     let layout = PopupLayout::without_query(area);
@@ -27,7 +31,10 @@ pub fn render_tag_interface(f: &mut Frame, state: &TagInterfaceState, area: Rect
     let content_width = layout.content_area.width as usize;
 
     let lines: Vec<Line> = if state.tags.is_empty() {
-        vec![Line::from(Span::styled("No tags in journal", Style::new().dim()))]
+        vec![Line::from(Span::styled(
+            "No tags in journal",
+            Style::new().dim(),
+        ))]
     } else {
         state
             .tags
@@ -39,9 +46,11 @@ pub fn render_tag_interface(f: &mut Frame, state: &TagInterfaceState, area: Rect
                 let is_selected = i == state.selected;
 
                 let style = if is_selected {
-                    Style::new().fg(Color::Black).bg(Color::Yellow)
+                    Style::new()
+                        .fg(theme::TAG_SELECTED_FG)
+                        .bg(theme::TAG_SELECTED_BG)
                 } else {
-                    Style::new().fg(Color::Yellow)
+                    Style::new().fg(theme::TAG_NORMAL_FG)
                 };
 
                 let count_style = if is_selected {
@@ -51,7 +60,14 @@ pub fn render_tag_interface(f: &mut Frame, state: &TagInterfaceState, area: Rect
                 };
 
                 let count_text = format!("({}) ", tag.count);
-                build_list_item_line(" #", &tag.name, &count_text, content_width, style, count_style)
+                build_list_item_line(
+                    " #",
+                    &tag.name,
+                    &count_text,
+                    content_width,
+                    style,
+                    count_style,
+                )
             })
             .collect()
     };

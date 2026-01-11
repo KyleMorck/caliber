@@ -1,7 +1,9 @@
 use ratatui::{
-    style::{Color, Style},
+    style::Style,
     text::{Line as RatatuiLine, Span},
 };
+
+use super::theme;
 
 use crate::dispatch::Keymap;
 use crate::registry::{
@@ -30,9 +32,9 @@ fn help_section_to_context(section: HelpSection) -> Option<KeyContext> {
 }
 
 fn build_help_lines(keymap: &Keymap) -> Vec<RatatuiLine<'static>> {
-    let header_style = Style::default().fg(Color::Cyan);
-    let key_style = Style::default().fg(Color::Yellow);
-    let desc_style = Style::default().fg(Color::White);
+    let header_style = Style::default().fg(theme::HELP_HEADER);
+    let key_style = Style::default().fg(theme::HELP_KEY);
+    let desc_style = Style::default().fg(theme::HELP_DESC);
     let header_indent = " ".repeat(KEY_WIDTH + GUTTER_WIDTH);
 
     let mut lines = Vec::new();

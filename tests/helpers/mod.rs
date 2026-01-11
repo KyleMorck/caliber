@@ -111,28 +111,34 @@ impl TestContext {
         }
     }
 
-    pub fn render_daily(&self) -> Vec<String> {
-        ui::render_daily_view(&self.app, 76)
+    pub fn render_daily(&mut self) -> Vec<String> {
+        let context = ui::RenderContext::for_test(80, 24);
+        let _ = ui::prepare_render(&mut self.app, &context);
+        ui::build_daily_list(&self.app, context.content_width)
+            .to_lines()
             .iter()
             .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect())
             .collect()
     }
 
-    pub fn render_filter(&self) -> Vec<String> {
-        ui::render_filter_view(&self.app, 76)
+    pub fn render_filter(&mut self) -> Vec<String> {
+        let context = ui::RenderContext::for_test(80, 24);
+        let _ = ui::prepare_render(&mut self.app, &context);
+        ui::build_filter_list(&self.app, context.content_width)
+            .to_lines()
             .iter()
             .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect())
             .collect()
     }
 
-    pub fn render_current(&self) -> Vec<String> {
+    pub fn render_current(&mut self) -> Vec<String> {
         match &self.app.view {
             ViewMode::Daily(_) => self.render_daily(),
             ViewMode::Filter(_) => self.render_filter(),
         }
     }
 
-    pub fn screen_contains(&self, text: &str) -> bool {
+    pub fn screen_contains(&mut self, text: &str) -> bool {
         self.render_current().iter().any(|line| line.contains(text))
     }
 
@@ -145,7 +151,7 @@ impl TestContext {
         self.render_footer().contains(text)
     }
 
-    pub fn find_line(&self, text: &str) -> Option<String> {
+    pub fn find_line(&mut self, text: &str) -> Option<String> {
         self.render_current()
             .into_iter()
             .find(|line| line.contains(text))

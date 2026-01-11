@@ -3,6 +3,8 @@ use ratatui::{
     style::{Color, Style},
     text::Span,
 };
+
+use super::theme;
 use unicode_width::UnicodeWidthStr;
 
 use crate::storage::{
@@ -64,8 +66,8 @@ pub fn style_content(text: &str, base_style: Style) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     let mut last_end = 0;
 
-    let tag_color = Color::Yellow;
-    let date_color = Color::Red;
+    let tag_color = theme::ENTRY_TAG;
+    let date_color = theme::ENTRY_DATE;
 
     let mut matches: Vec<(usize, usize, Color)> = Vec::new();
 

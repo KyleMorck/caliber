@@ -242,7 +242,7 @@ fn config_header_date_format_customizes_display() {
     let mut config = Config::default();
     config.header_date_format = "%A, %B %d".to_string();
     let date = NaiveDate::from_ymd_opt(2026, 1, 4).unwrap();
-    let ctx = TestContext::with_config_and_content(date, "", config);
+    let mut ctx = TestContext::with_config_and_content(date, "", config);
 
     assert!(ctx.screen_contains("Sunday, January 04"));
 }
@@ -253,7 +253,7 @@ fn config_hide_completed_hides_on_startup() {
     config.hide_completed = true;
     let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let content = "# 2026/01/15\n- [ ] Incomplete\n- [x] Complete\n";
-    let ctx = TestContext::with_config_and_content(date, content, config);
+    let mut ctx = TestContext::with_config_and_content(date, content, config);
 
     assert!(ctx.screen_contains("Incomplete"));
     assert!(!ctx.screen_contains("Complete"));

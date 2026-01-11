@@ -1,10 +1,13 @@
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
+
+use super::scroll_indicator::{ScrollIndicatorStyle, scroll_indicator_text};
+use super::theme;
 use unicode_width::UnicodeWidthStr;
 
 use crate::cursor::CursorBuffer;
@@ -108,10 +111,10 @@ pub fn render_popup_frame(f: &mut Frame, layout: &PopupLayout, title: &str) {
     let block = Block::default()
         .title(Span::styled(
             format!(" {title} "),
-            Style::new().fg(Color::Blue),
+            Style::new().fg(theme::POPUP_TITLE),
         ))
         .borders(Borders::ALL)
-        .border_style(Style::new().fg(Color::Blue));
+        .border_style(Style::new().fg(theme::POPUP_BORDER));
 
     f.render_widget(block, layout.popup_area);
 }
@@ -123,9 +126,9 @@ pub fn render_query_input(
     focused: bool,
 ) {
     let style = if focused {
-        Style::new().fg(Color::Blue)
+        Style::new().fg(theme::POPUP_QUERY)
     } else {
-        Style::new().fg(Color::Blue).dim()
+        Style::new().fg(theme::POPUP_QUERY_DIM).dim()
     };
 
     let query_line = Line::from(vec![
@@ -150,15 +153,14 @@ pub fn render_scroll_indicators(
     let can_scroll_up = scroll_offset > 0;
     let can_scroll_down = scroll_offset + visible_height < total_items;
 
-    if can_scroll_up || can_scroll_down {
-        let arrows = match (can_scroll_up, can_scroll_down) {
-            (true, true) => "▲▼",
-            (true, false) => "▲",
-            (false, true) => "▼",
-            (false, false) => "",
-        };
-        let indicator =
-            Paragraph::new(Span::styled(arrows, Style::new().dim())).alignment(Alignment::Right);
+    if let Some(arrows) =
+        scroll_indicator_text(can_scroll_up, can_scroll_down, ScrollIndicatorStyle::Arrows)
+    {
+        let indicator = Paragraph::new(Span::styled(
+            arrows,
+            Style::new().fg(theme::POPUP_SCROLL).dim(),
+        ))
+        .alignment(Alignment::Right);
         f.render_widget(indicator, layout.scroll_indicator_area);
     }
 }
@@ -179,7 +181,8 @@ pub fn build_list_item_line(
     let content_display = truncate_text(content, available_for_content);
     let content_display_width = content_display.width();
 
-    let padding_width = content_width.saturating_sub(prefix_width + content_display_width + suffix_width);
+    let padding_width =
+        content_width.saturating_sub(prefix_width + content_display_width + suffix_width);
     let padding = " ".repeat(padding_width);
 
     let mut spans = vec![

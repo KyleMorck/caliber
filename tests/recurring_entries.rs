@@ -79,7 +79,7 @@ fn recurring_hidden_when_completed_today() {
         past = past.format("%Y/%m/%d"),
         today = today.format("%Y/%m/%d")
     );
-    let ctx = TestContext::with_journal_content(today, &content);
+    let mut ctx = TestContext::with_journal_content(today, &content);
 
     assert!(!ctx.screen_contains("Daily task @every-day"));
 

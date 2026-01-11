@@ -1,14 +1,18 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::Paragraph,
 };
 
+use super::theme;
+
 use crate::app::ProjectInterfaceState;
 
-use super::interface_popup::{PopupLayout, build_list_item_line, render_popup_frame, render_scroll_indicators};
+use super::interface_popup::{
+    PopupLayout, build_list_item_line, render_popup_frame, render_scroll_indicators,
+};
 
 pub fn render_project_interface(
     f: &mut Frame,
@@ -32,7 +36,10 @@ pub fn render_project_interface(
     let content_width = layout.content_area.width as usize;
 
     let lines: Vec<Line> = if state.projects.is_empty() {
-        vec![Line::from(Span::styled("No projects registered", Style::new().dim()))]
+        vec![Line::from(Span::styled(
+            "No projects registered",
+            Style::new().dim(),
+        ))]
     } else {
         state
             .projects
@@ -42,7 +49,8 @@ pub fn render_project_interface(
             .take(visible_height)
             .map(|(i, project)| {
                 let is_selected = i == state.selected;
-                let is_current = current_project_id.is_some_and(|id| project.id.eq_ignore_ascii_case(id));
+                let is_current =
+                    current_project_id.is_some_and(|id| project.id.eq_ignore_ascii_case(id));
 
                 let style = if !project.available {
                     if is_selected {
@@ -51,9 +59,11 @@ pub fn render_project_interface(
                         Style::new().dim()
                     }
                 } else if is_selected {
-                    Style::new().fg(Color::Black).bg(Color::Yellow)
+                    Style::new()
+                        .fg(theme::PROJECT_SELECTED_FG)
+                        .bg(theme::PROJECT_SELECTED_BG)
                 } else {
-                    Style::new().fg(Color::Yellow)
+                    Style::new().fg(theme::PROJECT_NORMAL_FG)
                 };
 
                 let indicator_style = if is_selected {
@@ -63,7 +73,14 @@ pub fn render_project_interface(
                 };
 
                 let indicator = if is_current { " ◆ " } else { "" };
-                build_list_item_line(" ", &project.name, indicator, content_width, style, indicator_style)
+                build_list_item_line(
+                    " ",
+                    &project.name,
+                    indicator,
+                    content_width,
+                    style,
+                    indicator_style,
+                )
             })
             .collect()
     };

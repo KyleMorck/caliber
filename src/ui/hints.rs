@@ -6,6 +6,8 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Paragraph},
 };
 
+use super::theme;
+
 use crate::app::HintContext;
 
 pub const HINT_OVERLAY_HEIGHT: u16 = 5;
@@ -31,7 +33,7 @@ pub fn render_hint_overlay(f: &mut Frame, hint_state: &HintContext, footer_area:
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().dim());
+        .border_style(Style::default().fg(theme::HINT_BORDER).dim());
 
     let inner = block.inner(overlay_area);
     f.render_widget(block, overlay_area);
@@ -50,7 +52,7 @@ fn build_guidance_lines(message: &str, max_rows: usize) -> Vec<Line<'static>> {
     }
     lines.push(Line::from(Span::styled(
         message.to_string(),
-        Style::default().fg(Color::Gray).italic(),
+        Style::default().fg(theme::HINT_GUIDANCE).italic(),
     )));
     lines
 }
@@ -117,7 +119,7 @@ fn build_hint_lines(hint_state: &HintContext, width: usize, max_rows: usize) -> 
         };
         lines.push(Line::from(Span::styled(
             truncated,
-            Style::default().fg(Color::Gray),
+            Style::default().fg(theme::HINT_DESC),
         )));
     }
 

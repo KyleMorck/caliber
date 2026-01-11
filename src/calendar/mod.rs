@@ -3,7 +3,7 @@ mod parse;
 mod store;
 
 pub use fetch::fetch_calendar;
-pub use parse::{parse_ics, IcsParseResult};
+pub use parse::{IcsParseResult, parse_ics};
 pub use store::{CalendarEvent, CalendarFetchStatus, CalendarStore};
 
 use chrono::{Duration, Local, NaiveDate};
@@ -43,10 +43,7 @@ pub fn get_visible_calendar_ids(
     }
 }
 
-pub async fn fetch_all_calendars(
-    config: &Config,
-    visible_ids: &[String],
-) -> CalendarFetchResult {
+pub async fn fetch_all_calendars(config: &Config, visible_ids: &[String]) -> CalendarFetchResult {
     let today = Local::now().date_naive();
     let range_start = today - Duration::days(180);
     let range_end = today + Duration::days(365);

@@ -4,78 +4,108 @@ use ratatui::{
     text::{Line as RatatuiLine, Span},
 };
 
-use crate::app::{App, InputMode, InterfaceContext, PromptContext, ViewMode};
+use crate::app::{InputMode, InterfaceContext, PromptContext, ViewMode};
 use crate::dispatch::Keymap;
 use crate::registry::{FooterMode, KeyAction, KeyContext, footer_actions};
 
 use super::shared::format_key_for_display;
+use super::theme;
 
-pub fn render_footer(app: &App) -> RatatuiLine<'static> {
-    match (&app.view, &app.input_mode) {
-        (_, InputMode::Prompt(PromptContext::Command { buffer })) => RatatuiLine::from(vec![
-            Span::styled(":", Style::default().fg(Color::Blue)),
-            Span::raw(buffer.content().to_string()),
-        ]),
-        (_, InputMode::Prompt(PromptContext::Filter { buffer })) => RatatuiLine::from(vec![
-            Span::styled("/", Style::default().fg(Color::Magenta)),
-            Span::raw(buffer.content().to_string()),
-        ]),
+pub struct FooterModel<'a> {
+    pub view: &'a ViewMode,
+    pub input_mode: &'a InputMode,
+    pub keymap: &'a Keymap,
+}
+
+impl<'a> FooterModel<'a> {
+    #[must_use]
+    pub fn new(view: &'a ViewMode, input_mode: &'a InputMode, keymap: &'a Keymap) -> Self {
+        Self {
+            view,
+            input_mode,
+            keymap,
+        }
+    }
+}
+
+pub fn render_footer(model: FooterModel<'_>) -> RatatuiLine<'static> {
+    match (model.view, model.input_mode) {
+        (_, InputMode::Prompt(PromptContext::Command { buffer })) => {
+            prompt_line(":", theme::PROMPT_COMMAND, buffer.content())
+        }
+        (_, InputMode::Prompt(PromptContext::Filter { buffer })) => {
+            prompt_line("/", theme::PROMPT_FILTER, buffer.content())
+        }
         (_, InputMode::Prompt(PromptContext::RenameTag { old_tag, buffer })) => {
             RatatuiLine::from(vec![
-                Span::styled("Rename ", Style::default().fg(Color::Blue)),
-                Span::styled(format!("#{}", old_tag), Style::default().fg(Color::Yellow)),
-                Span::styled(" to: ", Style::default().fg(Color::Blue)),
+                Span::styled("Rename ", Style::default().fg(theme::PROMPT_RENAME_TAG)),
+                Span::styled(
+                    format!("#{}", old_tag),
+                    Style::default().fg(theme::PROMPT_TAG_HIGHLIGHT),
+                ),
+                Span::styled(" to: ", Style::default().fg(theme::PROMPT_RENAME_TAG)),
                 Span::raw(buffer.content().to_string()),
             ])
         }
         (_, InputMode::Edit(_)) => {
-            build_footer_line(" EDIT ", Color::Green, FooterMode::Edit, &app.keymap)
+            build_footer_line(" EDIT ", theme::MODE_EDIT, FooterMode::Edit, model.keymap)
         }
-        (_, InputMode::Reorder) => {
-            build_footer_line(" REORDER ", Color::Green, FooterMode::Reorder, &app.keymap)
-        }
+        (_, InputMode::Reorder) => build_footer_line(
+            " REORDER ",
+            theme::MODE_REORDER,
+            FooterMode::Reorder,
+            model.keymap,
+        ),
         (_, InputMode::Confirm(_)) => RatatuiLine::from(vec![
             Span::styled(
                 " CONFIRM ",
-                Style::default().fg(Color::Black).bg(Color::Blue),
+                Style::default()
+                    .fg(theme::FOOTER_INVERSE_FG)
+                    .bg(theme::MODE_INTERFACE),
             ),
-            Span::styled("  y", Style::default().fg(Color::Gray)),
+            Span::styled("  y", Style::default().fg(theme::FOOTER_HINT)),
             Span::styled(" Yes  ", Style::default().dim()),
-            Span::styled("n/Esc", Style::default().fg(Color::Gray)),
+            Span::styled("n/Esc", Style::default().fg(theme::FOOTER_HINT)),
             Span::styled(" No", Style::default().dim()),
         ]),
         (_, InputMode::Selection(state)) => {
             let count = state.count();
             build_footer_line(
                 &format!(" SELECT ({count}) "),
-                Color::Green,
+                theme::MODE_SELECTION,
                 FooterMode::Selection,
-                &app.keymap,
+                model.keymap,
             )
         }
         (_, InputMode::Interface(InterfaceContext::Date(_))) => build_footer_line(
             " DATE ",
-            Color::Blue,
+            theme::MODE_INTERFACE,
             FooterMode::DateInterface,
-            &app.keymap,
+            model.keymap,
         ),
         (_, InputMode::Interface(InterfaceContext::Project(_))) => build_footer_line(
             " PROJECT ",
-            Color::Blue,
+            theme::MODE_INTERFACE,
             FooterMode::ProjectInterface,
-            &app.keymap,
+            model.keymap,
         ),
-        (_, InputMode::Interface(InterfaceContext::Tag(_))) => {
-            build_footer_line(" TAG ", Color::Blue, FooterMode::TagInterface, &app.keymap)
-        }
-        (ViewMode::Daily(_), InputMode::Normal) => {
-            build_footer_line(" DAILY ", Color::Cyan, FooterMode::NormalDaily, &app.keymap)
-        }
+        (_, InputMode::Interface(InterfaceContext::Tag(_))) => build_footer_line(
+            " TAG ",
+            theme::MODE_INTERFACE,
+            FooterMode::TagInterface,
+            model.keymap,
+        ),
+        (ViewMode::Daily(_), InputMode::Normal) => build_footer_line(
+            " DAILY ",
+            theme::MODE_DAILY,
+            FooterMode::NormalDaily,
+            model.keymap,
+        ),
         (ViewMode::Filter(_), InputMode::Normal) => build_footer_line(
             " FILTER ",
-            Color::Magenta,
+            theme::MODE_FILTER,
             FooterMode::NormalFilter,
-            &app.keymap,
+            model.keymap,
         ),
     }
 }
@@ -101,7 +131,7 @@ fn build_footer_line(
 ) -> RatatuiLine<'static> {
     let mut spans = vec![Span::styled(
         mode_name.to_string(),
-        Style::default().fg(Color::Black).bg(color),
+        Style::default().fg(theme::FOOTER_INVERSE_FG).bg(color),
     )];
 
     let context = footer_mode_to_context(mode);
@@ -111,6 +141,13 @@ fn build_footer_line(
     }
 
     RatatuiLine::from(spans)
+}
+
+fn prompt_line(prefix: &str, color: Color, content: &str) -> RatatuiLine<'static> {
+    RatatuiLine::from(vec![
+        Span::styled(prefix.to_string(), Style::default().fg(color)),
+        Span::raw(content.to_string()),
+    ])
 }
 
 fn action_spans(action: &KeyAction, keymap: &Keymap, context: KeyContext) -> [Span<'static>; 2] {
@@ -140,7 +177,10 @@ fn action_spans(action: &KeyAction, keymap: &Keymap, context: KeyContext) -> [Sp
     };
 
     [
-        Span::styled(format!("  {key_display}"), Style::default().fg(Color::Gray)),
+        Span::styled(
+            format!("  {key_display}"),
+            Style::default().fg(theme::FOOTER_KEY),
+        ),
         Span::styled(format!(" {} ", action.footer_text), Style::default().dim()),
     ]
 }

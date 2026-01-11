@@ -1,29 +1,27 @@
 use ratatui::{
-    style::{Color, Style, Stylize},
-    text::{Line as RatatuiLine, Span},
+    style::{Style, Stylize},
+    text::Span,
 };
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, EditContext, InputMode, ViewMode};
-use crate::storage::EntryType;
 
-use super::shared::{
-    date_suffix_style, entry_style, format_date_suffix, style_content, truncate_with_tags,
-    wrap_text,
-};
+use super::helpers::edit_text;
+use super::list_helpers::{build_edit_rows, header_line};
+use super::model::ListModel;
+use super::rows;
+use super::shared::{date_suffix_style, entry_style, format_date_suffix};
+use super::theme;
 
-pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
+pub fn build_filter_list(app: &App, width: usize) -> ListModel {
     let ViewMode::Filter(state) = &app.view else {
-        return vec![];
+        return ListModel::from_rows(None, Vec::new(), app.scroll_offset());
     };
 
-    let mut lines = Vec::new();
+    let mut rows = Vec::new();
 
     let header = format!("Filter: {}", state.query);
-    lines.push(RatatuiLine::from(Span::styled(
-        header,
-        Style::default().fg(Color::Magenta),
-    )));
+    let header_line = header_line(header, Style::default().fg(theme::MODE_FILTER));
 
     let is_quick_adding = matches!(
         app.input_mode,
@@ -40,131 +38,59 @@ pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> 
 
         let content_style = entry_style(&filter_entry.entry_type);
 
-        let text = if is_editing_this {
-            if let Some(ref buffer) = app.edit_buffer {
-                buffer.content().to_string()
-            } else {
-                filter_entry.content.clone()
-            }
-        } else {
-            filter_entry.content.clone()
-        };
+        let text = edit_text(app, is_editing_this, &filter_entry.content);
 
         let prefix = filter_entry.entry_type.prefix();
         let prefix_width = prefix.width();
 
-        let (date_suffix, date_suffix_width) = format_date_suffix(filter_entry.source_date);
-
         if is_selected {
             if is_editing_this {
-                let available = width.saturating_sub(prefix_width + date_suffix_width);
-                let wrapped = wrap_text(&text, available);
-                for (i, line_text) in wrapped.iter().enumerate() {
-                    let mut spans = if i == 0 {
-                        vec![Span::styled(prefix.to_string(), content_style)]
-                    } else {
-                        vec![Span::styled(" ".repeat(prefix_width), content_style)]
-                    };
-                    spans.extend(style_content(line_text, content_style));
-                    if i == 0 {
-                        spans.push(Span::styled(
-                            date_suffix.clone(),
-                            date_suffix_style(content_style),
-                        ));
-                    }
-                    lines.push(RatatuiLine::from(spans));
-                }
+                let (date_suffix, date_suffix_width) = format_date_suffix(filter_entry.source_date);
+                let text_width = width.saturating_sub(prefix_width + date_suffix_width);
+                rows.extend(build_edit_rows(
+                    &prefix.to_string(),
+                    prefix_width,
+                    content_style,
+                    &text,
+                    text_width,
+                    Some(Span::styled(date_suffix, date_suffix_style(content_style))),
+                ));
             } else {
-                let sel_prefix = match &filter_entry.entry_type {
-                    EntryType::Task { completed: false } => " [ ] ",
-                    EntryType::Task { completed: true } => " [x] ",
-                    EntryType::Note => " ",
-                    EntryType::Event => " ",
-                };
-                let available = width.saturating_sub(prefix_width + date_suffix_width);
-                let display_text = truncate_with_tags(&text, available);
-
-                let is_cursor_selected = if let InputMode::Selection(ref sel_state) = app.input_mode
-                {
-                    sel_state.is_selected(idx)
-                } else {
-                    false
-                };
-                let cursor_indicator = if is_cursor_selected {
-                    Span::styled("◉", Style::default().fg(Color::Green))
-                } else {
-                    Span::styled("→", Style::default().fg(Color::Cyan))
-                };
-                let mut spans = vec![cursor_indicator];
-                spans.push(Span::styled(sel_prefix.to_string(), content_style));
-                spans.extend(style_content(&display_text, content_style));
-                spans.push(Span::styled(date_suffix, date_suffix_style(content_style)));
-                lines.push(RatatuiLine::from(spans));
+                rows.push(rows::build_filter_selected_row(
+                    app,
+                    filter_entry,
+                    idx,
+                    width,
+                ));
             }
         } else {
-            let is_selected_in_selection =
-                if let InputMode::Selection(ref sel_state) = app.input_mode {
-                    sel_state.is_selected(idx)
-                } else {
-                    false
-                };
-
-            let available = width.saturating_sub(prefix_width + date_suffix_width);
-            let display_text = truncate_with_tags(&text, available);
-
-            let first_char = if is_selected_in_selection {
-                Span::styled("○", Style::default().fg(Color::Green))
-            } else {
-                Span::styled(
-                    prefix.chars().next().unwrap_or('-').to_string(),
-                    content_style,
-                )
-            };
-            let rest_of_prefix: String = prefix.chars().skip(1).collect();
-
-            let mut spans = vec![first_char, Span::styled(rest_of_prefix, content_style)];
-            spans.extend(style_content(&display_text, content_style));
-            spans.push(Span::styled(date_suffix, date_suffix_style(content_style)));
-            lines.push(RatatuiLine::from(spans));
+            rows.push(rows::build_filter_row(app, filter_entry, idx, width));
         }
     }
 
     if let InputMode::Edit(EditContext::FilterQuickAdd { entry_type, .. }) = &app.input_mode {
-        let text = if let Some(ref buffer) = app.edit_buffer {
-            buffer.content().to_string()
-        } else {
-            String::new()
-        };
+        let text = edit_text(app, true, "");
         let prefix = entry_type.prefix();
         let prefix_width = prefix.width();
-        let available = width.saturating_sub(prefix_width);
-        let wrapped = wrap_text(&text, available);
+        let text_width = width.saturating_sub(prefix_width);
 
         let content_style = entry_style(entry_type);
-        if wrapped.is_empty() {
-            lines.push(RatatuiLine::from(Span::styled(
-                prefix.to_string(),
-                content_style,
-            )));
-        } else {
-            for (i, line_text) in wrapped.iter().enumerate() {
-                let mut spans = if i == 0 {
-                    vec![Span::styled(prefix.to_string(), content_style)]
-                } else {
-                    vec![Span::styled(" ".repeat(prefix_width), content_style)]
-                };
-                spans.extend(style_content(line_text, content_style));
-                lines.push(RatatuiLine::from(spans));
-            }
-        }
+        rows.extend(build_edit_rows(
+            &prefix.to_string(),
+            prefix_width,
+            content_style,
+            &text,
+            text_width,
+            None,
+        ));
     }
 
     if state.entries.is_empty() && !is_quick_adding {
-        lines.push(RatatuiLine::from(Span::styled(
+        rows.push(rows::build_message_row(
             "(no matches)",
             Style::default().dim(),
-        )));
+        ));
     }
 
-    lines
+    ListModel::from_rows(Some(header_line), rows, app.scroll_offset())
 }

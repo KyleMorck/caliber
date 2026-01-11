@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
-use ical::parser::ical::component::IcalEvent;
 use ical::parser::ical::IcalParser;
+use ical::parser::ical::component::IcalEvent;
 use ical::property::Property;
 use rrule::{RRuleSet, Tz as RRuleTz};
 use std::collections::{HashMap, HashSet};
