@@ -64,7 +64,7 @@ pub fn render_container(
 pub fn render_list(f: &mut Frame<'_>, list: ListModel, layout: &ContainerLayout) {
     let scroll_offset = list.scroll.offset;
     let total_lines = list.scroll.total;
-    let lines = list.to_lines();
+    let lines = list.into_lines();
 
     #[allow(clippy::cast_possible_truncation)]
     let content = Paragraph::new(lines).scroll((scroll_offset as u16, 0));

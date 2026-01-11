@@ -48,7 +48,7 @@ pub fn build_filter_list(app: &App, width: usize) -> ListModel {
                 let (date_suffix, date_suffix_width) = format_date_suffix(filter_entry.source_date);
                 let text_width = width.saturating_sub(prefix_width + date_suffix_width);
                 rows.extend(build_edit_rows(
-                    &prefix.to_string(),
+                    prefix,
                     prefix_width,
                     content_style,
                     &text,
@@ -76,7 +76,7 @@ pub fn build_filter_list(app: &App, width: usize) -> ListModel {
 
         let content_style = entry_style(entry_type);
         rows.extend(build_edit_rows(
-            &prefix.to_string(),
+            prefix,
             prefix_width,
             content_style,
             &text,

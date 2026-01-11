@@ -95,7 +95,7 @@ pub fn build_daily_list(app: &App, width: usize) -> ListModel {
             if is_editing {
                 let text_width = width.saturating_sub(prefix_width);
                 rows.extend(build_edit_rows(
-                    &prefix.to_string(),
+                    prefix,
                     prefix_width,
                     content_style,
                     &text,

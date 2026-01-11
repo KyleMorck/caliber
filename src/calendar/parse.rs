@@ -72,6 +72,7 @@ pub fn parse_ics(
     Ok(IcsParseResult { events })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn parse_event(
     event: &IcalEvent,
     calendar_id: &str,

@@ -23,13 +23,13 @@ impl ListModel {
     }
 
     #[must_use]
-    pub fn to_lines(self) -> Vec<RatatuiLine<'static>> {
+    pub fn into_lines(self) -> Vec<RatatuiLine<'static>> {
         let header_count = self.header.as_ref().map_or(0, |_| 1);
         let mut lines = Vec::with_capacity(self.rows.len() + header_count);
         if let Some(header) = self.header {
             lines.push(header);
         }
-        lines.extend(self.rows.into_iter().map(RowModel::to_line));
+        lines.extend(self.rows.into_iter().map(RowModel::into_line));
         lines
     }
 }
@@ -69,7 +69,7 @@ impl RowModel {
     }
 
     #[must_use]
-    pub fn to_line(self) -> RatatuiLine<'static> {
+    pub fn into_line(self) -> RatatuiLine<'static> {
         let mut spans = Vec::with_capacity(
             self.content.len()
                 + usize::from(self.indicator.is_some())

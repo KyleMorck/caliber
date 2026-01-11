@@ -115,7 +115,7 @@ impl TestContext {
         let context = ui::RenderContext::for_test(80, 24);
         let _ = ui::prepare_render(&mut self.app, &context);
         ui::build_daily_list(&self.app, context.content_width)
-            .to_lines()
+            .into_lines()
             .iter()
             .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect())
             .collect()
@@ -125,7 +125,7 @@ impl TestContext {
         let context = ui::RenderContext::for_test(80, 24);
         let _ = ui::prepare_render(&mut self.app, &context);
         ui::build_filter_list(&self.app, context.content_width)
-            .to_lines()
+            .into_lines()
             .iter()
             .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect())
             .collect()

@@ -37,11 +37,11 @@ pub use shared::{
 pub use view_model::build_view_model;
 
 pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
-    daily::build_daily_list(app, width).to_lines()
+    daily::build_daily_list(app, width).into_lines()
 }
 
 pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
-    filter::build_filter_list(app, width).to_lines()
+    filter::build_filter_list(app, width).into_lines()
 }
 
 pub fn render_footer(app: &App) -> RatatuiLine<'static> {

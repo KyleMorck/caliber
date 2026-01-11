@@ -90,7 +90,7 @@ pub fn build_daily_entry_row(
     let prefix = entry.prefix();
     let prefix_width = prefix.width();
 
-    let (first_char, rest_of_prefix) = split_prefix(&prefix);
+    let (first_char, rest_of_prefix) = split_prefix(prefix);
     let indicator = get_entry_indicator(
         app,
         is_selected,
@@ -144,7 +144,7 @@ pub fn build_filter_row(app: &App, entry: &Entry, index: usize, width: usize) ->
     let available = width.saturating_sub(prefix_width + date_suffix_width);
     let display_text = truncate_with_tags(&text, available);
 
-    let (first_char, rest_of_prefix) = split_prefix(&prefix);
+    let (first_char, rest_of_prefix) = split_prefix(prefix);
     let first_char = filter_list_indicator(app, &first_char, index, content_style);
 
     RowModel::new(
