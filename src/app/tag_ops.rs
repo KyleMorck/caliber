@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::storage;
 
-use super::{App, ViewMode};
+use super::{App, InputMode, ViewMode};
 
 fn is_valid_tag_boundary(journal: &str, end_pos: usize) -> bool {
     end_pos >= journal.len() || {
@@ -67,6 +67,14 @@ impl App {
 
         storage::save_journal(&path, &cleaned)?;
         Ok(count)
+    }
+
+    pub fn confirm_delete_tag(&mut self, tag: &str) -> io::Result<()> {
+        let count = self.delete_all_tag_occurrences(tag)?;
+        self.refresh_view_after_tag_change()?;
+        self.set_status(format!("Deleted {count} tag occurrences"));
+        self.input_mode = InputMode::Normal;
+        Ok(())
     }
 
     pub(super) fn rename_tag_occurrences(

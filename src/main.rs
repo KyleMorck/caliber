@@ -154,18 +154,12 @@ fn run_app<B: ratatui::backend::Backend>(
         {
             app.status_message = None;
 
-            if app.help_visible {
-                handlers::handle_help_key(&mut app, key);
-            } else {
-                match &app.input_mode {
-                    InputMode::Prompt(_) => handlers::handle_prompt_key(&mut app, key)?,
-                    InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
-                    InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
-                    InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
-                    InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
-                    InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
-                    InputMode::Interface(_) => handlers::handle_interface_key(&mut app, key)?,
-                }
+            match &app.input_mode {
+                InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
+                InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
+                InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
+                InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
+                InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
             }
         }
 

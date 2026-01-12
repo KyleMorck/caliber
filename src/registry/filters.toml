@@ -9,29 +9,21 @@
 syntax = "!tasks"
 category = "entry_type"
 help = "Incomplete tasks"
-readme = "Filter to show only incomplete tasks (- [ ] entries)"
-completion_hint = "Filter to show only incomplete tasks (- [ ] entries)"
 
 [[filter]]
 syntax = "!completed"
 category = "entry_type"
 help = "Completed tasks"
-readme = "Filter to show only completed tasks (- [x] entries)"
-completion_hint = "Filter to show only completed tasks (- [x] entries)"
 
 [[filter]]
 syntax = "!notes"
 category = "entry_type"
 help = "Notes only"
-readme = "Filter to show only notes (- entries without checkbox)"
-completion_hint = "Filter to show only notes (- entries without checkbox)"
 
 [[filter]]
 syntax = "!events"
 category = "entry_type"
 help = "Events only"
-readme = "Filter to show only events (* entries)"
-completion_hint = "Filter to show only events (* entries)"
 
 # =============================================================================
 # Date Operation Filters
@@ -42,45 +34,33 @@ syntax = "@on:"
 display = "@on:DATE"
 category = "date_op"
 help = "Entries on date"
-readme = "Filter entries from a single day. Supports relative dates."
-completion_hint = "Filter entries from a single day. Supports relative dates."
 
 [[filter]]
 syntax = "@before:"
 display = "@before:DATE"
 category = "date_op"
 help = "Entries before date"
-readme = "Filter entries from days on or before DATE (inclusive). Supports relative dates."
-completion_hint = "Filter entries from days on or before DATE (inclusive). Supports relative dates."
 
 [[filter]]
 syntax = "@after:"
 display = "@after:DATE"
 category = "date_op"
 help = "Entries after date"
-readme = "Filter entries from days on or after DATE (inclusive). Supports relative dates."
-completion_hint = "Filter entries from days on or after DATE (inclusive). Supports relative dates."
 
 [[filter]]
 syntax = "@overdue"
 category = "date_op"
 help = "Entries with past @date"
-readme = "Filter entries that have @date patterns targeting a date before today"
-completion_hint = "Filter entries that have @date patterns targeting a date before today"
 
 [[filter]]
 syntax = "@later"
 category = "date_op"
 help = "Entries with @date patterns"
-readme = "Filter entries that have @date patterns (one-time scheduled entries)"
-completion_hint = "Filter entries that have @date patterns (one-time scheduled entries)"
 
 [[filter]]
 syntax = "@recurring"
 category = "date_op"
 help = "Entries with @every-* patterns"
-readme = "Filter entries with recurring patterns (@every-day, @every-weekday, @every-monday, etc.)"
-completion_hint = "Filter entries with recurring patterns (@every-day, @every-weekday, @every-monday, etc.)"
 
 # =============================================================================
 # Negation Patterns
@@ -90,22 +70,16 @@ completion_hint = "Filter entries with recurring patterns (@every-day, @every-we
 syntax = "not:#tag"
 category = "negation"
 help = "Entries without tag"
-readme = "Exclude entries that contain the specified tag"
-completion_hint = "Exclude entries that contain the specified tag"
 
 [[filter]]
 syntax = "not:!type"
 category = "negation"
 help = "Exclude entry type"
-readme = "Exclude entries of the specified type (tasks, notes, or events)"
-completion_hint = "Exclude entries of the specified type (tasks, notes, or events)"
 
 [[filter]]
 syntax = "not:word"
 category = "negation"
 help = "Entries not containing text"
-readme = "Exclude entries that contain the specified text"
-completion_hint = "Exclude entries that contain the specified text"
 
 # =============================================================================
 # Other Patterns (for documentation)
@@ -115,19 +89,13 @@ completion_hint = "Exclude entries that contain the specified text"
 syntax = "#tag"
 category = "tag"
 help = "Entries with tag"
-readme = "Filter entries that contain the specified tag"
-completion_hint = "Filter entries that contain the specified tag"
 
 [[filter]]
 syntax = "$name"
 category = "saved_filter"
 help = "Saved filter"
-readme = "Expand a saved filter defined in config.toml"
-completion_hint = "Expand a saved filter defined in config.toml"
 
 [[filter]]
 syntax = "word"
 category = "text_search"
 help = "Entries containing text"
-readme = "Filter entries that contain the specified text (case-insensitive)"
-completion_hint = "Filter entries that contain the specified text (case-insensitive)"

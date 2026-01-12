@@ -517,13 +517,13 @@ impl HintContext {
 
         match effective {
             Self::Commands { prefix, matches } if !prefix.is_empty() => {
-                matches.first().map(|c| c.completion_hint)
+                matches.first().map(|c| c.help)
             }
             Self::FilterTypes { prefix, matches } if !prefix.is_empty() => {
-                matches.first().map(|f| f.completion_hint)
+                matches.first().map(|f| f.help)
             }
             Self::DateOps { prefix, matches } if !prefix.is_empty() => {
-                matches.first().map(|f| f.completion_hint)
+                matches.first().map(|f| f.help)
             }
             Self::DateValues {
                 prefix, matches, ..

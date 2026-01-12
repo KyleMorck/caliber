@@ -5,16 +5,9 @@ use chrono::Local;
 use crate::cursor::CursorBuffer;
 use crate::storage::{self, EntryType};
 
-use super::{
-    App, EditContext, FILTER_HEADER_LINES, FilterState, InputMode, PromptContext, ViewMode,
-};
+use super::{App, EditContext, FILTER_HEADER_LINES, FilterState, InputMode, ViewMode};
 
 impl App {
-    pub fn enter_filter_input(&mut self) {
-        self.enter_filter_mode();
-        self.update_hints();
-    }
-
     /// Switch to filter view with the given query.
     fn reset_filter_view(&mut self, query: String) -> io::Result<()> {
         let (query, unknown_filters) = storage::expand_saved_filters(&query, &self.config.filters);
@@ -42,17 +35,12 @@ impl App {
         Ok(())
     }
 
-    /// Extracts the query from the prompt buffer.
-    fn extract_query_buffer(&mut self) -> String {
-        match &self.input_mode {
-            InputMode::Prompt(PromptContext::Filter { buffer }) => buffer.content().to_string(),
-            _ => String::new(),
-        }
-    }
-
     pub fn execute_filter(&mut self) -> io::Result<()> {
         self.save();
-        let query = self.extract_query_buffer();
+        let query = self
+            .last_filter_query
+            .clone()
+            .unwrap_or_else(|| self.config.default_filter.clone());
         self.input_mode = InputMode::Normal;
         self.reset_filter_view(query)
     }
@@ -60,10 +48,6 @@ impl App {
     pub fn quick_filter(&mut self, query: &str) -> io::Result<()> {
         self.save();
         self.reset_filter_view(query.to_string())
-    }
-
-    pub fn cancel_filter_input(&mut self) {
-        self.input_mode = InputMode::Normal;
     }
 
     pub fn cancel_filter(&mut self) {

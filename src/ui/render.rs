@@ -29,14 +29,10 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
 
     render_header_bar(f, context.header_area, view_model.header);
 
-    let mut overlay_area = context.main_area;
     for (panel_id, rect) in layout_nodes(context.main_area, &view_model.layout) {
         if let Some(panel) = view_model.panels.get(panel_id) {
             let focused = view_model.focused_panel == Some(panel_id);
             let container_layout = render_container_in_area(f, rect, &panel.config, focused);
-            if focused {
-                overlay_area = container_layout.content_area;
-            }
             match &panel.content {
                 PanelContent::EntryList(list) => {
                     render_list(f, list.clone(), &container_layout);
@@ -49,14 +45,7 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
         f,
         view_model.overlays,
         OverlayLayout {
-            content_area: overlay_area,
-            footer_area: context.footer_area,
-            help_popup_area: context.help_popup_area,
             screen_area: context.size,
         },
     );
-
-    if let Some((cursor_x, cursor_y)) = view_model.cursor.prompt {
-        f.set_cursor_position((cursor_x, cursor_y));
-    }
 }

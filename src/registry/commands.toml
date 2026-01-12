@@ -4,29 +4,19 @@
 [[command]]
 name = "date"
 help = "Open date interface"
-readme = "Open date interface"
-completion_hint = "Open date interface"
 
 [[command]]
 name = "project"
 help = "Open project interface"
-readme = "Open project interface"
-completion_hint = "Open project interface"
 
 [[command]]
 name = "tag"
 help = "Open tag interface"
-readme = "Open tag interface"
-completion_hint = "Open tag interface to manage tags"
 
 [[command]]
 name = "scratchpad"
 help = "Open scratchpad for quick notes"
-readme = "Open scratchpad for quick notes"
-completion_hint = "Open scratchpad for quick notes"
 
 [[command]]
 name = "quit"
 help = "Quit application"
-readme = "Save and exit the application."
-completion_hint = "Save and exit the application."

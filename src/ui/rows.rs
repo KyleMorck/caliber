@@ -97,14 +97,14 @@ pub fn build_filter_selected_row(app: &App, entry: &Entry, index: usize, width: 
     let prefix_width = prefix.width();
     let (date_suffix, date_suffix_width) = format_date_suffix(entry.source_date);
 
-    let sel_prefix = format!(" {}", entry.entry_type.prefix());
+    let (_, rest_of_prefix) = split_prefix(prefix);
     let available = width.saturating_sub(prefix_width + date_suffix_width);
     let display_text = truncate_with_tags(&text, available);
 
     let resolver = IndicatorResolver::new(app);
     RowModel::new(
         Some(resolver.filter_cursor_indicator(index)),
-        Some(Span::styled(sel_prefix.to_string(), content_style)),
+        Some(Span::styled(rest_of_prefix, content_style)),
         style_content(&display_text, content_style),
         Some(Span::styled(date_suffix, date_suffix_style(content_style))),
     )

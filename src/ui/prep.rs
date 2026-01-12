@@ -1,6 +1,6 @@
 use crate::app::{
     App, DAILY_HEADER_LINES, DATE_SUFFIX_WIDTH, EditContext, FILTER_HEADER_LINES, InputMode,
-    InterfaceContext, PromptContext, ViewMode,
+    ViewMode,
 };
 use crate::cursor::cursor_position_in_wrap;
 use crate::storage::Line;
@@ -11,7 +11,6 @@ use super::scroll::{CursorContext, ensure_selected_visible};
 
 pub struct RenderPrep {
     pub edit_cursor: Option<CursorContext>,
-    pub prompt_cursor: Option<(u16, u16)>,
 }
 
 /// Prepares render state and mutates view scroll offsets for visibility.
@@ -43,32 +42,6 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
             );
             if state.selected == 0 {
                 state.scroll_offset = 0;
-            }
-        }
-    }
-
-    if app.help_visible {
-        app.help_visible_height = layout.help_visible_height;
-    }
-
-    if let InputMode::Interface(ref mut ctx) = app.input_mode {
-        match ctx {
-            InterfaceContext::Date(_) => {}
-            InterfaceContext::Project(state) => {
-                prep_interface_scroll(
-                    &mut state.scroll_offset,
-                    state.selected,
-                    state.projects.len(),
-                    layout.interface_visible_height,
-                );
-            }
-            InterfaceContext::Tag(state) => {
-                prep_interface_scroll(
-                    &mut state.scroll_offset,
-                    state.selected,
-                    state.tags.len(),
-                    layout.interface_visible_height,
-                );
             }
         }
     }
@@ -149,38 +122,5 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
         None
     };
 
-    let prompt_cursor = if let InputMode::Prompt(ref ctx) = app.input_mode {
-        let (prefix_width, cursor_pos) = prompt_cursor_offsets(ctx);
-        let cursor_x = layout.footer_area.x + prefix_width + cursor_pos as u16;
-        let cursor_y = layout.footer_area.y;
-        Some((cursor_x, cursor_y))
-    } else {
-        None
-    };
-
-    RenderPrep {
-        edit_cursor,
-        prompt_cursor,
-    }
-}
-
-fn prompt_cursor_offsets(ctx: &PromptContext) -> (u16, usize) {
-    match ctx {
-        PromptContext::Command { buffer } | PromptContext::Filter { buffer } => {
-            (1, buffer.cursor_display_pos())
-        }
-        PromptContext::RenameTag { old_tag, buffer } => {
-            let rename_prefix_width = "Rename #".len() + old_tag.len() + " to: ".len();
-            (rename_prefix_width as u16, buffer.cursor_display_pos())
-        }
-    }
-}
-
-fn prep_interface_scroll(
-    scroll_offset: &mut usize,
-    selected: usize,
-    total: usize,
-    visible_height: usize,
-) {
-    ensure_selected_visible(scroll_offset, selected, total, visible_height);
+    RenderPrep { edit_cursor }
 }

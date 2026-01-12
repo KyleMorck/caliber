@@ -1,9 +1,10 @@
+use ratatui::style::Color;
+
 use crate::app::App;
 
 use super::super::container::ContainerConfig;
 use super::super::filter::build_filter_list;
 use super::super::layout::PanelId;
-use super::super::theme;
 use super::super::view_model::{PanelContent, PanelModel};
 use super::ViewSpec;
 
@@ -13,8 +14,8 @@ pub fn build_filter_view_spec(
 ) -> ViewSpec {
     let config = ContainerConfig {
         title: None,
-        border_color: theme::BORDER_FILTER,
-        focused_border_color: Some(theme::BORDER_FOCUSED),
+        border_color: Color::Reset,
+        focused_border_color: None,
     };
     let list = build_filter_list(app, context.content_width);
 
