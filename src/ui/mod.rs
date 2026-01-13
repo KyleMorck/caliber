@@ -1,3 +1,4 @@
+mod agenda_widget;
 mod autocomplete;
 mod calendar;
 mod container;

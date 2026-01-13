@@ -178,7 +178,6 @@ impl Action for RestoreEntries {
                     }
                 }
             }
-            ViewMode::Agenda(_) => {}
         }
 
         Ok(Box::new(DeleteEntries {

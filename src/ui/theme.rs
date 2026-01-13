@@ -104,6 +104,27 @@ pub const GLYPH_PROJECTED_CALENDAR: &str = "○";
 pub const GLYPH_SCROLL_UP: &str = "▲";
 pub const GLYPH_SCROLL_DOWN: &str = "▼";
 pub const GLYPH_SCROLL_BOTH: &str = "▲▼";
+pub const GLYPH_AGENDA_CALENDAR: char = '○';
+pub const GLYPH_AGENDA_EVENT: char = '*';
+pub const GLYPH_AGENDA_RECURRING: char = '↪';
+pub const GLYPH_AGENDA_FALLBACK: char = '•';
 
 pub const SCROLL_LABEL: &str = " scroll";
 pub const SCROLL_PADDING: &str = " ";
+
+// Tab bar
+pub const TAB_ACTIVE: Color = Color::Cyan;
+pub const TAB_DIVIDER: &str = "   ";
+pub const TAB_PADDING: usize = 2;
+
+// Sidebar layout
+pub const CALENDAR_PANEL_HEIGHT: u16 = 10;
+pub const UPCOMING_MIN_HEIGHT: u16 = 3;
+
+// Agenda widget
+pub const AGENDA_MIN_ENTRIES: usize = 7;
+pub const AGENDA_MAX_DAYS_SEARCH: i64 = 365;
+pub const AGENDA_DATE_WIDTH: usize = 12;
+pub const AGENDA_ENTRY_PADDING: usize = 5;
+pub const AGENDA_MIN_GUTTER: u16 = 20;
+pub const AGENDA_BORDER_WIDTH: usize = 2;

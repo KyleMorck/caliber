@@ -63,45 +63,30 @@ pub fn remove_all_trailing_tags(text: &str) -> Option<String> {
 }
 
 pub fn style_content(text: &str, base_style: Style) -> Vec<Span<'static>> {
-    let mut spans = Vec::new();
-    let mut last_end = 0;
-
-    let tag_color = theme::ENTRY_TAG;
-    let date_color = theme::ENTRY_DATE;
-
     let mut matches: Vec<(usize, usize, Color)> = Vec::new();
 
-    for cap in TAG_REGEX.captures_iter(text) {
-        if let Some(m) = cap.get(0) {
-            matches.push((m.start(), m.end(), tag_color));
+    let collect_matches = |regex: &regex::Regex, color: Color, matches: &mut Vec<_>| {
+        for cap in regex.captures_iter(text) {
+            if let Some(m) = cap.get(0) {
+                matches.push((m.start(), m.end(), color));
+            }
         }
-    }
+    };
 
-    for cap in LATER_DATE_REGEX.captures_iter(text) {
-        if let Some(m) = cap.get(0) {
-            matches.push((m.start(), m.end(), date_color));
-        }
-    }
-
-    for cap in RELATIVE_DATE_REGEX.captures_iter(text) {
-        if let Some(m) = cap.get(0) {
-            matches.push((m.start(), m.end(), date_color));
-        }
-    }
-
-    for cap in RECURRING_REGEX.captures_iter(text) {
-        if let Some(m) = cap.get(0) {
-            matches.push((m.start(), m.end(), date_color));
-        }
-    }
+    collect_matches(&TAG_REGEX, theme::ENTRY_TAG, &mut matches);
+    collect_matches(&LATER_DATE_REGEX, theme::ENTRY_DATE, &mut matches);
+    collect_matches(&RELATIVE_DATE_REGEX, theme::ENTRY_DATE, &mut matches);
+    collect_matches(&RECURRING_REGEX, theme::ENTRY_DATE, &mut matches);
 
     matches.sort_by_key(|(start, _, _)| *start);
+
+    let mut spans = Vec::new();
+    let mut last_end = 0;
 
     for (start, end, color) in matches {
         if start > last_end {
             spans.push(Span::styled(text[last_end..start].to_string(), base_style));
         }
-        // Apply base style modifiers (like DIM) to colored spans
         spans.push(Span::styled(
             text[start..end].to_string(),
             base_style.fg(color),
@@ -154,7 +139,7 @@ pub fn split_trailing_tags(text: &str) -> (&str, Option<&str>) {
     }
 }
 
-/// Truncate text while preserving trailing tags when possible
+/// Truncate text while preserving trailing tags (right-aligned when truncated)
 #[must_use]
 pub fn truncate_with_tags(text: &str, max_width: usize) -> String {
     let (content, tags) = split_trailing_tags(text);
@@ -175,11 +160,17 @@ pub fn truncate_with_tags(text: &str, max_width: usize) -> String {
         return truncate_text(tags, max_width);
     }
 
+    // No truncation needed - keep tags in natural position
     if trimmed_content.width() <= content_width {
-        format!("{} {}", trimmed_content, tags)
-    } else {
-        format!("{} {}", truncate_text(trimmed_content, content_width), tags)
+        return format!("{} {}", trimmed_content, tags);
     }
+
+    // Truncation needed - right-align tags
+    let truncated = truncate_text(trimmed_content, content_width);
+    let used_width = truncated.width() + 1 + tags.width();
+    let padding = max_width.saturating_sub(used_width);
+
+    format!("{}{} {}", truncated, " ".repeat(padding), tags)
 }
 
 /// Format a key spec for user-facing display

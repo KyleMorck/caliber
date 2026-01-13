@@ -77,19 +77,6 @@ pub struct FilterState {
     pub scroll_offset: usize,
 }
 
-/// State specific to the Agenda view (stub for now)
-#[derive(Clone, Default)]
-pub struct AgendaState {
-    pub scroll_offset: usize,
-}
-
-impl AgendaState {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
 /// Which palette is currently active
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CommandPaletteMode {
@@ -200,7 +187,6 @@ pub struct TagInfo {
 pub enum ViewMode {
     Daily(DailyState),
     Filter(FilterState),
-    Agenda(AgendaState),
 }
 
 /// Context for what is being edited
@@ -247,6 +233,13 @@ pub enum InsertPosition {
     Above,
 }
 
+/// Which sidebar is currently shown
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SidebarType {
+    Calendar,
+    Agenda,
+}
+
 /// The currently selected item, accounting for hidden completed entries
 pub enum SelectedItem<'a> {
     Projected {
@@ -288,7 +281,7 @@ pub struct App {
     pub original_edit_content: Option<String>,
     pub calendar_store: CalendarStore,
     pub calendar_state: CalendarState,
-    pub show_calendar_sidebar: bool,
+    pub active_sidebar: Option<SidebarType>,
     pub runtime_handle: Option<Handle>,
     pub calendar_rx: Option<mpsc::Receiver<crate::calendar::CalendarFetchResult>>,
     pub calendar_tx: Option<mpsc::Sender<crate::calendar::CalendarFetchResult>>,
@@ -362,7 +355,7 @@ impl App {
             original_edit_content: None,
             calendar_store: CalendarStore::new(),
             calendar_state: CalendarState::new(date),
-            show_calendar_sidebar: true,
+            active_sidebar: Some(SidebarType::Calendar),
             runtime_handle,
             calendar_rx,
             calendar_tx,

@@ -5,7 +5,7 @@ use chrono::{Datelike, Days, Local, Months, NaiveDate};
 
 use crate::storage::{self, DayInfo};
 
-use super::App;
+use super::{App, SidebarType};
 
 #[derive(Clone, Debug)]
 pub struct CalendarState {
@@ -32,12 +32,22 @@ impl App {
     }
 
     #[must_use]
-    pub fn show_calendar_sidebar(&self) -> bool {
-        self.show_calendar_sidebar
+    pub fn active_sidebar(&self) -> Option<SidebarType> {
+        self.active_sidebar
     }
 
     pub fn toggle_calendar_sidebar(&mut self) {
-        self.show_calendar_sidebar = !self.show_calendar_sidebar;
+        self.active_sidebar = match self.active_sidebar {
+            Some(SidebarType::Calendar) => None,
+            _ => Some(SidebarType::Calendar),
+        };
+    }
+
+    pub fn toggle_agenda(&mut self) {
+        self.active_sidebar = match self.active_sidebar {
+            Some(SidebarType::Agenda) => None,
+            _ => Some(SidebarType::Agenda),
+        };
     }
 
     pub fn sync_calendar_state(&mut self, date: NaiveDate) {

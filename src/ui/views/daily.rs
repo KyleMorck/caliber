@@ -25,5 +25,8 @@ pub(crate) fn list_content_height_for_daily(context: &RenderContext) -> usize {
 }
 
 fn list_panel_content_area(context: &RenderContext) -> ratatui::layout::Rect {
-    content_area_for(context.content_area, &view_content_container_config(theme::BORDER_DAILY))
+    content_area_for(
+        context.content_area,
+        &view_content_container_config(theme::BORDER_DAILY),
+    )
 }

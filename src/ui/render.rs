@@ -5,8 +5,9 @@ use ratatui::text::{Line as RatatuiLine, Span};
 use ratatui::widgets::{Borders, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
-use crate::app::{App, ViewMode};
+use crate::app::{App, SidebarType, ViewMode};
 
+use super::agenda_widget::build_agenda_widget;
 use super::autocomplete::render_autocomplete_dropdown;
 use super::calendar::{CalendarModel, render_calendar};
 use super::container::{ContainerConfig, render_container_in_area, render_list};
@@ -21,10 +22,17 @@ use super::view_model::{PanelContent, build_view_model};
 
 pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
     let base_context = RenderContext::new(f.area());
-    let sidebar_width = if app.show_calendar_sidebar() {
-        CalendarModel::panel_width()
-    } else {
-        0
+    let sidebar_width = match app.active_sidebar() {
+        Some(SidebarType::Calendar) => CalendarModel::panel_width(),
+        Some(SidebarType::Agenda) => {
+            let max_width = base_context
+                .main_area
+                .width
+                .saturating_sub(theme::AGENDA_MIN_GUTTER);
+            let agenda = build_agenda_widget(app, max_width as usize, true);
+            (agenda.required_width() as u16 + theme::AGENDA_BORDER_WIDTH as u16).min(max_width)
+        }
+        None => 0,
     };
     let context = base_context.with_sidebar(sidebar_width);
 
@@ -39,7 +47,6 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
     let selected_tab = match &app.view {
         ViewMode::Daily(_) => 0,
         ViewMode::Filter(_) => 1,
-        ViewMode::Agenda(_) => 2,
     };
     render_view_tabs(f, &context, &date_label, selected_tab);
 
@@ -65,7 +72,11 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
     }
 
     if let Some(sidebar_area) = context.sidebar_area {
-        render_sidebar(f, app, sidebar_area);
+        match app.active_sidebar() {
+            Some(SidebarType::Calendar) => render_calendar_sidebar(f, app, sidebar_area),
+            Some(SidebarType::Agenda) => render_agenda_sidebar(f, app, sidebar_area),
+            None => {}
+        }
     }
 
     if let (Some(cursor), Some(content_area)) = (view_model.cursor.edit.as_ref(), list_content_area)
@@ -90,8 +101,6 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
 }
 
 fn render_view_tabs(f: &mut Frame<'_>, context: &RenderContext, date_label: &str, selected: usize) {
-    use ratatui::style::Color;
-
     let tabs_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(1)])
@@ -100,13 +109,13 @@ fn render_view_tabs(f: &mut Frame<'_>, context: &RenderContext, date_label: &str
     let tabs_row = tabs_layout[0];
     let rule_row = tabs_layout[1];
 
-    let tab_labels = [date_label, "Filter", "Agenda"];
+    let tab_labels = [date_label, "Filter"];
 
     let mut tab_spans = Vec::new();
     for (i, label) in tab_labels.iter().enumerate() {
         let style = if i == selected {
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme::TAB_ACTIVE)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
@@ -116,22 +125,20 @@ fn render_view_tabs(f: &mut Frame<'_>, context: &RenderContext, date_label: &str
         tab_spans.push(Span::styled((*label).to_string(), style));
     }
 
-    let divider = "   ";
-    let padding = 2usize;
     let mut line_spans = Vec::new();
-    line_spans.push(Span::raw(" ".repeat(padding)));
+    line_spans.push(Span::raw(" ".repeat(theme::TAB_PADDING)));
     for (i, span) in tab_spans.into_iter().enumerate() {
         line_spans.push(span);
         if i + 1 < tab_labels.len() {
-            line_spans.push(Span::raw(divider));
+            line_spans.push(Span::raw(theme::TAB_DIVIDER));
         }
     }
     let tabs_line = RatatuiLine::from(line_spans);
     f.render_widget(Paragraph::new(tabs_line), tabs_row);
 
-    let divider_width = divider.width();
+    let divider_width = theme::TAB_DIVIDER.width();
     let mut starts = Vec::new();
-    let mut cursor = padding;
+    let mut cursor = theme::TAB_PADDING;
     for (index, label) in tab_labels.iter().enumerate() {
         starts.push(cursor);
         cursor += label.width();
@@ -157,7 +164,7 @@ fn render_view_tabs(f: &mut Frame<'_>, context: &RenderContext, date_label: &str
     if highlight_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(highlight_len),
-            Style::default().fg(Color::Cyan),
+            Style::default().fg(theme::TAB_ACTIVE),
         ));
     }
     if after_len > 0 {
@@ -171,13 +178,24 @@ fn render_view_tabs(f: &mut Frame<'_>, context: &RenderContext, date_label: &str
     f.render_widget(Paragraph::new(rule_line), rule_row);
 }
 
-fn render_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
+fn render_calendar_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
     let calendar_state = app.calendar_state();
-    let calendar_height = CalendarModel::panel_height().min(sidebar_area.height);
-    let blank_height = sidebar_area.height.saturating_sub(calendar_height);
 
-    let base_config = ContainerConfig {
-        title: None,
+    let split = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(theme::CALENDAR_PANEL_HEIGHT),
+            Constraint::Min(theme::UPCOMING_MIN_HEIGHT),
+        ])
+        .split(sidebar_area);
+
+    let calendar_area = split[0];
+    let upcoming_area = split[1];
+
+    let calendar_config = ContainerConfig {
+        title: Some(RatatuiLine::from(
+            calendar_state.display_month.format(" %B %Y ").to_string(),
+        )),
         border_color: theme::BORDER_DAILY,
         focused_border_color: None,
         padded: false,
@@ -185,19 +203,6 @@ fn render_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
         rounded: true,
     };
 
-    let calendar_area = Rect {
-        height: calendar_height,
-        ..sidebar_area
-    };
-    let calendar_config = ContainerConfig {
-        title: Some(RatatuiLine::from(
-            calendar_state
-                .display_month
-                .format(" %B %Y ")
-                .to_string(),
-        )),
-        ..base_config
-    };
     let calendar_layout = render_container_in_area(f, calendar_area, &calendar_config, false);
     let calendar_model = CalendarModel {
         selected: calendar_state.selected,
@@ -206,12 +211,35 @@ fn render_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
     };
     render_calendar(f, &calendar_model, calendar_layout.content_area);
 
-    if blank_height > 0 {
-        let blank_area = Rect {
-            y: sidebar_area.y.saturating_add(calendar_height),
-            height: blank_height,
-            ..sidebar_area
-        };
-        render_container_in_area(f, blank_area, &base_config, false);
-    }
+    let upcoming_config = ContainerConfig {
+        title: Some(RatatuiLine::from(" Upcoming ")),
+        border_color: theme::BORDER_DAILY,
+        focused_border_color: None,
+        padded: false,
+        borders: Borders::ALL,
+        rounded: true,
+    };
+
+    let upcoming_layout = render_container_in_area(f, upcoming_area, &upcoming_config, false);
+    let agenda = build_agenda_widget(app, upcoming_layout.content_area.width as usize, false);
+    let lines = agenda.render_lines();
+    let content = Paragraph::new(lines);
+    f.render_widget(content, upcoming_layout.content_area);
+}
+
+fn render_agenda_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
+    let config = ContainerConfig {
+        title: Some(RatatuiLine::from(" Agenda ")),
+        border_color: theme::BORDER_DAILY,
+        focused_border_color: None,
+        padded: false,
+        borders: Borders::ALL,
+        rounded: true,
+    };
+
+    let layout = render_container_in_area(f, sidebar_area, &config, false);
+    let agenda = build_agenda_widget(app, layout.content_area.width as usize, true);
+    let lines = agenda.render_lines();
+    let content = Paragraph::new(lines);
+    f.render_widget(content, layout.content_area);
 }

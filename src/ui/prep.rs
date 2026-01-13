@@ -52,7 +52,6 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
                 state.scroll_offset = 0;
             }
         }
-        ViewMode::Agenda(_) => {}
     }
 
     let edit_cursor = if let InputMode::Edit(ref ctx) = app.input_mode

@@ -195,7 +195,12 @@ contexts = ["edit"]
 
 [[action]]
 key_action_id = "toggle_calendar_sidebar"
-default_keys = ["\\"]
+default_keys = ["."]
+contexts = ["shared_normal"]
+
+[[action]]
+key_action_id = "toggle_agenda"
+default_keys = [","]
 contexts = ["shared_normal"]
 
 [[action]]

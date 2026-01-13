@@ -38,7 +38,6 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
             InputMode::Normal => match app.view {
                 ViewMode::Daily(_) => app.new_task(InsertPosition::Bottom),
                 ViewMode::Filter(_) => app.filter_quick_add(),
-                ViewMode::Agenda(_) => {}
             },
             _ => {}
         },
@@ -203,6 +202,9 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         ToggleCalendarSidebar => {
             app.toggle_calendar_sidebar();
         }
+        ToggleAgenda => {
+            app.toggle_agenda();
+        }
         FilterQuickAdd => app.filter_quick_add(),
         Refresh => {
             app.refresh_filter()?;
@@ -251,7 +253,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 
     let spec = KeySpec::from_event(&key);
     let context = match &app.view {
-        ViewMode::Daily(_) | ViewMode::Agenda(_) => KeyContext::DailyNormal,
+        ViewMode::Daily(_) => KeyContext::DailyNormal,
         ViewMode::Filter(_) => KeyContext::FilterNormal,
     };
 

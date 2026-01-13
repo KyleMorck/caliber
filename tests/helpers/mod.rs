@@ -128,7 +128,6 @@ impl TestContext {
         match &self.app.view {
             ViewMode::Daily(_) => self.render_daily(),
             ViewMode::Filter(_) => self.render_filter(),
-            ViewMode::Agenda(_) => vec![], // Agenda is a stub for now
         }
     }
 
@@ -165,7 +164,6 @@ impl TestContext {
         match &self.app.view {
             ViewMode::Daily(state) => state.selected,
             ViewMode::Filter(state) => state.selected,
-            ViewMode::Agenda(_) => 0, // Agenda doesn't have selection yet
         }
     }
 
