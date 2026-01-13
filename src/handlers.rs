@@ -191,7 +191,7 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
         }
         SelectionExtendRange => app.selection_extend_to_cursor(),
         ToggleFilterView => {
-            app.cycle_to_next_tab()?;
+            app.cycle_view()?;
         }
         ToggleJournal => {
             app.toggle_journal()?;

@@ -5,7 +5,7 @@ use chrono::Local;
 use crate::cursor::CursorBuffer;
 use crate::storage::{self, EntryType};
 
-use super::{App, EditContext, FILTER_HEADER_LINES, FilterState, InputMode, ViewMode};
+use super::{App, EditContext, FilterState, InputMode, ViewMode};
 
 impl App {
     /// Switch to filter view with the given query.
@@ -101,7 +101,7 @@ impl App {
         let ViewMode::Filter(state) = &self.view else {
             return 0;
         };
-        state.selected + FILTER_HEADER_LINES
+        state.selected
     }
 
     #[must_use]
@@ -109,21 +109,13 @@ impl App {
         let ViewMode::Filter(state) = &self.view else {
             return 1;
         };
-        state.entries.len() + FILTER_HEADER_LINES
+        state.entries.len()
     }
 
-    /// Cycle to next tab: Daily -> Filter -> Daily
-    pub fn cycle_to_next_tab(&mut self) -> io::Result<()> {
+    pub fn cycle_view(&mut self) -> io::Result<()> {
         match &self.view {
-            ViewMode::Daily(_) => {
-                // Daily -> Filter
-                self.execute_filter()?;
-            }
-            ViewMode::Filter(state) => {
-                // Filter -> Daily (save query for later)
-                self.last_filter_query = Some(state.query.clone());
-                self.restore_daily_view();
-            }
+            ViewMode::Daily(_) => self.execute_filter()?,
+            ViewMode::Filter(_) => self.cancel_filter(),
         }
         Ok(())
     }

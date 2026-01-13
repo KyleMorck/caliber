@@ -4,7 +4,7 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 pub struct RenderContext {
     pub size: Rect,
     pub header_area: Rect,
-    pub tabs_area: Rect,
+    pub heading_area: Rect,
     pub main_area: Rect,
     pub footer_area: Rect,
     pub content_area: Rect,
@@ -24,14 +24,14 @@ impl RenderContext {
             ])
             .split(size);
         let header_area = chunks[0];
-        let tabs_area = chunks[1];
+        let heading_area = chunks[1];
         let main_area = chunks[2];
         let footer_area = chunks[3];
 
         Self {
             size,
             header_area,
-            tabs_area,
+            heading_area,
             main_area,
             footer_area,
             content_area: main_area,

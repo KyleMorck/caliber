@@ -78,6 +78,7 @@ pub fn build_view_model(app: &App, context: &RenderContext, prep: RenderPrep) ->
     };
 
     let view_spec = build_view_spec(app, context);
+    let header = build_header(app);
 
     ViewModel {
         layout: view_spec.layout,
@@ -86,8 +87,15 @@ pub fn build_view_model(app: &App, context: &RenderContext, prep: RenderPrep) ->
         cursor: CursorModel {
             edit: prep.edit_cursor,
         },
-        header: view_spec.header,
+        header,
         focused_panel: view_spec.focused_panel,
         primary_list_panel: view_spec.primary_list_panel,
+    }
+}
+
+fn build_header(_app: &App) -> HeaderModel {
+    HeaderModel {
+        left: None,
+        right: None,
     }
 }

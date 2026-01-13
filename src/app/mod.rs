@@ -35,7 +35,6 @@ use crate::storage::{
     self, Entry, EntryType, JournalContext, JournalSlot, Line, ProjectRegistry, RawEntry,
 };
 
-pub const FILTER_HEADER_LINES: usize = 1;
 pub const DATE_SUFFIX_WIDTH: usize = " (MM/DD)".len();
 
 /// State specific to the Daily view
@@ -446,6 +445,18 @@ impl App {
         let path = self.journal_context.project_path()?;
         let registry = ProjectRegistry::load();
         registry.find_by_path(path).cloned()
+    }
+
+    /// Get the display name for the current journal
+    #[must_use]
+    pub fn journal_display_name(&self) -> String {
+        match self.active_journal() {
+            JournalSlot::Hub => "HUB".to_string(),
+            JournalSlot::Project => self
+                .get_current_project_info()
+                .map(|p| p.name)
+                .unwrap_or_else(|| "Project".to_string()),
+        }
     }
 
     #[must_use]

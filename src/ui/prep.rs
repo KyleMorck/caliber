@@ -1,5 +1,5 @@
-use crate::app::{App, DATE_SUFFIX_WIDTH, EditContext, FILTER_HEADER_LINES, InputMode, ViewMode};
-use crate::cursor::cursor_position_in_wrap;
+use crate::app::{App, DATE_SUFFIX_WIDTH, EditContext, InputMode, ViewMode};
+use crate::cursor::{CursorBuffer, cursor_position_in_wrap};
 use crate::storage::Line;
 use unicode_width::UnicodeWidthStr;
 
@@ -10,22 +10,33 @@ use super::views::{
     list_content_width_for_filter,
 };
 
-const DAILY_LIST_HEADER_LINES: usize = 0;
-
 pub struct RenderPrep {
     pub edit_cursor: Option<CursorContext>,
 }
 
-fn daily_fixed_lines(app: &App) -> usize {
-    DAILY_LIST_HEADER_LINES + app.calendar_event_count()
+fn build_cursor_context(
+    buffer: &CursorBuffer,
+    prefix_width: usize,
+    available_width: usize,
+    entry_start_line: usize,
+) -> CursorContext {
+    let text_width = available_width.saturating_sub(prefix_width);
+    let wrap_width = text_width.saturating_sub(1).max(1);
+    let (cursor_row, cursor_col) =
+        cursor_position_in_wrap(buffer.content(), buffer.cursor_display_pos(), wrap_width);
+    CursorContext {
+        prefix_width,
+        cursor_row,
+        cursor_col,
+        entry_start_line,
+    }
 }
 
-/// Prepares render state and mutates view scroll offsets for visibility.
 pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
     let filter_visual_line = app.filter_visual_line();
     let filter_total_lines = app.filter_total_lines();
     let visible_entry_count = app.visible_entry_count();
-    let daily_fixed_lines = daily_fixed_lines(app);
+    let calendar_event_count = app.calendar_event_count();
 
     match &mut app.view {
         ViewMode::Filter(state) => {
@@ -44,8 +55,8 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
             let scroll_height = list_content_height_for_daily(layout);
             ensure_selected_visible(
                 &mut state.scroll_offset,
-                state.selected + daily_fixed_lines,
-                visible_entry_count + daily_fixed_lines,
+                state.selected + calendar_event_count,
+                visible_entry_count + calendar_event_count,
                 scroll_height,
             );
             if state.selected == 0 {
@@ -63,19 +74,13 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
                     unreachable!()
                 };
                 let prefix_width = entry_type.prefix().len();
-                let text_width = list_content_width_for_filter(layout).saturating_sub(prefix_width);
-                let wrap_width = text_width.saturating_sub(1).max(1);
-                let (cursor_row, cursor_col) = cursor_position_in_wrap(
-                    buffer.content(),
-                    buffer.cursor_display_pos(),
-                    wrap_width,
-                );
-                Some(CursorContext {
+                let available_width = list_content_width_for_filter(layout);
+                Some(build_cursor_context(
+                    buffer,
                     prefix_width,
-                    cursor_row,
-                    cursor_col,
-                    entry_start_line: state.entries.len() + FILTER_HEADER_LINES,
-                })
+                    available_width,
+                    state.entries.len(),
+                ))
             }
             EditContext::FilterEdit { filter_index, .. } => {
                 let ViewMode::Filter(state) = &app.view else {
@@ -83,20 +88,9 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
                 };
                 state.entries.get(*filter_index).map(|filter_entry| {
                     let prefix_width = filter_entry.entry_type.prefix().len();
-                    let text_width = list_content_width_for_filter(layout)
-                        .saturating_sub(prefix_width + DATE_SUFFIX_WIDTH);
-                    let wrap_width = text_width.saturating_sub(1).max(1);
-                    let (cursor_row, cursor_col) = cursor_position_in_wrap(
-                        buffer.content(),
-                        buffer.cursor_display_pos(),
-                        wrap_width,
-                    );
-                    CursorContext {
-                        prefix_width,
-                        cursor_row,
-                        cursor_col,
-                        entry_start_line: *filter_index + FILTER_HEADER_LINES,
-                    }
+                    let available_width =
+                        list_content_width_for_filter(layout).saturating_sub(DATE_SUFFIX_WIDTH);
+                    build_cursor_context(buffer, prefix_width, available_width, *filter_index)
                 })
             }
             EditContext::Daily { entry_index } => app
@@ -110,25 +104,12 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
                     }
                 })
                 .map(|entry_type| {
-                    let list_content_width = list_content_width_for_daily(layout);
-
                     let prefix_width = entry_type.prefix().width();
-                    let text_width = list_content_width.saturating_sub(prefix_width);
-                    let wrap_width = text_width.saturating_sub(1).max(1);
-
-                    let (cursor_row, cursor_col) = cursor_position_in_wrap(
-                        buffer.content(),
-                        buffer.cursor_display_pos(),
-                        wrap_width,
-                    );
-                    CursorContext {
-                        prefix_width,
-                        cursor_row,
-                        cursor_col,
-                        entry_start_line: daily_fixed_lines
-                            + app.visible_projected_count()
-                            + app.visible_entries_before(*entry_index),
-                    }
+                    let available_width = list_content_width_for_daily(layout);
+                    let entry_start_line = calendar_event_count
+                        + app.visible_projected_count()
+                        + app.visible_entries_before(*entry_index);
+                    build_cursor_context(buffer, prefix_width, available_width, entry_start_line)
                 }),
         }
     } else {

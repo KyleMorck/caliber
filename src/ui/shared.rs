@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, Local, NaiveDate};
 use ratatui::{
     style::{Color, Style},
     text::Span,
@@ -28,6 +28,18 @@ pub fn format_date_suffix(date: NaiveDate) -> (String, usize) {
     let suffix = format!(" ({})", date.format("%m/%d"));
     let width = suffix.width();
     (suffix, width)
+}
+
+/// Format a date for display, showing year only if different from current year
+#[must_use]
+pub fn format_date_smart(date: NaiveDate, format: &str) -> String {
+    let base = date.format(format).to_string();
+    let current_year = Local::now().year();
+    if date.year() != current_year {
+        format!("{}, {}", base, date.year())
+    } else {
+        base
+    }
 }
 
 /// Style for date suffixes - always dimmed relative to entry content

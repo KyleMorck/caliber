@@ -70,7 +70,7 @@ fn default_default_filter() -> String {
 }
 
 fn default_header_date_format() -> String {
-    "%m/%d/%y".to_string()
+    "%A, %b %-d".to_string()
 }
 
 fn default_scratchpad_file() -> PathBuf {

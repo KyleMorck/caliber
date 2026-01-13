@@ -1,7 +1,7 @@
 use chrono::Timelike;
 use ratatui::{
     style::{Color, Style, Stylize},
-    text::{Line as RatatuiLine, Span},
+    text::Span,
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -190,10 +190,6 @@ pub fn build_filter_row(app: &App, entry: &Entry, index: usize, width: usize) ->
             suffix: EntrySuffix::Date(date_suffix),
         },
     )
-}
-
-pub fn header_line(text: impl Into<String>, style: Style) -> RatatuiLine<'static> {
-    RatatuiLine::from(Span::styled(text.into(), style))
 }
 
 pub fn build_edit_rows_with_prefix_width(

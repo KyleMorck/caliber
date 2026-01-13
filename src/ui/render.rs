@@ -40,15 +40,7 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
     let view_model = build_view_model(app, &context, prep);
 
     render_header_bar(f, context.header_area, view_model.header);
-    let date_label = app
-        .current_date
-        .format(&app.config.header_date_format)
-        .to_string();
-    let selected_tab = match &app.view {
-        ViewMode::Daily(_) => 0,
-        ViewMode::Filter(_) => 1,
-    };
-    render_view_tabs(f, &context, &date_label, selected_tab);
+    render_view_heading(f, &context, app);
 
     let mut list_content_area = None;
 
@@ -91,6 +83,23 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
         render_autocomplete_dropdown(f, app, cursor, content_area);
     }
 
+    let selected_tab = match &app.view {
+        ViewMode::Daily(_) => 0,
+        ViewMode::Filter(_) => 1,
+    };
+    let journal_name = app.journal_display_name();
+    let journal_color = match app.active_journal() {
+        crate::storage::JournalSlot::Hub => theme::JOURNAL_HUB,
+        crate::storage::JournalSlot::Project => theme::JOURNAL_PROJECT,
+    };
+    render_footer_bar(
+        f,
+        context.footer_area,
+        selected_tab,
+        &journal_name,
+        journal_color,
+    );
+
     render_overlays(
         f,
         view_model.overlays,
@@ -100,71 +109,101 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
     );
 }
 
-fn render_view_tabs(f: &mut Frame<'_>, context: &RenderContext, date_label: &str, selected: usize) {
-    let tabs_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1)])
-        .split(context.tabs_area);
+fn render_footer_bar(
+    f: &mut Frame<'_>,
+    area: Rect,
+    selected_tab: usize,
+    journal_name: &str,
+    journal_color: ratatui::style::Color,
+) {
+    use ratatui::style::Color;
 
-    let tabs_row = tabs_layout[0];
-    let rule_row = tabs_layout[1];
+    let padded_area = Rect {
+        x: area.x + 1,
+        y: area.y,
+        width: area.width.saturating_sub(1),
+        height: area.height,
+    };
 
-    let tab_labels = [date_label, "Filter"];
+    let tab_labels = ["Daily", "Filter"];
 
-    let mut tab_spans = Vec::new();
+    let mut left_spans = Vec::new();
     for (i, label) in tab_labels.iter().enumerate() {
-        let style = if i == selected {
-            Style::default()
-                .fg(theme::TAB_ACTIVE)
-                .add_modifier(Modifier::BOLD)
+        let style = if i == selected_tab {
+            Style::default().fg(Color::Black).bg(Color::White)
         } else {
             Style::default()
-                .fg(theme::PALETTE_TAB_INACTIVE)
+                .fg(Color::DarkGray)
                 .add_modifier(Modifier::DIM)
         };
-        tab_spans.push(Span::styled((*label).to_string(), style));
-    }
-
-    let mut line_spans = Vec::new();
-    line_spans.push(Span::raw(" ".repeat(theme::TAB_PADDING)));
-    for (i, span) in tab_spans.into_iter().enumerate() {
-        line_spans.push(span);
+        left_spans.push(Span::styled(format!(" {} ", label), style));
         if i + 1 < tab_labels.len() {
-            line_spans.push(Span::raw(theme::TAB_DIVIDER));
+            left_spans.push(Span::raw(" "));
         }
     }
-    let tabs_line = RatatuiLine::from(line_spans);
-    f.render_widget(Paragraph::new(tabs_line), tabs_row);
 
-    let divider_width = theme::TAB_DIVIDER.width();
-    let mut starts = Vec::new();
-    let mut cursor = theme::TAB_PADDING;
-    for (index, label) in tab_labels.iter().enumerate() {
-        starts.push(cursor);
-        cursor += label.width();
-        if index + 1 < tab_labels.len() {
-            cursor += divider_width;
+    let left_line = RatatuiLine::from(left_spans);
+    f.render_widget(Paragraph::new(left_line), padded_area);
+
+    let journal_label = format!("[{}]", journal_name);
+    let right_line = RatatuiLine::from(Span::styled(
+        journal_label,
+        Style::default().fg(journal_color),
+    ));
+    f.render_widget(
+        Paragraph::new(right_line).alignment(ratatui::layout::Alignment::Right),
+        padded_area,
+    );
+}
+
+fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
+    let heading_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(1), Constraint::Length(1)])
+        .split(context.heading_area);
+
+    let heading_row = heading_layout[0];
+    let rule_row = heading_layout[1];
+
+    let (label, color) = match &app.view {
+        ViewMode::Daily(_) => {
+            let date_label =
+                super::shared::format_date_smart(app.current_date, &app.config.header_date_format);
+            (date_label, theme::MODE_DAILY)
         }
-    }
+        ViewMode::Filter(state) => {
+            let filter_label = format!("Filter: {}", state.query);
+            (filter_label, theme::MODE_FILTER)
+        }
+    };
+
+    let label_width = label.width();
+    let line_spans = vec![
+        Span::raw(" ".repeat(theme::HEADING_PADDING)),
+        Span::styled(
+            label,
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ),
+    ];
+    let heading_line = RatatuiLine::from(line_spans);
+    f.render_widget(Paragraph::new(heading_line), heading_row);
 
     let rule_width = rule_row.width as usize;
-    let active_start = starts.get(selected).copied().unwrap_or(0);
-    let active_width = tab_labels.get(selected).map(|l| l.width()).unwrap_or(0);
-    let before_len = active_start.min(rule_width);
-    let highlight_len = active_width.min(rule_width.saturating_sub(before_len));
-    let after_len = rule_width.saturating_sub(before_len + highlight_len);
+    let highlight_start = theme::HEADING_PADDING;
+    let highlight_len = label_width.min(rule_width.saturating_sub(highlight_start));
+    let after_len = rule_width.saturating_sub(highlight_start + highlight_len);
 
     let mut rule_spans = Vec::new();
-    if before_len > 0 {
+    if highlight_start > 0 {
         rule_spans.push(Span::styled(
-            "─".repeat(before_len),
+            "─".repeat(highlight_start),
             Style::default().fg(theme::PALETTE_TAB_RULE),
         ));
     }
     if highlight_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(highlight_len),
-            Style::default().fg(theme::TAB_ACTIVE),
+            Style::default().fg(color),
         ));
     }
     if after_len > 0 {

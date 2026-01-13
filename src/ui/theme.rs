@@ -9,8 +9,8 @@ pub const BORDER_FOCUSED: Color = Color::White;
 pub const STATUS_FG: Color = Color::Black;
 pub const STATUS_BG: Color = Color::Yellow;
 
-pub const JOURNAL_HUB: Color = Color::Green;
-pub const JOURNAL_PROJECT: Color = Color::Blue;
+pub const JOURNAL_HUB: Color = Color::Blue;
+pub const JOURNAL_PROJECT: Color = Color::Cyan;
 
 pub const PROMPT_COMMAND: Color = Color::Blue;
 pub const PROMPT_FILTER: Color = Color::Magenta;
@@ -112,10 +112,8 @@ pub const GLYPH_AGENDA_FALLBACK: char = '•';
 pub const SCROLL_LABEL: &str = " scroll";
 pub const SCROLL_PADDING: &str = " ";
 
-// Tab bar
-pub const TAB_ACTIVE: Color = Color::Cyan;
-pub const TAB_DIVIDER: &str = "   ";
-pub const TAB_PADDING: usize = 2;
+// View heading
+pub const HEADING_PADDING: usize = 2;
 
 // Sidebar layout
 pub const CALENDAR_PANEL_HEIGHT: u16 = 10;

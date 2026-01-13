@@ -1,12 +1,12 @@
 use crate::app::App;
-use crate::ui::container::{content_area_for, view_content_container_config};
+use crate::ui::container::view_content_container_config;
 use crate::ui::context::RenderContext;
 use crate::ui::filter::build_filter_list;
 use crate::ui::layout::PanelId;
 use crate::ui::theme;
 use crate::ui::view_model::{PanelContent, PanelModel};
 
-use super::ViewSpec;
+use super::{ViewSpec, list_panel_content_area};
 
 pub fn build_filter_view_spec(app: &App, context: &RenderContext) -> ViewSpec {
     let config = view_content_container_config(theme::BORDER_FILTER);
@@ -19,16 +19,9 @@ pub fn build_filter_view_spec(app: &App, context: &RenderContext) -> ViewSpec {
 }
 
 pub(crate) fn list_content_width_for_filter(context: &RenderContext) -> usize {
-    list_panel_content_area(context).width as usize
+    list_panel_content_area(context, theme::BORDER_FILTER).width as usize
 }
 
 pub(crate) fn list_content_height_for_filter(context: &RenderContext) -> usize {
-    list_panel_content_area(context).height as usize
-}
-
-fn list_panel_content_area(context: &RenderContext) -> ratatui::layout::Rect {
-    content_area_for(
-        context.content_area,
-        &view_content_container_config(theme::BORDER_FILTER),
-    )
+    list_panel_content_area(context, theme::BORDER_FILTER).height as usize
 }
