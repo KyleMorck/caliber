@@ -5,7 +5,6 @@ use ratatui::text::{Line as RatatuiLine, Span};
 use ratatui::widgets::{Borders, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
-use super::surface::Surface;
 use crate::app::{App, InputMode, SidebarType, ViewMode};
 
 use super::agenda_widget::{AgendaVariant, build_agenda_widget};
@@ -109,7 +108,6 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
         selected_tab,
         &journal_name,
         journal_color,
-        &app.surface,
     );
 
     render_overlays(
@@ -117,6 +115,7 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
         view_model.overlays,
         OverlayLayout {
             screen_area: context.size,
+            surface: &app.surface,
         },
     );
 }
@@ -127,7 +126,6 @@ fn render_footer_bar(
     selected_tab: usize,
     journal_name: &str,
     journal_color: ratatui::style::Color,
-    surface: &Surface,
 ) {
     use ratatui::style::Color;
 
@@ -157,32 +155,6 @@ fn render_footer_bar(
 
     let left_line = RatatuiLine::from(left_spans);
     f.render_widget(Paragraph::new(left_line), padded_area);
-
-    // Surface color palette for testing
-    let bg_indicator = match surface.background {
-        Color::Reset => Span::styled("??", Style::default().fg(Color::Red)),
-        Color::Rgb(r, g, b) => Span::styled(
-            "bg",
-            Style::default().bg(Color::Rgb(r, g, b)).fg(Color::White),
-        ),
-        _ => Span::raw("--"),
-    };
-    let palette_spans = vec![
-        bg_indicator,
-        Span::raw(" "),
-        Span::styled("  ", Style::default().bg(surface.gray1)),
-        Span::styled("  ", Style::default().bg(surface.gray2)),
-        Span::styled("  ", Style::default().bg(surface.gray3)),
-        Span::styled("  ", Style::default().bg(surface.gray4)),
-        Span::styled("  ", Style::default().bg(surface.gray5)),
-        Span::raw(" "),
-        Span::styled("txt", Style::default().fg(surface.muted_text)),
-    ];
-    let palette_line = RatatuiLine::from(palette_spans);
-    f.render_widget(
-        Paragraph::new(palette_line).alignment(ratatui::layout::Alignment::Center),
-        padded_area,
-    );
 
     let journal_label = format!("[{}]", journal_name);
     let right_line = RatatuiLine::from(Span::styled(

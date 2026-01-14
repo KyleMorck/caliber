@@ -7,6 +7,7 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
+use super::surface::Surface;
 use crate::app::{CommandPaletteMode, CommandPaletteState, ConfirmContext, TagInfo};
 use crate::registry::{COMMANDS, Command, KeyActionId, KeyContext, get_keys_for_action};
 use crate::storage::ProjectRegistry;
@@ -20,8 +21,9 @@ pub struct OverlayModel {
     pub command_palette: Option<CommandPaletteModel>,
 }
 
-pub struct OverlayLayout {
+pub struct OverlayLayout<'a> {
     pub screen_area: Rect,
+    pub surface: &'a Surface,
 }
 
 pub struct ConfirmModel {
@@ -168,7 +170,7 @@ fn tab_index(mode: CommandPaletteMode) -> usize {
     }
 }
 
-fn item_styles(is_selected: bool, is_available: bool) -> (Style, Style) {
+fn item_styles(is_selected: bool, is_available: bool, bg: Color, muted: Color) -> (Style, Style) {
     let base_modifier = if is_available {
         Modifier::empty()
     } else {
@@ -176,19 +178,25 @@ fn item_styles(is_selected: bool, is_available: bool) -> (Style, Style) {
     };
 
     let name_style = if is_selected {
-        Style::default().add_modifier(Modifier::REVERSED | Modifier::BOLD | base_modifier)
+        Style::default()
+            .bg(bg)
+            .add_modifier(Modifier::REVERSED | Modifier::BOLD | base_modifier)
     } else {
         Style::default()
             .fg(Color::White)
+            .bg(bg)
             .add_modifier(Modifier::BOLD | base_modifier)
     };
 
     let desc_style = if is_selected {
-        Style::default().add_modifier(Modifier::REVERSED | Modifier::DIM | base_modifier)
+        Style::default()
+            .bg(bg)
+            .add_modifier(Modifier::REVERSED | base_modifier)
     } else {
         Style::default()
-            .fg(Color::White)
-            .add_modifier(Modifier::DIM | base_modifier)
+            .fg(muted)
+            .bg(bg)
+            .add_modifier(base_modifier)
     };
 
     (name_style, desc_style)
@@ -224,15 +232,23 @@ fn padded_area(area: Rect, padding: u16) -> Rect {
     }
 }
 
-pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, area: Rect) {
+pub fn render_command_palette(
+    f: &mut Frame<'_>,
+    model: CommandPaletteModel,
+    area: Rect,
+    surface: &Surface,
+) {
     let popup_area = centered_rect_max(90, 22, area);
     f.render_widget(Clear, popup_area);
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .border_style(Style::default().fg(Color::White));
-    let inner_area = block.inner(popup_area);
+    let bg = theme::panel_bg(surface);
+    let block = Block::default().style(Style::default().bg(bg));
+    let inner_area = Rect {
+        x: popup_area.x + 1,
+        y: popup_area.y + 1,
+        width: popup_area.width.saturating_sub(2),
+        height: popup_area.height.saturating_sub(2),
+    };
     f.render_widget(block, popup_area);
 
     let layout = Layout::default()
@@ -268,14 +284,14 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
         .select(tab_index(model.mode))
         .style(
             Style::default()
-                .fg(Color::Gray)
-                .bg(Color::Reset)
+                .fg(theme::secondary_text(surface))
+                .bg(bg)
                 .add_modifier(Modifier::DIM),
         )
         .highlight_style(
             Style::default()
                 .fg(Color::White)
-                .bg(Color::Reset)
+                .bg(bg)
                 .add_modifier(Modifier::BOLD)
                 .remove_modifier(Modifier::DIM),
         )
@@ -289,7 +305,7 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
         .unwrap_or("esc");
     let cancel_hint = Paragraph::new(RatatuiLine::from(Span::styled(
         cancel_key,
-        Style::default().fg(Color::Gray).bg(Color::Reset),
+        Style::default().fg(theme::secondary_text(surface)).bg(bg),
     )))
     .alignment(Alignment::Right);
     f.render_widget(cancel_hint, tabs_row[1]);
@@ -323,19 +339,19 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
     if before_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(before_len),
-            Style::default().fg(Color::DarkGray).bg(Color::Reset),
+            Style::default().fg(theme::panel_rule(surface)).bg(bg),
         ));
     }
     if highlight_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(highlight_len),
-            Style::default().fg(Color::Cyan).bg(Color::Reset),
+            Style::default().fg(Color::Cyan).bg(bg),
         ));
     }
     if after_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(after_len),
-            Style::default().fg(Color::DarkGray).bg(Color::Reset),
+            Style::default().fg(theme::panel_rule(surface)).bg(bg),
         ));
     }
     let rule_line = RatatuiLine::from(rule_spans);
@@ -357,7 +373,10 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
             for (index, command) in commands.iter().enumerate() {
                 if command.group != current_group {
                     if !lines.is_empty() {
-                        lines.push(RatatuiLine::raw(""));
+                        lines.push(RatatuiLine::styled(
+                            " ".repeat(list_width),
+                            Style::default().bg(bg),
+                        ));
                     }
                     current_group = command.group;
                     let group_line = padded_line(command.group, list_width, padding);
@@ -365,13 +384,14 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
                         group_line,
                         Style::default()
                             .fg(Color::Cyan)
-                            .bg(Color::Reset)
+                            .bg(bg)
                             .add_modifier(Modifier::BOLD),
                     )));
                 }
 
                 let is_selected = index == model.selected;
-                let (name_style, desc_style) = item_styles(is_selected, true);
+                let (name_style, desc_style) =
+                    item_styles(is_selected, true, bg, theme::secondary_text(surface));
 
                 if is_selected {
                     selected_line = Some(lines.len());
@@ -386,7 +406,12 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
         CommandPaletteMode::Projects => {
             for (index, project) in model.projects.iter().enumerate() {
                 let is_selected = index == model.selected;
-                let (name_style, desc_style) = item_styles(is_selected, project.available);
+                let (name_style, desc_style) = item_styles(
+                    is_selected,
+                    project.available,
+                    bg,
+                    theme::secondary_text(surface),
+                );
 
                 if is_selected {
                     selected_line = Some(lines.len());
@@ -401,7 +426,8 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
         CommandPaletteMode::Tags => {
             for (index, tag) in model.tags.iter().enumerate() {
                 let is_selected = index == model.selected;
-                let (name_style, count_style) = item_styles(is_selected, true);
+                let (name_style, count_style) =
+                    item_styles(is_selected, true, bg, theme::secondary_text(surface));
 
                 if is_selected {
                     selected_line = Some(lines.len());
@@ -419,9 +445,9 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
                     Span::styled(
                         " ".repeat(gap),
                         if is_selected {
-                            Style::default().add_modifier(Modifier::REVERSED)
+                            Style::default().bg(bg).add_modifier(Modifier::REVERSED)
                         } else {
-                            Style::default()
+                            Style::default().bg(bg)
                         },
                     ),
                     Span::styled(
@@ -437,7 +463,7 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
         let empty_line = padded_line(empty_message(model.mode), list_width, padding);
         lines.push(RatatuiLine::from(Span::styled(
             empty_line,
-            Style::default().fg(Color::Gray).bg(Color::Reset),
+            Style::default().fg(theme::secondary_text(surface)).bg(bg),
         )));
     }
 
@@ -480,18 +506,18 @@ pub fn render_command_palette(f: &mut Frame<'_>, model: CommandPaletteModel, are
     if let Some(content) = footer_content {
         let footer = Paragraph::new(RatatuiLine::from(Span::styled(
             content,
-            Style::default().fg(Color::Gray),
+            Style::default().fg(theme::secondary_text(surface)).bg(bg),
         )))
         .alignment(Alignment::Right);
         f.render_widget(footer, footer_area);
     }
 }
 
-pub fn render_overlays(f: &mut Frame<'_>, overlays: OverlayModel, layout: OverlayLayout) {
+pub fn render_overlays(f: &mut Frame<'_>, overlays: OverlayModel, layout: OverlayLayout<'_>) {
     if let Some(confirm) = overlays.confirm {
         render_confirm_modal(f, confirm, layout.screen_area);
     }
     if let Some(palette) = overlays.command_palette {
-        render_command_palette(f, palette, layout.screen_area);
+        render_command_palette(f, palette, layout.screen_area, layout.surface);
     }
 }

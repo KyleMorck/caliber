@@ -1,5 +1,6 @@
 use ratatui::style::Color;
 
+use super::surface::Surface;
 use crate::storage::JournalSlot;
 
 // Context primaries - change based on mode/journal
@@ -35,6 +36,26 @@ pub fn context_primary(journal: JournalSlot, in_filter: bool) -> Color {
             JournalSlot::Project => PROJECT_PRIMARY,
         }
     }
+}
+
+// Panel/overlay colors (derived from terminal surface)
+
+/// Background for floating panels, overlays, and sidebars.
+#[must_use]
+pub fn panel_bg(surface: &Surface) -> Color {
+    surface.gray3
+}
+
+/// Dividers and rules within panels.
+#[must_use]
+pub fn panel_rule(surface: &Surface) -> Color {
+    surface.gray4
+}
+
+/// Secondary/description text on panels.
+#[must_use]
+pub fn secondary_text(surface: &Surface) -> Color {
+    surface.muted_text
 }
 
 // Glyphs

@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 /// For dark terminals: grays get progressively lighter (gray1 = subtle, gray5 = most visible)
 /// For light terminals: grays get progressively darker
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Surface {
     /// Whether the terminal has a dark background
     pub is_dark: bool,
