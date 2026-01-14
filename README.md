@@ -327,15 +327,16 @@ Press `+` to open the project switcher.
 | `!completed` | Completed tasks |
 | `!notes` | Notes only |
 | `!events` | Events only |
-| `@on:DATE` | Entries on date |
-| `@before:DATE` | Entries before date |
-| `@after:DATE` | Entries after date |
-| `@overdue` | Entries with past @date |
+| `mm/dd` | Entries on exact date |
+| `mm/dd..` | From date to today |
+| `..mm/dd` | All past through date |
+| `mm/dd..mm/dd` | Between two dates |
+| `@overdue` | Incomplete tasks with past @date |
 | `@later` | Entries with @date patterns |
-| `@recurring` | Entries with @every-* patterns |
-| `not:#tag` | Entries without tag |
-| `not:!type` | Exclude entry type |
-| `not:word` | Entries not containing text |
+| `@recurring` | Show recurring entries (hidden by default) |
+| `-#tag` | Entries without tag |
+| `-!type` | Exclude entry type |
+| `-word` | Entries not containing text |
 | `#tag` | Entries with tag |
 | `$name` | Saved filter |
 | `word` | Entries containing text |

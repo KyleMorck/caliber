@@ -26,58 +26,64 @@ category = "entry_type"
 help = "Events only"
 
 # =============================================================================
-# Date Operation Filters
+# Date Range Filters (spread syntax)
 # =============================================================================
 
 [[filter]]
-syntax = "@on:"
-display = "@on:DATE"
-category = "date_op"
-help = "Entries on date"
+syntax = "mm/dd"
+category = "date_range"
+help = "Entries on exact date"
 
 [[filter]]
-syntax = "@before:"
-display = "@before:DATE"
-category = "date_op"
-help = "Entries before date"
+syntax = "mm/dd.."
+category = "date_range"
+help = "From date to today"
 
 [[filter]]
-syntax = "@after:"
-display = "@after:DATE"
-category = "date_op"
-help = "Entries after date"
+syntax = "..mm/dd"
+category = "date_range"
+help = "All past through date"
+
+[[filter]]
+syntax = "mm/dd..mm/dd"
+category = "date_range"
+help = "Between two dates"
+
+# =============================================================================
+# Content Pattern Filters
+# =============================================================================
 
 [[filter]]
 syntax = "@overdue"
-category = "date_op"
-help = "Entries with past @date"
+category = "content_pattern"
+help = "Incomplete tasks with past @date"
 
 [[filter]]
 syntax = "@later"
-category = "date_op"
+category = "content_pattern"
 help = "Entries with @date patterns"
 
 [[filter]]
 syntax = "@recurring"
-category = "date_op"
-help = "Entries with @every-* patterns"
+category = "content_pattern"
+help = "Show recurring entries (hidden by default)"
 
 # =============================================================================
 # Negation Patterns
 # =============================================================================
 
 [[filter]]
-syntax = "not:#tag"
+syntax = "-#tag"
 category = "negation"
 help = "Entries without tag"
 
 [[filter]]
-syntax = "not:!type"
+syntax = "-!type"
 category = "negation"
 help = "Exclude entry type"
 
 [[filter]]
-syntax = "not:word"
+syntax = "-word"
 category = "negation"
 help = "Entries not containing text"
 

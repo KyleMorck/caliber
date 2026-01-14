@@ -88,6 +88,75 @@ pub static RECURRING_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
+/// Checks if a token looks like spread date syntax (not plain text search).
+/// Spread syntax includes: DATE, DATE.., ..DATE, DATE..DATE
+/// Where DATE can be: mm/dd, mm/dd/yy, mm/dd/yyyy, yyyy/mm/dd, d[1-999][+], weekday[+]
+fn is_spread_syntax(token: &str) -> bool {
+    // Contains ".." -> definitely spread syntax
+    if token.contains("..") {
+        return true;
+    }
+    // Absolute date: starts with digit, contains /
+    if token.chars().next().is_some_and(|c| c.is_ascii_digit()) && token.contains('/') {
+        return true;
+    }
+    // Relative days: d followed by digit (d1-d999, optionally with +)
+    if token.starts_with('d') && token.chars().nth(1).is_some_and(|c| c.is_ascii_digit()) {
+        return true;
+    }
+    // Weekday (mon, tue, etc. optionally with +)
+    let base = token.strip_suffix('+').unwrap_or(token);
+    matches!(
+        base,
+        "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
+    )
+}
+
+/// Parses spread date syntax and returns (before_date, after_date).
+/// Spread syntax:
+/// - Single date: exact match (before=date, after=date)
+/// - DATE.. (past): from date to today
+/// - DATE+.. (future): from date to infinity
+/// - ..DATE (past): all past through date
+/// - ..DATE+ (future): from today to date
+/// - DATE..DATE: between two dates
+fn parse_spread_date(
+    token: &str,
+    today: NaiveDate,
+) -> Option<(Option<NaiveDate>, Option<NaiveDate>)> {
+    let Some((start, end)) = token.split_once("..") else {
+        let date = parse_filter_date(token, today)?;
+        return Some((Some(date), Some(date)));
+    };
+
+    if start.is_empty() && end.is_empty() {
+        return None;
+    }
+
+    let start_is_future = start.ends_with('+');
+    let end_is_future = end.ends_with('+');
+
+    let start_date = (!start.is_empty())
+        .then(|| parse_filter_date(start, today))
+        .flatten();
+    let end_date = (!end.is_empty())
+        .then(|| parse_filter_date(end, today))
+        .flatten();
+
+    if (!start.is_empty() && start_date.is_none()) || (!end.is_empty() && end_date.is_none()) {
+        return None;
+    }
+
+    match (start.is_empty(), end.is_empty()) {
+        (true, false) if end_is_future => Some((end_date, Some(today))),
+        (true, false) => Some((end_date, None)),
+        (false, true) if start_is_future => Some((None, start_date)),
+        (false, true) => Some((Some(today), start_date)),
+        (false, false) => Some((end_date, start_date)),
+        _ => None,
+    }
+}
+
 #[must_use]
 pub fn extract_tags(content: &str) -> Vec<String> {
     TAG_REGEX
@@ -330,46 +399,24 @@ pub fn parse_filter_query(query: &str) -> Filter {
     let today = chrono::Local::now().date_naive();
 
     for token in query.split_whitespace() {
-        // Date filters: @on:DATE, @before:DATE, @after:DATE, @overdue
+        // Spread date syntax: DATE, DATE.., ..DATE, DATE..DATE
         // Dates default to past (d7 = 7 days ago, mon = last Monday)
         // Append + for explicit future (d7+ = 7 days from now, mon+ = next Monday)
-        if let Some(date_str) = token.strip_prefix("@on:") {
+        if is_spread_syntax(token) {
             if filter.before_date.is_some() || filter.after_date.is_some() {
                 filter
                     .invalid_tokens
-                    .push("Cannot combine @on with @before/@after".to_string());
-            } else if let Some(date) = parse_filter_date(date_str, today) {
-                filter.before_date = Some(date);
-                filter.after_date = Some(date);
+                    .push("Multiple date ranges".to_string());
+            } else if let Some((before, after)) = parse_spread_date(token, today) {
+                filter.before_date = before;
+                filter.after_date = after;
             } else {
                 filter.invalid_tokens.push(token.to_string());
             }
             continue;
         }
-        if let Some(date_str) = token.strip_prefix("@before:") {
-            if filter.before_date.is_some() {
-                filter
-                    .invalid_tokens
-                    .push("Multiple @before dates".to_string());
-            } else if let Some(date) = parse_filter_date(date_str, today) {
-                filter.before_date = Some(date);
-            } else {
-                filter.invalid_tokens.push(token.to_string());
-            }
-            continue;
-        }
-        if let Some(date_str) = token.strip_prefix("@after:") {
-            if filter.after_date.is_some() {
-                filter
-                    .invalid_tokens
-                    .push("Multiple @after dates".to_string());
-            } else if let Some(date) = parse_filter_date(date_str, today) {
-                filter.after_date = Some(date);
-            } else {
-                filter.invalid_tokens.push(token.to_string());
-            }
-            continue;
-        }
+
+        // Content-based filters: @overdue, @later, @recurring
         if token == "@overdue" {
             filter.overdue = true;
             continue;
@@ -387,7 +434,7 @@ pub fn parse_filter_query(query: &str) -> Filter {
             continue;
         }
 
-        if let Some(negated) = token.strip_prefix("not:") {
+        if let Some(negated) = token.strip_prefix('-') {
             if let Some(tag) = negated.strip_prefix('#') {
                 filter.exclude_tags.push(tag.to_string());
             } else if let Some(type_str) = negated.strip_prefix('!') {
@@ -476,10 +523,13 @@ pub fn collect_filtered_entries(filter: &Filter, path: &Path) -> io::Result<Vec<
 
             let parsed = parse_lines(line);
             if let Some(Line::Entry(raw_entry)) = parsed.first() {
-                // Overdue filter: entry must have @date targeting before today
+                // Overdue filter: entry must be an incomplete task with @date before today
                 if filter.overdue {
+                    let is_incomplete_task =
+                        matches!(raw_entry.entry_type, EntryType::Task { completed: false });
                     let target = extract_target_date_prefer_past(&raw_entry.content, today);
-                    if target.is_none() || target.unwrap() >= today {
+                    let is_overdue = is_incomplete_task && target.is_some_and(|d| d < today);
+                    if !is_overdue {
                         line_index_in_day += 1;
                         continue;
                     }
@@ -494,8 +544,9 @@ pub fn collect_filtered_entries(filter: &Filter, path: &Path) -> io::Result<Vec<
                     continue;
                 }
 
-                // Recurring filter: entry must have an @every-* pattern
-                if filter.recurring && !RECURRING_REGEX.is_match(&raw_entry.content) {
+                // @recurring shows only recurring; otherwise recurring entries are excluded
+                let is_recurring = RECURRING_REGEX.is_match(&raw_entry.content);
+                if filter.recurring != is_recurring {
                     line_index_in_day += 1;
                     continue;
                 }

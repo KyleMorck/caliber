@@ -351,7 +351,7 @@ impl HintContext {
     ) -> Self {
         if input.is_empty() {
             return Self::GuidanceMessage {
-                message: "Type to search, or use ! @ # $ not: for filters",
+                message: "Type to search, or use ! @ # $ - for filters",
             };
         }
 
@@ -361,12 +361,12 @@ impl HintContext {
 
         let current_token = input.split_whitespace().last().unwrap_or("");
 
-        if let Some(neg_suffix) = current_token.strip_prefix("not:") {
+        if let Some(neg_suffix) = current_token.strip_prefix('-') {
             let inner = Self::compute_filter_token(neg_suffix, journal_tags, saved_filters);
             if matches!(inner, Self::Inactive) && neg_suffix.is_empty() {
                 return Self::Negation {
                     inner: Box::new(Self::GuidanceMessage {
-                        message: "! @ # or text to negate",
+                        message: "! # or text to negate",
                     }),
                 };
             }
@@ -417,24 +417,15 @@ impl HintContext {
             };
         }
 
-        if let Some(date_prefix) = token.strip_prefix('@') {
-            for filter in FILTER_SYNTAX.iter() {
-                if filter.category == FilterCategory::DateOp
-                    && filter.syntax.ends_with(':')
-                    && let Some(filter_prefix) = filter.syntax.strip_prefix('@')
-                    && let Some(date_value) = date_prefix.strip_prefix(filter_prefix)
-                {
-                    return Self::compute_date_value_hints(date_value);
-                }
-            }
-
+        // Content pattern filters: @overdue, @later, @recurring
+        if let Some(content_prefix) = token.strip_prefix('@') {
             let matches: Vec<&'static FilterSyntax> = FILTER_SYNTAX
                 .iter()
-                .filter(|f| f.category == FilterCategory::DateOp)
+                .filter(|f| f.category == FilterCategory::ContentPattern)
                 .filter(|f| {
                     f.syntax
                         .get(1..)
-                        .is_some_and(|s| s.starts_with(date_prefix))
+                        .is_some_and(|s| s.starts_with(content_prefix))
                 })
                 .collect();
 
@@ -442,7 +433,7 @@ impl HintContext {
                 return Self::Inactive;
             }
             return Self::DateOps {
-                prefix: date_prefix.to_string(),
+                prefix: content_prefix.to_string(),
                 matches,
                 selected: 0,
             };
@@ -468,46 +459,6 @@ impl HintContext {
         }
 
         Self::Inactive
-    }
-
-    fn compute_date_value_hints(value_prefix: &str) -> Self {
-        // Empty prefix: show all filter date values
-        if value_prefix.is_empty() {
-            let matches: Vec<&'static DateValue> = DATE_VALUES
-                .iter()
-                .filter(|dv| dv.scopes.contains(&DateScope::Filter))
-                .collect();
-            let selected = Self::first_selectable_index(&Self::date_display_items(
-                &DateScope::Filter,
-                &matches,
-            ));
-            return Self::DateValues {
-                prefix: value_prefix.to_string(),
-                scope: DateScope::Filter,
-                matches,
-                selected,
-            };
-        }
-
-        // Find all matching date values using unified matching
-        let matches: Vec<&'static DateValue> = DATE_VALUES
-            .iter()
-            .filter(|dv| dv.scopes.contains(&DateScope::Filter))
-            .filter(|dv| Self::matches_date_value(value_prefix, dv))
-            .collect();
-
-        if matches.is_empty() {
-            return Self::Inactive;
-        }
-
-        let selected =
-            Self::first_selectable_index(&Self::date_display_items(&DateScope::Filter, &matches));
-        Self::DateValues {
-            prefix: value_prefix.to_string(),
-            scope: DateScope::Filter,
-            matches,
-            selected,
-        }
     }
 
     fn suffix_after(s: &str, prefix_len: usize) -> String {

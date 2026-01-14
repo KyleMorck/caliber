@@ -169,7 +169,8 @@ mod tests {
 
     #[test]
     fn filter_query_combines_types_tags_dates() {
-        let filter = parse_filter_query("!tasks #work @after:1/1 @before:1/31");
+        // Spread syntax: 1/1..1/31 means between Jan 1 and Jan 31
+        let filter = parse_filter_query("!tasks #work 1/1..1/31");
         assert_eq!(filter.entry_types, vec![FilterType::Task]);
         assert_eq!(filter.tags, vec!["work"]);
         assert!(filter.after_date.is_some());
@@ -183,26 +184,83 @@ mod tests {
     }
 
     #[test]
-    fn filter_date_today_parses_to_current_date() {
-        // @before:today and @after:today should parse to today's date
+    fn spread_date_syntax() {
         let today = chrono::Local::now().date_naive();
 
-        let filter = parse_filter_query("@before:today");
-        assert_eq!(filter.before_date, Some(today));
+        // Single date: exact match (both bounds set to same date)
+        let filter = parse_filter_query("1/15");
+        assert!(filter.before_date.is_some());
+        assert!(filter.after_date.is_some());
+        assert_eq!(filter.before_date, filter.after_date);
         assert!(filter.invalid_tokens.is_empty());
 
-        let filter = parse_filter_query("@after:today");
-        assert_eq!(filter.after_date, Some(today));
+        // Open-ended past: date.. means from date to today
+        let filter = parse_filter_query("d7..");
+        assert_eq!(filter.before_date, Some(today));
+        assert!(filter.after_date.is_some());
+        assert!(filter.invalid_tokens.is_empty());
+
+        // Open-ended start: ..date means all past through date
+        let filter = parse_filter_query("..d30");
+        assert!(filter.before_date.is_some());
+        assert!(filter.after_date.is_none());
+        assert!(filter.invalid_tokens.is_empty());
+
+        // Range: date..date means between two dates
+        let filter = parse_filter_query("1/1..1/31");
+        assert!(filter.before_date.is_some());
+        assert!(filter.after_date.is_some());
+        assert!(filter.invalid_tokens.is_empty());
+    }
+
+    #[test]
+    fn spread_date_future_syntax() {
+        let today = chrono::Local::now().date_naive();
+
+        // Future open-ended: d7+.. means from 7 days in future to infinity
+        let filter = parse_filter_query("d7+..");
+        assert!(filter.before_date.is_none()); // No upper bound
+        assert!(filter.after_date.is_some()); // 7 days from now
+        assert!(filter.invalid_tokens.is_empty());
+
+        // Future bounded: ..d7+ means from today to 7 days in future
+        let filter = parse_filter_query("..d7+");
+        assert!(filter.before_date.is_some()); // 7 days from now
+        assert_eq!(filter.after_date, Some(today)); // today
+        assert!(filter.invalid_tokens.is_empty());
+    }
+
+    #[test]
+    fn negation_with_dash_prefix() {
+        // -#tag excludes entries with tag
+        let filter = parse_filter_query("-#work");
+        assert_eq!(filter.exclude_tags, vec!["work"]);
+        assert!(filter.invalid_tokens.is_empty());
+
+        // -!tasks excludes incomplete tasks
+        let filter = parse_filter_query("-!tasks");
+        assert_eq!(filter.exclude_types, vec![FilterType::Task]);
+        assert!(filter.invalid_tokens.is_empty());
+
+        // -word excludes entries containing word
+        let filter = parse_filter_query("-urgent");
+        assert_eq!(filter.exclude_terms, vec!["urgent"]);
         assert!(filter.invalid_tokens.is_empty());
     }
 
     #[test]
     fn invalid_tokens_captured_in_filter() {
+        // Invalid entry type
         assert!(!parse_filter_query("!tas").invalid_tokens.is_empty());
+
+        // Multiple date ranges should be invalid
         assert!(
-            !parse_filter_query("@before:1/1 @before:1/15")
+            !parse_filter_query("1/1..1/15 1/20..1/31")
                 .invalid_tokens
                 .is_empty()
         );
+
+        // Empty spread ".." is invalid
+        assert!(!parse_filter_query("..").invalid_tokens.is_empty());
     }
 }
