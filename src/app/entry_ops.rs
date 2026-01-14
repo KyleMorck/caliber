@@ -438,8 +438,12 @@ impl App {
                 return Ok(());
             }
         };
+        self.paste_entries_from_text(&text)
+    }
 
-        let raw_entries = Self::parse_paste_raw(&text);
+    /// Paste text as entries below current selection (used by bracketed paste)
+    pub fn paste_entries_from_text(&mut self, text: &str) -> io::Result<()> {
+        let raw_entries = Self::parse_paste_raw(text);
         if raw_entries.is_empty() {
             self.set_status("Nothing to paste");
             return Ok(());

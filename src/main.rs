@@ -3,7 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 use crossterm::{
-    event::{self, Event},
+    event::{self, DisableBracketedPaste, EnableBracketedPaste, Event},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -48,14 +48,20 @@ fn main() -> Result<(), io::Error> {
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    // Enable bracketed paste to capture Cmd+V as a single event (which we ignore)
+    // Without this, pasted text arrives as individual key events causing issues
+    execute!(stdout, EnterAlternateScreen, EnableBracketedPaste)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let res = run_app(&mut terminal, config, journal_context, surface);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableBracketedPaste
+    )?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -153,21 +159,26 @@ fn run_app<B: ratatui::backend::Backend>(
 
         app.poll_calendar_results();
 
-        if event::poll(std::time::Duration::from_millis(16))?
-            && let Event::Key(key) = event::read()?
-        {
-            app.status_message = None;
+        if event::poll(std::time::Duration::from_millis(16))? {
+            match event::read()? {
+                Event::Key(key) => {
+                    app.status_message = None;
 
-            match &app.input_mode {
-                InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
-                InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
-                InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
-                InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
-                InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
-                InputMode::CommandPalette(_) => {
-                    handlers::handle_command_palette_key(&mut app, key)?;
+                    match &app.input_mode {
+                        InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
+                        InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
+                        InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
+                        InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
+                        InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
+                        InputMode::CommandPalette(_) => {
+                            handlers::handle_command_palette_key(&mut app, key)?;
+                        }
+                        InputMode::FilterPrompt => {
+                            handlers::handle_filter_prompt_key(&mut app, key)?;
+                        }
+                    }
                 }
-                InputMode::FilterPrompt => handlers::handle_filter_prompt_key(&mut app, key)?,
+                _ => {}
             }
         }
 
