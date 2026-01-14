@@ -3,7 +3,7 @@ use std::io;
 use std::path::Path;
 use std::sync::LazyLock;
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use regex::Regex;
 
 use super::date_parsing::{ParseContext, parse_date, parse_weekday};
@@ -106,10 +106,7 @@ fn is_spread_syntax(token: &str) -> bool {
     }
     // Weekday (mon, tue, etc. optionally with +)
     let base = token.strip_suffix('+').unwrap_or(token);
-    matches!(
-        base,
-        "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
-    )
+    matches!(base, "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")
 }
 
 /// Parses spread date syntax and returns (before_date, after_date).
@@ -325,6 +322,38 @@ fn extract_target_date_prefer_past(content: &str, today: NaiveDate) -> Option<Na
         .and_then(|m| parse_date(m.as_str(), ParseContext::Filter, today))
 }
 
+/// Defers the first @date pattern by 1 day (e.g., @1/15 → @1/16).
+/// Returns Some(new_content) if an @date was found and modified, None otherwise.
+#[must_use]
+pub fn defer_date(content: &str, today: NaiveDate) -> Option<String> {
+    let caps = LATER_DATE_REGEX.captures(content)?;
+    let date_match = caps.get(0)?;
+    let date_str = caps.get(1)?;
+
+    let date = parse_date(date_str.as_str(), ParseContext::Entry, today)?;
+    let new_date = date + chrono::Duration::days(1);
+    let new_date_str = format!("@{}/{}", new_date.month(), new_date.day());
+
+    let mut result = content.to_string();
+    result.replace_range(date_match.range(), &new_date_str);
+    Some(result)
+}
+
+/// Removes the first @date pattern from content (including any preceding space).
+/// Returns Some(new_content) if an @date was found and removed, None otherwise.
+#[must_use]
+pub fn remove_date(content: &str) -> Option<String> {
+    static REMOVE_DATE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\s?@(\d{4}/\d{1,2}/\d{1,2}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)").unwrap()
+    });
+
+    REMOVE_DATE_REGEX.find(content).map(|m| {
+        let mut result = content.to_string();
+        result.replace_range(m.range(), "");
+        result
+    })
+}
+
 /// Collects all projected entries (both @later and @recurring) for the target date.
 /// Entries from the target date itself are excluded (they're regular entries).
 /// Returns entries with appropriate SourceType (Later or Recurring).
@@ -364,7 +393,9 @@ pub fn collect_projected_entries_for_date(
                     ));
                 }
                 // Check for @recurring pattern (repeating projection)
+                // Only project to dates on or after the source date
                 else if let Some(pattern) = extract_recurring_pattern(&raw_entry.content)
+                    && target_date >= source_date
                     && pattern.matches(target_date)
                 {
                     entries.push(Entry::from_raw(
@@ -379,8 +410,16 @@ pub fn collect_projected_entries_for_date(
         }
     }
 
-    // Sort by source date (chronologically - older first)
-    entries.sort_by_key(|entry| entry.source_date);
+    // Sort: Recurring first, then Later, each group by source_date
+    entries.sort_by(|a, b| {
+        let a_recurring = matches!(a.source_type, SourceType::Recurring);
+        let b_recurring = matches!(b.source_type, SourceType::Recurring);
+        match (a_recurring, b_recurring) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.source_date.cmp(&b.source_date),
+        }
+    });
     Ok(entries)
 }
 

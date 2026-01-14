@@ -161,9 +161,16 @@ fn build_entry_row(app: &App, spec: EntryRowSpec<'_>) -> RowModel {
         EntryIndicator::Filter => {
             resolver.filter_list_indicator(&first_char, spec.visible_idx, content_style)
         }
-        EntryIndicator::Projected(source_type) => {
-            resolver.projected_indicator(spec.is_selected, source_type)
-        }
+        EntryIndicator::Projected(source_type) => match source_type {
+            SourceType::Later => resolver.entry_indicator(
+                spec.is_selected,
+                spec.visible_idx,
+                theme::PROJECTED_DATE,
+                &first_char,
+                content_style,
+            ),
+            _ => resolver.projected_indicator(spec.is_selected, source_type, content_style),
+        },
     };
 
     let suffix_span = suffix_text.map(|text| Span::styled(text, date_suffix_style(content_style)));
@@ -293,7 +300,12 @@ impl<'a> IndicatorResolver<'a> {
         }
     }
 
-    fn projected_indicator(&self, is_cursor: bool, kind: &SourceType) -> Span<'static> {
+    fn projected_indicator(
+        &self,
+        is_cursor: bool,
+        kind: &SourceType,
+        content_style: Style,
+    ) -> Span<'static> {
         let indicator = match kind {
             SourceType::Later => theme::GLYPH_PROJECTED_LATER,
             SourceType::Recurring => theme::GLYPH_PROJECTED_RECURRING,
@@ -302,9 +314,9 @@ impl<'a> IndicatorResolver<'a> {
         };
 
         if is_cursor {
-            Span::styled(indicator, Style::default().fg(self.cursor_color()))
-        } else {
             Span::styled(indicator, Style::default().fg(theme::PROJECTED_DATE))
+        } else {
+            Span::styled(indicator.to_string(), content_style)
         }
     }
 

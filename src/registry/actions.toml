@@ -99,6 +99,16 @@ default_keys = ["d"]
 contexts = ["shared_normal", "selection", "command_palette"]
 
 [[action]]
+key_action_id = "defer_date"
+default_keys = [">"]
+contexts = ["shared_normal", "selection"]
+
+[[action]]
+key_action_id = "remove_date"
+default_keys = ["D"]
+contexts = ["shared_normal", "selection"]
+
+[[action]]
 key_action_id = "yank"
 default_keys = ["y"]
 contexts = ["shared_normal", "selection"]

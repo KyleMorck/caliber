@@ -50,6 +50,20 @@ impl App {
             InputMode::Edit(EditContext::FilterQuickAdd { entry_type, .. }) => {
                 *entry_type = entry_type.cycle();
             }
+            InputMode::Edit(EditContext::LaterEdit {
+                source_date,
+                line_index,
+            }) => {
+                let source_date = *source_date;
+                let line_index = *line_index;
+                let path = self.active_path().to_path_buf();
+
+                if let Ok(Some(_new_type)) =
+                    storage::cycle_entry_type(source_date, &path, line_index)
+                {
+                    self.refresh_projected_entries();
+                }
+            }
             _ => {}
         }
     }
@@ -91,6 +105,17 @@ impl App {
             }
             EditContext::FilterQuickAdd { date, entry_type } => {
                 self.save_filter_quick_add_with_action(*date, entry_type.clone(), new_content);
+            }
+            EditContext::LaterEdit {
+                source_date,
+                line_index,
+            } => {
+                self.save_later_edit_with_action(
+                    *source_date,
+                    *line_index,
+                    new_content,
+                    original_content,
+                );
             }
         }
 
@@ -177,40 +202,27 @@ impl App {
 
         if new_content.trim().is_empty() {
             let _ = storage::delete_entry(date, &path, line_index);
-        } else {
-            let entry_type = storage::get_entry_type(date, &path, line_index);
-
-            match storage::update_entry_content(date, &path, line_index, new_content.clone()) {
-                Ok(false) => {
-                    self.set_status(format!(
-                        "Failed to update: no entry at index {line_index} for {date}"
-                    ));
-                }
-                Err(e) => {
-                    self.set_status(format!("Failed to save: {e}"));
-                }
-                Ok(true) if original_content != new_content => {
-                    let entry = Entry {
-                        entry_type: entry_type.clone(),
-                        content: original_content.clone(),
-                        source_date: date,
-                        line_index,
-                        source_type: SourceType::Local,
-                    };
-                    let target = EditTarget {
-                        location: EntryLocation::Filter {
-                            index: filter_index,
-                            entry,
-                        },
-                        original_content,
-                        new_content,
-                        entry_type,
-                    };
-                    let action = EditEntry::new(target);
-                    let _ = self.execute_action(Box::new(action));
-                }
-                Ok(true) => {}
-            }
+        } else if let Some((entry_type, new_content)) =
+            self.update_remote_entry(date, line_index, new_content, &original_content)
+        {
+            let entry = Entry {
+                entry_type: entry_type.clone(),
+                content: original_content.clone(),
+                source_date: date,
+                line_index,
+                source_type: SourceType::Local,
+            };
+            let target = EditTarget {
+                location: EntryLocation::Filter {
+                    index: filter_index,
+                    entry,
+                },
+                original_content,
+                new_content,
+                entry_type,
+            };
+            let action = EditEntry::new(target);
+            let _ = self.execute_action(Box::new(action));
         }
 
         if date == self.current_date {
@@ -263,6 +275,68 @@ impl App {
         let _ = self.refresh_filter();
         if let ViewMode::Filter(state) = &mut self.view {
             state.selected = state.entries.len().saturating_sub(1);
+        }
+    }
+
+    fn save_later_edit_with_action(
+        &mut self,
+        source_date: chrono::NaiveDate,
+        line_index: usize,
+        new_content: String,
+        original_content: String,
+    ) {
+        let path = self.active_path().to_path_buf();
+
+        if new_content.trim().is_empty() {
+            let _ = storage::delete_entry(source_date, &path, line_index);
+        } else if let Some((entry_type, new_content)) =
+            self.update_remote_entry(source_date, line_index, new_content, &original_content)
+        {
+            let entry = Entry {
+                entry_type: entry_type.clone(),
+                content: original_content.clone(),
+                source_date,
+                line_index,
+                source_type: SourceType::Later,
+            };
+            let target = EditTarget {
+                location: EntryLocation::Projected(entry),
+                original_content,
+                new_content,
+                entry_type,
+            };
+            let action = EditEntry::new(target);
+            let _ = self.execute_action(Box::new(action));
+        }
+
+        self.refresh_projected_entries();
+    }
+
+    /// Updates an entry on a remote date (not current_date).
+    /// Returns Some((entry_type, new_content)) if content changed, None otherwise.
+    fn update_remote_entry(
+        &mut self,
+        date: chrono::NaiveDate,
+        line_index: usize,
+        new_content: String,
+        original_content: &str,
+    ) -> Option<(EntryType, String)> {
+        let path = self.active_path().to_path_buf();
+        let entry_type = storage::get_entry_type(date, &path, line_index);
+
+        match storage::update_entry_content(date, &path, line_index, new_content.clone()) {
+            Ok(false) => {
+                self.set_status(format!(
+                    "Failed to update: no entry at index {line_index} for {date}"
+                ));
+                None
+            }
+            Err(e) => {
+                self.set_status(format!("Failed to save: {e}"));
+                None
+            }
+            Ok(true) if original_content != new_content => Some((entry_type, new_content)),
+            Ok(true) => None,
         }
     }
 

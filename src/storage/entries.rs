@@ -33,7 +33,7 @@ impl EntryType {
 pub enum SourceType {
     /// Entry belongs to the viewed day, editable
     Local,
-    /// Projected via @date pattern, read-only
+    /// Projected via @date pattern, editable (modifies source)
     Later,
     /// Projected via @every-* pattern, read-only
     Recurring,
@@ -132,9 +132,10 @@ impl Entry {
     }
 
     /// Returns true if this entry can be edited/deleted.
+    /// Local and Later entries are editable; Recurring and Calendar are read-only.
     #[must_use]
     pub fn is_editable(&self) -> bool {
-        self.source_type == SourceType::Local
+        matches!(self.source_type, SourceType::Local | SourceType::Later)
     }
 }
 

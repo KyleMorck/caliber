@@ -138,6 +138,20 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
                 app.delete_current_entry()?;
             }
         }
+        DeferDate => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.defer_selected()?;
+            } else {
+                app.defer_current_entry()?;
+            }
+        }
+        RemoveDate => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.remove_date_from_selected()?;
+            } else {
+                app.remove_date_from_current_entry()?;
+            }
+        }
         Yank => {
             if matches!(app.input_mode, InputMode::Selection(_)) {
                 app.yank_selected();

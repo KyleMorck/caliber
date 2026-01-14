@@ -72,8 +72,11 @@ impl App {
     }
 
     /// Delete the currently selected entry (view-aware, yanks to clipboard first)
+    /// Later entries are deletable (deletes source), Recurring entries are read-only.
     pub fn delete_current_entry(&mut self) -> io::Result<()> {
-        if matches!(self.get_selected_item(), SelectedItem::Projected { .. }) {
+        if let SelectedItem::Projected { entry, .. } = self.get_selected_item()
+            && !matches!(entry.source_type, SourceType::Later)
+        {
             self.set_status("Press o to go to source");
             return Ok(());
         }
@@ -188,12 +191,21 @@ impl App {
     }
 
     /// Start editing the current entry (view-aware)
-    /// Edit is blocked on projected entries - use 'o' to go to source
+    /// Later entries are editable (edits source), Recurring entries are read-only.
     pub fn edit_current_entry(&mut self) {
         let (ctx, content) = match self.get_selected_item() {
-            SelectedItem::Projected { .. } => {
-                self.set_status("Press o to go to source");
-                return;
+            SelectedItem::Projected { entry, .. } => {
+                if !matches!(entry.source_type, SourceType::Later) {
+                    self.set_status("Press o to go to source");
+                    return;
+                }
+                (
+                    EditContext::LaterEdit {
+                        source_date: entry.source_date,
+                        line_index: entry.line_index,
+                    },
+                    entry.content.clone(),
+                )
             }
             SelectedItem::Daily { index, entry, .. } => (
                 EditContext::Daily { entry_index: index },
@@ -303,33 +315,34 @@ impl App {
         }
     }
 
-    /// Extract tag target (location + content) from current selection
-    pub fn extract_tag_target_from_current(&self) -> Option<super::actions::TagTarget> {
+    /// Extract content target (location + content) from current selection.
+    /// Used for tag operations, date operations, and other content transformations.
+    pub fn extract_content_target_from_current(&self) -> Option<super::actions::ContentTarget> {
         match self.get_selected_item() {
-            SelectedItem::Projected { entry, .. } => Some(super::actions::TagTarget {
-                location: EntryLocation::Projected(entry.clone()),
-                original_content: entry.content.clone(),
-            }),
+            SelectedItem::Projected { entry, .. } => Some(super::actions::ContentTarget::new(
+                EntryLocation::Projected(entry.clone()),
+                entry.content.clone(),
+            )),
             SelectedItem::Daily {
                 line_idx, entry, ..
-            } => Some(super::actions::TagTarget {
-                location: EntryLocation::Daily { line_idx },
-                original_content: entry.content.clone(),
-            }),
-            SelectedItem::Filter { index, entry } => Some(super::actions::TagTarget {
-                location: EntryLocation::Filter {
+            } => Some(super::actions::ContentTarget::new(
+                EntryLocation::Daily { line_idx },
+                entry.content.clone(),
+            )),
+            SelectedItem::Filter { index, entry } => Some(super::actions::ContentTarget::new(
+                EntryLocation::Filter {
                     index,
                     entry: entry.clone(),
                 },
-                original_content: entry.content.clone(),
-            }),
+                entry.content.clone(),
+            )),
             SelectedItem::None => None,
         }
     }
 
     /// Remove the last trailing tag from the selected entry
     pub fn remove_last_tag_from_current_entry(&mut self) -> io::Result<()> {
-        let Some(target) = self.extract_tag_target_from_current() else {
+        let Some(target) = self.extract_content_target_from_current() else {
             return Ok(());
         };
         let action =
@@ -339,7 +352,7 @@ impl App {
 
     /// Remove all trailing tags from the selected entry
     pub fn remove_all_tags_from_current_entry(&mut self) -> io::Result<()> {
-        let Some(target) = self.extract_tag_target_from_current() else {
+        let Some(target) = self.extract_content_target_from_current() else {
             return Ok(());
         };
         let action =
@@ -349,7 +362,7 @@ impl App {
 
     /// Append a favorite tag to the current entry
     pub fn append_tag_to_current_entry(&mut self, tag: &str) -> io::Result<()> {
-        let Some(target) = self.extract_tag_target_from_current() else {
+        let Some(target) = self.extract_content_target_from_current() else {
             return Ok(());
         };
         let action = super::actions::AppendTag::single(
@@ -357,6 +370,30 @@ impl App {
             target.original_content,
             tag.to_string(),
         );
+        self.execute_action(Box::new(action))
+    }
+
+    /// Defer the @date on the current entry by 1 day
+    pub fn defer_current_entry(&mut self) -> io::Result<()> {
+        let Some(target) = self.extract_content_target_from_current() else {
+            return Ok(());
+        };
+
+        if super::actions::is_recurring_entry(&target.location) {
+            self.set_status("Cannot defer recurring entries");
+            return Ok(());
+        }
+
+        let action = super::actions::DeferDate::single(target.location, target.original_content);
+        self.execute_action(Box::new(action))
+    }
+
+    /// Remove the @date from the current entry
+    pub fn remove_date_from_current_entry(&mut self) -> io::Result<()> {
+        let Some(target) = self.extract_content_target_from_current() else {
+            return Ok(());
+        };
+        let action = super::actions::RemoveDate::single(target.location, target.original_content);
         self.execute_action(Box::new(action))
     }
 
