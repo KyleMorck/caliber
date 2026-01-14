@@ -271,17 +271,18 @@ impl<'a> IndicatorResolver<'a> {
     }
 
     fn filter_cursor_indicator(&self, index: usize) -> Span<'static> {
-        if self.selection_active(index) {
-            Span::styled(
-                theme::GLYPH_SELECTED,
-                Style::default().fg(theme::EDIT_PRIMARY),
-            )
+        let in_selection_mode = matches!(self.app.input_mode, InputMode::Selection(_));
+        let glyph = if self.selection_active(index) {
+            theme::GLYPH_SELECTED
         } else {
-            Span::styled(
-                theme::GLYPH_CURSOR,
-                Style::default().fg(self.cursor_color()),
-            )
-        }
+            theme::GLYPH_CURSOR
+        };
+        let color = if in_selection_mode || self.selection_active(index) {
+            theme::EDIT_PRIMARY
+        } else {
+            self.cursor_color()
+        };
+        Span::styled(glyph, Style::default().fg(color))
     }
 
     fn filter_list_indicator(
@@ -337,17 +338,12 @@ impl<'a> IndicatorResolver<'a> {
                     Style::default().fg(theme::EDIT_PRIMARY),
                 )
             } else if matches!(self.app.input_mode, InputMode::Selection(_)) {
-                if is_selected_in_selection {
-                    Span::styled(
-                        theme::GLYPH_SELECTED,
-                        Style::default().fg(theme::EDIT_PRIMARY),
-                    )
+                let glyph = if is_selected_in_selection {
+                    theme::GLYPH_SELECTED
                 } else {
-                    Span::styled(
-                        theme::GLYPH_CURSOR,
-                        Style::default().fg(self.cursor_color()),
-                    )
-                }
+                    theme::GLYPH_CURSOR
+                };
+                Span::styled(glyph, Style::default().fg(theme::EDIT_PRIMARY))
             } else {
                 Span::styled(theme::GLYPH_CURSOR, Style::default().fg(cursor_color))
             }
