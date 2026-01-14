@@ -33,11 +33,14 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
                 .main_area
                 .width
                 .saturating_sub(theme::AGENDA_MIN_GUTTER);
+            let min_width = CalendarModel::panel_width();
             if let Some(ref cache) = app.agenda_cache {
                 let agenda = build_agenda_widget(cache, max_width as usize, AgendaVariant::Full);
-                (agenda.required_width() as u16 + theme::AGENDA_BORDER_WIDTH as u16).min(max_width)
+                (agenda.required_width() as u16 + theme::AGENDA_BORDER_WIDTH as u16)
+                    .max(min_width)
+                    .min(max_width)
             } else {
-                0
+                min_width
             }
         }
         None => 0,
@@ -156,10 +159,12 @@ fn render_footer_bar(
     let left_line = RatatuiLine::from(left_spans);
     f.render_widget(Paragraph::new(left_line), padded_area);
 
-    let journal_label = format!("[{}]", journal_name);
+    let journal_label = format!("[{}]", journal_name.to_uppercase());
     let right_line = RatatuiLine::from(Span::styled(
         journal_label,
-        Style::default().fg(journal_color),
+        Style::default()
+            .fg(journal_color)
+            .add_modifier(Modifier::BOLD),
     ));
     f.render_widget(
         Paragraph::new(right_line).alignment(ratatui::layout::Alignment::Right),
@@ -182,7 +187,7 @@ fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
         ViewMode::Daily(_) => {
             let date_label =
                 super::shared::format_date_smart(app.current_date, &app.config.header_date_format);
-            let color = theme::context_primary(app.active_journal(), false);
+            let color = theme::context_primary(app.active_journal());
             (date_label, color)
         }
         ViewMode::Filter(state) => {
@@ -192,7 +197,8 @@ fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
                 state.query.clone()
             };
             let filter_label = format!("Filter: {}", query_text);
-            (filter_label, theme::FILTER_PRIMARY)
+            let color = theme::context_primary(app.active_journal());
+            (filter_label, color)
         }
     };
 

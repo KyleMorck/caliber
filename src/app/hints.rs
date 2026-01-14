@@ -572,9 +572,9 @@ impl HintContext {
         match effective {
             Self::Tags { .. } => theme::TAG,
             Self::Commands { .. } => theme::HUB_PRIMARY,
-            Self::FilterTypes { .. } | Self::DateOps { .. } => theme::FILTER_PRIMARY,
+            Self::FilterTypes { .. } | Self::DateOps { .. } => Color::Magenta,
             Self::DateValues { .. } => theme::PROJECTED_DATE,
-            Self::SavedFilters { .. } => theme::FILTER_PRIMARY,
+            Self::SavedFilters { .. } => Color::Magenta,
             Self::Inactive | Self::GuidanceMessage { .. } | Self::Negation { .. } => Color::Reset,
         }
     }

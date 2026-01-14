@@ -3,10 +3,9 @@ use ratatui::style::Color;
 use super::surface::Surface;
 use crate::storage::JournalSlot;
 
-// Context primaries - change based on mode/journal
+// Context primaries - change based on journal
 pub const HUB_PRIMARY: Color = Color::Blue;
 pub const PROJECT_PRIMARY: Color = Color::Cyan;
-pub const FILTER_PRIMARY: Color = Color::Magenta;
 pub const EDIT_PRIMARY: Color = Color::Green;
 
 // Content highlighting
@@ -24,17 +23,13 @@ pub const CALENDAR_OTHER: Color = Color::Gray;
 pub const CONFIRM_YES: Color = Color::Green;
 pub const CONFIRM_NO: Color = Color::Red;
 
-/// Returns the appropriate primary color based on journal and view context.
-/// Used for cursor, projected indicators, and other context-aware elements.
+/// Returns the appropriate primary color based on journal context.
+/// Used for cursor, headings, and other context-aware elements.
 #[must_use]
-pub fn context_primary(journal: JournalSlot, in_filter: bool) -> Color {
-    if in_filter {
-        FILTER_PRIMARY
-    } else {
-        match journal {
-            JournalSlot::Hub => HUB_PRIMARY,
-            JournalSlot::Project => PROJECT_PRIMARY,
-        }
+pub fn context_primary(journal: JournalSlot) -> Color {
+    match journal {
+        JournalSlot::Hub => HUB_PRIMARY,
+        JournalSlot::Project => PROJECT_PRIMARY,
     }
 }
 

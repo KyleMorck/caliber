@@ -260,8 +260,7 @@ impl<'a> IndicatorResolver<'a> {
     }
 
     fn cursor_color(&self) -> Color {
-        let in_filter = matches!(self.app.view, crate::app::ViewMode::Filter(_));
-        theme::context_primary(self.app.active_journal(), in_filter)
+        theme::context_primary(self.app.active_journal())
     }
 
     fn filter_cursor_indicator(&self, index: usize) -> Span<'static> {

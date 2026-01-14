@@ -50,11 +50,7 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
             InputMode::Selection(_) => app.cancel_selection_mode(),
             InputMode::CommandPalette(_) => app.close_command_palette(),
             InputMode::FilterPrompt => app.cancel_filter_prompt(),
-            InputMode::Normal | InputMode::Confirm(_) => {
-                if matches!(app.view, ViewMode::Filter(_)) {
-                    app.cancel_filter();
-                }
-            }
+            InputMode::Normal | InputMode::Confirm(_) => {}
         },
         MoveDown => match &app.input_mode {
             InputMode::Reorder => app.reorder_move_down(),
