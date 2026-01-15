@@ -42,7 +42,7 @@ pub fn context_primary(journal: JournalSlot) -> Color {
 /// Background for floating panels, overlays, and sidebars.
 #[must_use]
 pub fn panel_bg(surface: &Surface) -> Color {
-    surface.gray3
+    surface.gray2
 }
 
 /// Dividers and rules within panels.

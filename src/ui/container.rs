@@ -1,16 +1,14 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::Line as RatatuiLine,
     widgets::{Block, BorderType, Borders, Paragraph},
 };
-use unicode_width::UnicodeWidthStr;
 
 use super::context::RenderContext;
 use super::layout::padded_content_area_with_buffer;
 use super::model::ListModel;
-use super::scroll_indicator::{ScrollIndicatorStyle, scroll_indicator_text};
 
 pub struct ContainerConfig {
     pub title: Option<RatatuiLine<'static>>,
@@ -104,37 +102,9 @@ pub fn content_area_for(area: Rect, config: &ContainerConfig) -> Rect {
 
 pub fn render_list(f: &mut Frame<'_>, list: &ListModel, layout: &ContainerLayout) {
     let scroll_offset = list.scroll.offset;
-    let total_lines = list.scroll.total;
     let lines = list.lines();
 
     #[allow(clippy::cast_possible_truncation)]
     let content = Paragraph::new(lines).scroll((scroll_offset as u16, 0));
     f.render_widget(content, layout.content_area);
-
-    let content_height = layout.content_area.height as usize;
-    let can_scroll_up = scroll_offset > 0;
-    let can_scroll_down = scroll_offset + content_height < total_lines;
-
-    if let Some(arrows) = scroll_indicator_text(
-        can_scroll_up,
-        can_scroll_down,
-        ScrollIndicatorStyle::Labeled,
-    ) {
-        let indicator_width = arrows.width() as u16;
-        let indicator_area = Rect {
-            x: layout
-                .main_area
-                .x
-                .saturating_add(layout.main_area.width.saturating_sub(indicator_width + 1)),
-            y: layout
-                .main_area
-                .y
-                .saturating_add(layout.main_area.height.saturating_sub(1)),
-            width: indicator_width,
-            height: 1,
-        };
-        let scroll_indicator =
-            Paragraph::new(ratatui::text::Span::styled(arrows, Style::default().dim()));
-        f.render_widget(scroll_indicator, indicator_area);
-    }
 }

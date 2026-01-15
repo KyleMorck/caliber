@@ -96,21 +96,16 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
         render_filter_prompt_autocomplete(f, app, &context);
     }
 
-    let selected_tab = match &app.view {
-        ViewMode::Daily(_) => 0,
-        ViewMode::Filter(_) => 1,
-    };
     let journal_name = app.journal_display_name();
-    let journal_color = match app.active_journal() {
-        crate::storage::JournalSlot::Hub => theme::HUB_PRIMARY,
-        crate::storage::JournalSlot::Project => theme::PROJECT_PRIMARY,
-    };
+    let journal_slot = app.active_journal();
     render_footer_bar(
         f,
         context.footer_area,
-        selected_tab,
+        &app.view,
+        &app.input_mode,
         &journal_name,
-        journal_color,
+        journal_slot,
+        &app.surface,
     );
 
     render_overlays(
@@ -126,49 +121,68 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
 fn render_footer_bar(
     f: &mut Frame<'_>,
     area: Rect,
-    selected_tab: usize,
+    view: &ViewMode,
+    input_mode: &InputMode,
     journal_name: &str,
-    journal_color: ratatui::style::Color,
+    journal_slot: crate::storage::JournalSlot,
+    surface: &super::surface::Surface,
 ) {
-    use ratatui::style::Color;
+    use ratatui::layout::{Constraint, Direction, Layout};
 
-    let padded_area = Rect {
-        x: area.x + 1,
-        y: area.y,
-        width: area.width.saturating_sub(1),
-        height: area.height,
+    let bg = surface.gray1;
+
+    let (mode_label, mode_color) = match input_mode {
+        InputMode::Edit(_) => ("Edit", theme::EDIT_PRIMARY),
+        InputMode::Selection(_) => ("Select", theme::EDIT_PRIMARY),
+        InputMode::Reorder => ("Reorder", theme::EDIT_PRIMARY),
+        _ => match view {
+            ViewMode::Daily(_) => ("Daily", Color::White),
+            ViewMode::Filter(_) => ("Filter", Color::LightMagenta),
+        },
     };
+    let mode_text = format!(" {} ", mode_label);
+    let mode_width = mode_text.len() as u16;
 
-    let tab_labels = ["Daily", "Filter"];
+    let journal_color = match journal_slot {
+        crate::storage::JournalSlot::Hub => theme::HUB_PRIMARY,
+        crate::storage::JournalSlot::Project => theme::PROJECT_PRIMARY,
+    };
+    let journal_text = format!(" {} ", journal_name);
+    let journal_width = journal_text.len() as u16;
 
-    let mut left_spans = Vec::new();
-    for (i, label) in tab_labels.iter().enumerate() {
-        let style = if i == selected_tab {
-            Style::default().fg(Color::Black).bg(Color::White)
-        } else {
-            Style::default()
-                .fg(Color::DarkGray)
-                .add_modifier(Modifier::DIM)
-        };
-        left_spans.push(Span::styled(format!(" {} ", label), style));
-        if i + 1 < tab_labels.len() {
-            left_spans.push(Span::raw(" "));
-        }
-    }
+    let layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(1),             // left padding (default bg)
+            Constraint::Length(mode_width),    // mode indicator
+            Constraint::Min(0),                // flexible middle (gray bg)
+            Constraint::Length(journal_width), // journal indicator
+            Constraint::Length(1),             // right padding (default bg)
+        ])
+        .split(area);
 
-    let left_line = RatatuiLine::from(left_spans);
-    f.render_widget(Paragraph::new(left_line), padded_area);
-
-    let journal_label = format!("[{}]", journal_name.to_uppercase());
-    let right_line = RatatuiLine::from(Span::styled(
-        journal_label,
-        Style::default()
-            .fg(journal_color)
-            .add_modifier(Modifier::BOLD),
-    ));
     f.render_widget(
-        Paragraph::new(right_line).alignment(ratatui::layout::Alignment::Right),
-        padded_area,
+        Paragraph::new(Span::styled(
+            mode_text,
+            Style::default().fg(Color::Black).bg(mode_color),
+        )),
+        layout[1],
+    );
+
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            " ".repeat(layout[2].width as usize),
+            Style::default().bg(bg),
+        )),
+        layout[2],
+    );
+
+    f.render_widget(
+        Paragraph::new(Span::styled(
+            journal_text,
+            Style::default().fg(Color::Black).bg(journal_color),
+        )),
+        layout[3],
     );
 }
 

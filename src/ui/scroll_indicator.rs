@@ -22,7 +22,7 @@ pub fn scroll_indicator_text(
     match style {
         ScrollIndicatorStyle::Arrows => Some(arrows.to_string()),
         ScrollIndicatorStyle::Labeled => Some(format!(
-            "{pad}{arrows}{label}{pad}",
+            "{label}{pad}{arrows}",
             pad = theme::SCROLL_PADDING,
             label = theme::SCROLL_LABEL
         )),
