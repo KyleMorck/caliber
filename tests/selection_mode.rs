@@ -172,7 +172,7 @@ fn c_key_batch_toggles_selected_tasks() {
     ctx.press(KeyCode::Char('j'));
     ctx.press(KeyCode::Char('v'));
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     assert!(journal.contains("[x] Task A"));

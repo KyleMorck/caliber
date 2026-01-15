@@ -36,18 +36,19 @@ impl App {
         self.active_sidebar
     }
 
-    pub fn toggle_calendar_sidebar(&mut self) {
+    pub fn toggle_sidebar(&mut self, sidebar: SidebarType) {
         self.active_sidebar = match self.active_sidebar {
-            Some(SidebarType::Calendar) => None,
-            _ => Some(SidebarType::Calendar),
+            Some(current) if current == sidebar => None,
+            _ => Some(sidebar),
         };
     }
 
+    pub fn toggle_calendar_sidebar(&mut self) {
+        self.toggle_sidebar(SidebarType::Calendar);
+    }
+
     pub fn toggle_agenda(&mut self) {
-        self.active_sidebar = match self.active_sidebar {
-            Some(SidebarType::Agenda) => None,
-            _ => Some(SidebarType::Agenda),
-        };
+        self.toggle_sidebar(SidebarType::Agenda);
     }
 
     pub fn sync_calendar_state(&mut self, date: NaiveDate) {
@@ -129,21 +130,22 @@ impl App {
 }
 
 fn month_date_range(year: i32, month: u32) -> (NaiveDate, NaiveDate) {
-    let start = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
-    let end = first_of_next_month(year, month).pred_opt().unwrap();
+    let start = first_of_month(year, month);
+    let end = first_of_next_month(year, month).pred_opt().unwrap_or(start);
     (start, end)
 }
 
 fn first_of_month(year: i32, month: u32) -> NaiveDate {
-    NaiveDate::from_ymd_opt(year, month, 1).unwrap()
+    NaiveDate::from_ymd_opt(year, month, 1).expect("valid year/month from chrono date")
 }
 
 fn first_of_next_month(year: i32, month: u32) -> NaiveDate {
     if month == 12 {
-        NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap()
+        NaiveDate::from_ymd_opt(year.saturating_add(1), 1, 1)
     } else {
-        NaiveDate::from_ymd_opt(year, month + 1, 1).unwrap()
+        NaiveDate::from_ymd_opt(year, month + 1, 1)
     }
+    .expect("valid year/month from chrono date")
 }
 
 fn days_in_month(year: i32, month: u32) -> u32 {

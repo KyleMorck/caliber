@@ -1,0 +1,238 @@
+# Help definitions for in-app help palette and README generation
+#
+# Each [[help]] entry represents a line in help/README:
+#   - actions: single action ID or array of related action IDs to display together
+#   - description: human-readable description of what the action(s) do
+#   - category: grouping for help organization
+#   - contexts: where this help entry applies (optional, inferred from actions if omitted)
+#
+# When actions is an array, keys are displayed together (e.g., "j/k" for movement)
+
+# =============================================================================
+# Navigation
+# =============================================================================
+
+[[help]]
+actions = ["move_up", "move_down"]
+description = "Move selection up/down"
+category = "navigation"
+
+[[help]]
+actions = ["move_left", "move_right"]
+description = "Navigate to previous/next day"
+category = "navigation"
+
+[[help]]
+actions = ["jump_to_first", "jump_to_last"]
+description = "Jump to first/last entry"
+category = "navigation"
+
+[[help]]
+actions = ["prev_week", "next_week"]
+description = "Jump backward/forward one week"
+category = "navigation"
+
+[[help]]
+actions = ["prev_month", "next_month"]
+description = "Jump backward/forward one month"
+category = "navigation"
+
+[[help]]
+actions = ["prev_year", "next_year"]
+description = "Jump backward/forward one year"
+category = "navigation"
+
+[[help]]
+actions = "goto_today"
+description = "Jump to today"
+category = "navigation"
+
+[[help]]
+actions = "date_picker"
+description = "Open date picker"
+category = "navigation"
+
+# =============================================================================
+# Entry Operations
+# =============================================================================
+
+[[help]]
+actions = ["new_entry_below", "new_entry_above"]
+description = "Create new entry below/above"
+category = "entries"
+
+[[help]]
+actions = "edit"
+description = "Edit selected entry"
+category = "entries"
+
+[[help]]
+actions = "toggle_complete"
+description = "Toggle task completion"
+category = "entries"
+
+[[help]]
+actions = "delete"
+description = "Delete selected entry"
+category = "entries"
+
+[[help]]
+actions = "cycle_entry_type"
+description = "Cycle entry type (task/note/event)"
+category = "entries"
+
+# =============================================================================
+# Date Operations
+# =============================================================================
+
+[[help]]
+actions = "defer_date"
+description = "Defer entry to a future date"
+category = "dates"
+
+[[help]]
+actions = "remove_date"
+description = "Remove date from entry"
+category = "dates"
+
+# =============================================================================
+# Clipboard & Undo
+# =============================================================================
+
+[[help]]
+actions = ["yank", "paste"]
+description = "Yank/paste entry"
+category = "clipboard"
+
+[[help]]
+actions = ["undo", "redo"]
+description = "Undo/redo last action"
+category = "clipboard"
+
+# =============================================================================
+# Tags
+# =============================================================================
+
+[[help]]
+actions = "remove_last_tag"
+description = "Remove last tag from entry"
+category = "tags"
+
+[[help]]
+actions = "remove_all_tags"
+description = "Remove all tags from entry"
+category = "tags"
+
+# =============================================================================
+# Selection Mode
+# =============================================================================
+
+[[help]]
+actions = "selection"
+description = "Enter/exit selection mode"
+category = "selection"
+
+[[help]]
+actions = "selection_extend_range"
+description = "Extend selection as range"
+category = "selection"
+
+# =============================================================================
+# Views & Panels
+# =============================================================================
+
+[[help]]
+actions = "toggle_filter_view"
+description = "Toggle between daily and filter view"
+category = "views"
+
+[[help]]
+actions = "filter_prompt"
+description = "Open filter prompt"
+category = "views"
+
+[[help]]
+actions = "toggle_journal"
+description = "Toggle between hub and project journal"
+category = "views"
+
+[[help]]
+actions = "toggle_calendar_sidebar"
+description = "Toggle calendar sidebar"
+category = "views"
+
+[[help]]
+actions = "toggle_agenda"
+description = "Toggle agenda panel"
+category = "views"
+
+# =============================================================================
+# Filter View
+# =============================================================================
+
+[[help]]
+actions = "filter_quick_add"
+description = "Quick add entry in filter view"
+category = "filter"
+
+[[help]]
+actions = "refresh"
+description = "Refresh filter results"
+category = "filter"
+
+# =============================================================================
+# Daily View
+# =============================================================================
+
+[[help]]
+actions = "reorder_mode"
+description = "Enter reorder mode"
+category = "daily"
+
+[[help]]
+actions = "tidy_entries"
+description = "Tidy entries (sort by type)"
+category = "daily"
+
+[[help]]
+actions = "hide"
+description = "Hide completed tasks"
+category = "daily"
+
+# =============================================================================
+# Edit Mode
+# =============================================================================
+
+[[help]]
+actions = "submit"
+description = "Save and exit edit mode"
+category = "edit"
+
+[[help]]
+actions = "cancel"
+description = "Cancel and discard changes"
+category = "edit"
+
+[[help]]
+actions = "save_and_new"
+description = "Save and create new entry below"
+category = "edit"
+
+[[help]]
+actions = "autocomplete"
+description = "Autocomplete tags and dates"
+category = "edit"
+
+# =============================================================================
+# General
+# =============================================================================
+
+[[help]]
+actions = "command_palette"
+description = "Open command palette"
+category = "general"
+
+[[help]]
+actions = "quit"
+description = "Quit application"
+category = "general"

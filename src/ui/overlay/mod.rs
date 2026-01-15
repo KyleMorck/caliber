@@ -12,7 +12,7 @@ use crate::app::{CommandPaletteMode, CommandPaletteState, ConfirmContext, TagInf
 use crate::registry::{COMMANDS, Command, KeyActionId, KeyContext, get_keys_for_action};
 use crate::storage::ProjectRegistry;
 
-use super::footer::{centered_rect, centered_rect_max};
+use super::layout::{centered_rect, centered_rect_max};
 use super::scroll_indicator::{ScrollIndicatorStyle, scroll_indicator_text};
 use super::theme;
 
@@ -106,7 +106,7 @@ impl CommandPaletteModel {
     }
 }
 
-pub fn render_confirm_modal(f: &mut Frame<'_>, model: ConfirmModel, area: Rect) {
+pub fn render_confirm_modal(f: &mut Frame<'_>, area: Rect, model: ConfirmModel) {
     let (title, messages): (&str, Vec<String>) = match &model.context {
         ConfirmContext::CreateProjectJournal => (
             " Create Project Journal ",
@@ -130,7 +130,7 @@ pub fn render_confirm_modal(f: &mut Frame<'_>, model: ConfirmModel, area: Rect) 
     let confirm_block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Blue));
+        .border_style(Style::default().fg(theme::CONFIRM_BORDER));
 
     let inner_area = confirm_block.inner(popup_area);
     f.render_widget(confirm_block, popup_area);
@@ -202,7 +202,7 @@ fn item_styles(is_selected: bool, is_available: bool, bg: Color, muted: Color) -
             .add_modifier(Modifier::REVERSED | Modifier::BOLD | base_modifier)
     } else {
         Style::default()
-            .fg(Color::White)
+            .fg(theme::CALENDAR_TEXT)
             .bg(bg)
             .add_modifier(Modifier::BOLD | base_modifier)
     };
@@ -290,8 +290,8 @@ fn build_palette_item_line(
 
 pub fn render_command_palette(
     f: &mut Frame<'_>,
-    model: CommandPaletteModel,
     area: Rect,
+    model: CommandPaletteModel,
     surface: &Surface,
 ) {
     let popup_area = centered_rect_max(90, 22, area);
@@ -346,7 +346,7 @@ pub fn render_command_palette(
         )
         .highlight_style(
             Style::default()
-                .fg(Color::White)
+                .fg(theme::CALENDAR_TEXT)
                 .bg(bg)
                 .add_modifier(Modifier::BOLD)
                 .remove_modifier(Modifier::DIM),
@@ -401,7 +401,7 @@ pub fn render_command_palette(
     if highlight_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(highlight_len),
-            Style::default().fg(Color::Cyan).bg(bg),
+            Style::default().fg(theme::PALETTE_ACCENT).bg(bg),
         ));
     }
     if after_len > 0 {
@@ -423,7 +423,7 @@ pub fn render_command_palette(
 
     let muted = theme::secondary_text(surface);
     let header_style = Style::default()
-        .fg(Color::Cyan)
+        .fg(theme::PALETTE_ACCENT)
         .bg(bg)
         .add_modifier(Modifier::BOLD);
 
@@ -620,7 +620,7 @@ pub fn render_command_palette(
     }
 }
 
-pub fn render_date_picker(f: &mut Frame<'_>, model: DatePickerModel, area: Rect) {
+pub fn render_date_picker(f: &mut Frame<'_>, area: Rect, model: DatePickerModel) {
     let popup_area = centered_rect_max(16, 3, area);
     f.render_widget(Clear, popup_area);
 
@@ -639,12 +639,14 @@ pub fn render_date_picker(f: &mut Frame<'_>, model: DatePickerModel, area: Rect)
 
     let input_spans = vec![
         Span::raw(" "),
-        Span::styled(&before_cursor, Style::default().fg(Color::White)),
+        Span::styled(&before_cursor, Style::default().fg(theme::CALENDAR_TEXT)),
         Span::styled(
             cursor_char.to_string(),
-            Style::default().fg(Color::Black).bg(Color::White),
+            Style::default()
+                .fg(theme::TEXT_ON_ACCENT)
+                .bg(theme::CALENDAR_TEXT),
         ),
-        Span::styled(after_cursor, Style::default().fg(Color::White)),
+        Span::styled(after_cursor, Style::default().fg(theme::CALENDAR_TEXT)),
     ];
     let input_line = Paragraph::new(RatatuiLine::from(input_spans));
     f.render_widget(input_line, inner);
@@ -652,12 +654,12 @@ pub fn render_date_picker(f: &mut Frame<'_>, model: DatePickerModel, area: Rect)
 
 pub fn render_overlays(f: &mut Frame<'_>, overlays: OverlayModel, layout: OverlayLayout<'_>) {
     if let Some(confirm) = overlays.confirm {
-        render_confirm_modal(f, confirm, layout.screen_area);
+        render_confirm_modal(f, layout.screen_area, confirm);
     }
     if let Some(palette) = overlays.command_palette {
-        render_command_palette(f, palette, layout.screen_area, layout.surface);
+        render_command_palette(f, layout.screen_area, palette, layout.surface);
     }
     if let Some(date_picker) = overlays.date_picker {
-        render_date_picker(f, date_picker, layout.screen_area);
+        render_date_picker(f, layout.screen_area, date_picker);
     }
 }

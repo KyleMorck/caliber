@@ -25,6 +25,19 @@ fn shifted_char_to_digit(c: char) -> Option<char> {
     }
 }
 
+/// Handle Up/Down navigation in hint dropdown. Returns true if handled.
+fn handle_hint_navigation(app: &mut App, code: KeyCode) -> bool {
+    if matches!(code, KeyCode::Up | KeyCode::Down) && app.hint_state.is_active() {
+        if code == KeyCode::Down {
+            app.hint_state.select_next();
+        } else {
+            app.hint_state.select_prev();
+        }
+        return true;
+    }
+    false
+}
+
 fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
     use KeyActionId::*;
     match action {
@@ -281,12 +294,7 @@ pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 }
 
 pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
-    if matches!(key.code, KeyCode::Up | KeyCode::Down) && app.hint_state.is_active() {
-        if key.code == KeyCode::Down {
-            app.hint_state.select_next();
-        } else {
-            app.hint_state.select_prev();
-        }
+    if handle_hint_navigation(app, key.code) {
         return;
     }
 
@@ -487,12 +495,7 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 }
 
 pub fn handle_filter_prompt_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
-    if matches!(key.code, KeyCode::Up | KeyCode::Down) && app.hint_state.is_active() {
-        if key.code == KeyCode::Down {
-            app.hint_state.select_next();
-        } else {
-            app.hint_state.select_prev();
-        }
+    if handle_hint_navigation(app, key.code) {
         return Ok(());
     }
 

@@ -26,7 +26,7 @@ pub fn view_content_container_config(border_color: Color) -> ContainerConfig {
     ContainerConfig {
         title: None,
         border_color,
-        focused_border_color: Some(Color::White),
+        focused_border_color: Some(super::theme::BORDER_DEFAULT),
         padded: true,
         borders: Borders::NONE,
         rounded: false,

@@ -8,13 +8,33 @@ pub const HUB_PRIMARY: Color = Color::Blue;
 pub const PROJECT_PRIMARY: Color = Color::Cyan;
 pub const EDIT_PRIMARY: Color = Color::Green;
 
+// View mode colors
+pub const DAILY_PRIMARY: Color = Color::White;
+pub const FILTER_PRIMARY: Color = Color::LightMagenta;
+pub const FILTER_BORDER: Color = Color::Magenta;
+
 // Content highlighting
 pub const TAG: Color = Color::Yellow;
 pub const PROJECTED_DATE: Color = Color::Red;
 
-// Confirm dialog (semantic)
+// Confirm dialog
+pub const CONFIRM_BORDER: Color = Color::Blue;
 pub const CONFIRM_YES: Color = Color::Green;
 pub const CONFIRM_NO: Color = Color::Red;
+
+// Command palette
+pub const PALETTE_ACCENT: Color = Color::Cyan;
+
+// Border colors
+pub const BORDER_DEFAULT: Color = Color::White;
+pub const BORDER_MUTED: Color = Color::Gray;
+
+// Text colors
+pub const TEXT_MUTED: Color = Color::DarkGray;
+pub const TEXT_ON_ACCENT: Color = Color::Black;
+
+// Calendar
+pub const CALENDAR_TEXT: Color = Color::White;
 
 // Status indicator
 pub const STATUS_TEXT: Color = Color::Gray;

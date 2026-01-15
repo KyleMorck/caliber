@@ -1,4 +1,4 @@
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line as RatatuiLine, Span};
 
 use crate::app::{App, InputMode};
@@ -11,6 +11,7 @@ use super::model::ListModel;
 use super::overlay::{CommandPaletteModel, ConfirmModel, DatePickerModel, OverlayModel};
 use super::prep::RenderPrep;
 use super::scroll::CursorContext;
+use super::theme;
 use super::views::build_view_spec;
 
 pub struct ViewModel {
@@ -104,13 +105,13 @@ pub fn build_view_model(app: &App, context: &RenderContext, prep: RenderPrep) ->
 }
 
 fn build_header() -> HeaderModel {
-    let version = format!("v{}", env!("CARGO_PKG_VERSION"));
+    let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
     HeaderModel {
         left: None,
         right: Some(RatatuiLine::from(Span::styled(
             version,
             Style::default()
-                .fg(Color::DarkGray)
+                .fg(theme::TEXT_MUTED)
                 .add_modifier(Modifier::DIM),
         ))),
     }

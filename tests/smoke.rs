@@ -16,7 +16,7 @@ fn core_workflow_creates_toggles_filters_deletes_undoes() {
     ctx.press(KeyCode::Char('j'));
     ctx.press(KeyCode::Char('k'));
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
     assert!(ctx.screen_contains("[x]"));
 
     ctx.press(KeyCode::Char('d'));

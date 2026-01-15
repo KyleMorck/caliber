@@ -56,7 +56,7 @@ fn toggle_materializes_completed_recurring_entry() {
     );
     let mut ctx = TestContext::with_journal_content(today, &content);
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     let today_section = today.format("# %Y/%m/%d").to_string();

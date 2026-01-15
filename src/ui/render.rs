@@ -1,6 +1,6 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line as RatatuiLine, Span};
 use ratatui::widgets::{Borders, Paragraph};
 use unicode_width::UnicodeWidthStr;
@@ -136,8 +136,8 @@ fn render_footer_bar(
         InputMode::Selection(_) => ("Select", theme::EDIT_PRIMARY),
         InputMode::Reorder => ("Reorder", theme::EDIT_PRIMARY),
         _ => match view {
-            ViewMode::Daily(_) => ("Daily", Color::White),
-            ViewMode::Filter(_) => ("Filter", Color::LightMagenta),
+            ViewMode::Daily(_) => ("Daily", theme::DAILY_PRIMARY),
+            ViewMode::Filter(_) => ("Filter", theme::FILTER_PRIMARY),
         },
     };
     let mode_text = format!(" {} ", mode_label);
@@ -164,7 +164,7 @@ fn render_footer_bar(
     f.render_widget(
         Paragraph::new(Span::styled(
             mode_text,
-            Style::default().fg(Color::Black).bg(mode_color),
+            Style::default().fg(theme::TEXT_ON_ACCENT).bg(mode_color),
         )),
         layout[1],
     );
@@ -180,7 +180,7 @@ fn render_footer_bar(
     f.render_widget(
         Paragraph::new(Span::styled(
             journal_text,
-            Style::default().fg(Color::Black).bg(journal_color),
+            Style::default().fg(theme::TEXT_ON_ACCENT).bg(journal_color),
         )),
         layout[3],
     );
@@ -246,7 +246,7 @@ fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
     if highlight_start > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(highlight_start),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme::TEXT_MUTED),
         ));
     }
     if highlight_len > 0 {
@@ -258,7 +258,7 @@ fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
     if after_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(after_len),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme::TEXT_MUTED),
         ));
     }
 
@@ -284,7 +284,7 @@ fn render_calendar_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
         title: Some(RatatuiLine::from(
             calendar_state.display_month.format(" %B %Y ").to_string(),
         )),
-        border_color: Color::White,
+        border_color: theme::BORDER_DEFAULT,
         focused_border_color: None,
         padded: false,
         borders: Borders::ALL,
@@ -303,7 +303,7 @@ fn render_calendar_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
 
     let upcoming_config = ContainerConfig {
         title: Some(RatatuiLine::from(" Upcoming ")),
-        border_color: Color::White,
+        border_color: theme::BORDER_DEFAULT,
         focused_border_color: None,
         padded: false,
         borders: Borders::ALL,
@@ -327,7 +327,7 @@ fn render_calendar_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
 fn render_agenda_sidebar(f: &mut Frame<'_>, app: &App, sidebar_area: Rect) {
     let config = ContainerConfig {
         title: Some(RatatuiLine::from(" Agenda ")),
-        border_color: Color::White,
+        border_color: theme::BORDER_DEFAULT,
         focused_border_color: None,
         padded: false,
         borders: Borders::ALL,

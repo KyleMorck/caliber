@@ -5,7 +5,7 @@ use ratatui::widgets::calendar::{CalendarEventStore, Monthly};
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
 };
 use time::{Date, Month};
 
@@ -59,9 +59,9 @@ pub fn render_calendar(f: &mut Frame<'_>, model: &CalendarModel<'_>, area: Rect)
         }
         if info.has_entries || info.has_calendar_events {
             let style = if info.has_overdue_tasks {
-                Style::new().fg(theme::PROJECTED_DATE).not_dim()
+                Style::default().fg(theme::PROJECTED_DATE).not_dim()
             } else {
-                Style::new().fg(Color::White).not_dim()
+                Style::default().fg(theme::CALENDAR_TEXT).not_dim()
             };
             events.add(to_time_date(*date), style);
         }
@@ -72,19 +72,28 @@ pub fn render_calendar(f: &mut Frame<'_>, model: &CalendarModel<'_>, area: Rect)
         && today.year() == model.display_month.year()
         && today != model.selected
     {
-        events.add(to_time_date(today), Style::new().fg(context_primary).not_dim());
+        events.add(
+            to_time_date(today),
+            Style::default().fg(context_primary).not_dim(),
+        );
     }
 
     // Selected day - same priority logic but reversed
     let selected_info = model.day_cache.get(&model.selected);
     let selected_style = if model.selected == today {
-        Style::new().fg(context_primary).reversed().not_dim()
+        Style::default().fg(context_primary).reversed().not_dim()
     } else if selected_info.is_some_and(|i| i.has_overdue_tasks) {
-        Style::new().fg(theme::PROJECTED_DATE).reversed().not_dim()
+        Style::default()
+            .fg(theme::PROJECTED_DATE)
+            .reversed()
+            .not_dim()
     } else if selected_info.is_some_and(|i| i.has_entries || i.has_calendar_events) {
-        Style::new().fg(Color::White).reversed().not_dim()
+        Style::default()
+            .fg(theme::CALENDAR_TEXT)
+            .reversed()
+            .not_dim()
     } else {
-        Style::new().reversed().not_dim()
+        Style::default().reversed().not_dim()
     };
     events.add(to_time_date(model.selected), selected_style);
 
@@ -96,8 +105,8 @@ pub fn render_calendar(f: &mut Frame<'_>, model: &CalendarModel<'_>, area: Rect)
     };
 
     let calendar = Monthly::new(to_time_date(model.display_month), events)
-        .show_weekdays_header(Style::new().fg(Color::White).dim().bold())
-        .default_style(Style::new().fg(Color::White).dim());
+        .show_weekdays_header(Style::default().fg(theme::CALENDAR_TEXT).dim().bold())
+        .default_style(Style::default().fg(theme::CALENDAR_TEXT).dim());
 
     f.render_widget(calendar, calendar_area);
 }

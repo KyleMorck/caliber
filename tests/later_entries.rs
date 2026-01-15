@@ -50,7 +50,7 @@ fn toggle_completes_later_entry_in_source() {
     let content = "# 2026/01/10\n- [ ] Later task @01/15\n";
     let mut ctx = TestContext::with_journal_content(view_date, content);
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     assert!(journal.contains("- [x] Later task @01/15"));

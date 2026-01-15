@@ -1,6 +1,6 @@
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Style, Stylize};
+use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line as RatatuiLine, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use unicode_width::UnicodeWidthStr;
@@ -159,7 +159,7 @@ pub fn build_dropdown_lines(
 pub fn render_dropdown_box(f: &mut Frame<'_>, area: Rect, lines: Vec<RatatuiLine<'static>>) {
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Gray));
+        .border_style(Style::default().fg(super::theme::BORDER_MUTED));
 
     f.render_widget(Clear, area);
     f.render_widget(block.clone(), area);

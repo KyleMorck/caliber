@@ -2,7 +2,7 @@ use std::path::Path;
 
 use chrono::{Local, NaiveDate};
 use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
+use ratatui::text::{Line as RatatuiLine, Span};
 use unicode_width::UnicodeWidthStr;
 
 use crate::calendar::CalendarStore;
@@ -50,16 +50,16 @@ impl AgendaWidgetModel<'_> {
         self.width
     }
 
-    pub fn render_lines(&self) -> Vec<Line<'static>> {
+    pub fn render_lines(&self) -> Vec<RatatuiLine<'static>> {
         let mut lines = Vec::new();
         let content_width = self.width.saturating_sub(theme::AGENDA_BORDER_WIDTH);
 
         for (i, day) in self.days.iter().enumerate() {
             if i > 0 && self.variant == AgendaVariant::Full {
-                lines.push(Line::from(""));
+                lines.push(RatatuiLine::from(""));
             }
             let date_str = day.date.format("%m/%d/%y").to_string();
-            lines.push(Line::from(Span::styled(
+            lines.push(RatatuiLine::from(Span::styled(
                 format!(" {date_str}"),
                 Style::default().add_modifier(Modifier::DIM),
             )));
@@ -73,7 +73,7 @@ impl AgendaWidgetModel<'_> {
                     AgendaVariant::Mini => &entry.text,
                 };
                 let text = truncate_text(text, max_text);
-                lines.push(Line::from(vec![
+                lines.push(RatatuiLine::from(vec![
                     Span::styled(prefix, entry.style),
                     Span::raw(text),
                 ]));

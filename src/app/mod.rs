@@ -190,6 +190,42 @@ pub enum ViewMode {
     Filter(FilterState),
 }
 
+impl ViewMode {
+    /// Returns a mutable reference to the selected index
+    pub fn selected_mut(&mut self) -> &mut usize {
+        match self {
+            ViewMode::Daily(state) => &mut state.selected,
+            ViewMode::Filter(state) => &mut state.selected,
+        }
+    }
+
+    /// Returns the current selected index
+    #[must_use]
+    pub fn selected(&self) -> usize {
+        match self {
+            ViewMode::Daily(state) => state.selected,
+            ViewMode::Filter(state) => state.selected,
+        }
+    }
+
+    /// Returns a mutable reference to the scroll offset
+    pub fn scroll_offset_mut(&mut self) -> &mut usize {
+        match self {
+            ViewMode::Daily(state) => &mut state.scroll_offset,
+            ViewMode::Filter(state) => &mut state.scroll_offset,
+        }
+    }
+
+    /// Returns the current scroll offset
+    #[must_use]
+    pub fn scroll_offset(&self) -> usize {
+        match self {
+            ViewMode::Daily(state) => state.scroll_offset,
+            ViewMode::Filter(state) => state.scroll_offset,
+        }
+    }
+}
+
 /// Context for what is being edited
 #[derive(Clone, Debug, PartialEq)]
 pub enum EditContext {
@@ -447,7 +483,8 @@ impl App {
 
         handle.spawn(async move {
             let result = fetch_all_calendars(&config, &visible_ids).await;
-            let _ = tx.send(result).await;
+            // Receiver dropped is expected on app shutdown - silent discard is intentional
+            drop(tx.send(result).await);
         });
     }
 

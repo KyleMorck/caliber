@@ -2,16 +2,20 @@ use reqwest::Client;
 use std::sync::LazyLock;
 use std::time::Duration;
 
-static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
+static HTTP_CLIENT: LazyLock<Option<Client>> = LazyLock::new(|| {
     Client::builder()
         .timeout(Duration::from_secs(30))
         .user_agent("Caliber/1.0")
         .build()
-        .expect("Failed to create HTTP client")
+        .ok()
 });
 
 pub async fn fetch_calendar(url: &str) -> Result<String, String> {
-    let response = HTTP_CLIENT
+    let client = HTTP_CLIENT
+        .as_ref()
+        .ok_or_else(|| "HTTP client unavailable (TLS initialization failed)".to_string())?;
+
+    let response = client
         .get(url)
         .send()
         .await

@@ -135,15 +135,15 @@ fn shift_t_key_tidies_entries_by_type() {
 }
 
 #[test]
-fn c_key_toggles_task_completion() {
+fn space_toggles_task_completion() {
     let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let content = "# 2026/01/15\n- [ ] My task\n";
     let mut ctx = TestContext::with_journal_content(date, content);
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
     assert!(ctx.screen_contains("[x]"));
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
     assert!(ctx.screen_contains("[ ]"));
 
     let journal = ctx.read_journal();

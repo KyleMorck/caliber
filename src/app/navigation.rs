@@ -47,17 +47,11 @@ impl App {
 
     #[must_use]
     pub fn scroll_offset(&self) -> usize {
-        match &self.view {
-            ViewMode::Filter(state) => state.scroll_offset,
-            ViewMode::Daily(state) => state.scroll_offset,
-        }
+        self.view.scroll_offset()
     }
 
     pub fn scroll_offset_mut(&mut self) -> &mut usize {
-        match &mut self.view {
-            ViewMode::Filter(state) => &mut state.scroll_offset,
-            ViewMode::Daily(state) => &mut state.scroll_offset,
-        }
+        self.view.scroll_offset_mut()
     }
 
     /// Count visible projected entries (accounting for hide_completed).
@@ -112,14 +106,8 @@ impl App {
     }
 
     pub fn move_up(&mut self) {
-        match &mut self.view {
-            ViewMode::Daily(state) => {
-                state.selected = state.selected.saturating_sub(1);
-            }
-            ViewMode::Filter(state) => {
-                state.selected = state.selected.saturating_sub(1);
-            }
-        }
+        let selected = self.view.selected_mut();
+        *selected = selected.saturating_sub(1);
     }
 
     pub fn move_down(&mut self) {
@@ -138,10 +126,7 @@ impl App {
     }
 
     pub fn jump_to_first(&mut self) {
-        match &mut self.view {
-            ViewMode::Daily(state) => state.selected = 0,
-            ViewMode::Filter(state) => state.selected = 0,
-        }
+        *self.view.selected_mut() = 0;
     }
 
     pub fn jump_to_last(&mut self) {

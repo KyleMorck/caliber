@@ -40,8 +40,11 @@ pub fn build_daily_list(app: &App, width: usize) -> ListModel {
         visible_projected_idx += 1;
 
         let visible_idx = visible_projected_idx - 1;
-        let is_editing =
-            is_selected && matches!(app.input_mode, InputMode::Edit(EditContext::LaterEdit { .. }));
+        let is_editing = is_selected
+            && matches!(
+                app.input_mode,
+                InputMode::Edit(EditContext::LaterEdit { .. })
+            );
 
         if is_editing {
             let content_style = entry_style(&projected_entry.entry_type);

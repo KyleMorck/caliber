@@ -40,12 +40,12 @@ contexts = ["shared_normal", "selection"]
 
 [[action]]
 key_action_id = "prev_week"
-default_keys = ["J", "pageup"]
+default_keys = ["K", "pageup"]
 contexts = ["daily_normal"]
 
 [[action]]
 key_action_id = "next_week"
-default_keys = ["K", "pagedown"]
+default_keys = ["J", "pagedown"]
 contexts = ["daily_normal"]
 
 [[action]]
@@ -90,7 +90,7 @@ contexts = ["shared_normal"]
 
 [[action]]
 key_action_id = "toggle_complete"
-default_keys = ["c"]
+default_keys = ["space"]
 contexts = ["shared_normal", "selection"]
 
 [[action]]

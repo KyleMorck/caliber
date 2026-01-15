@@ -47,7 +47,7 @@ fn entry_type_preserved_on_save() {
     ctx.press(KeyCode::Enter);
 
     ctx.press(KeyCode::Char('g'));
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     assert!(journal.contains("- [x] A task"));
