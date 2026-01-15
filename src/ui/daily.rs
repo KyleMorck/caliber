@@ -1,7 +1,4 @@
-use ratatui::{
-    style::{Style, Stylize},
-    text::{Line as RatatuiLine, Span},
-};
+use ratatui::style::{Style, Stylize};
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, EditContext, InputMode, ViewMode};
@@ -10,9 +7,8 @@ use crate::storage::{EntryType, Line};
 use super::helpers::edit_text;
 use super::model::ListModel;
 use super::rows;
-use super::rows::{build_edit_rows_with_prefix_width, header_line};
+use super::rows::build_edit_rows_with_prefix_width;
 use super::shared::entry_style;
-use super::theme;
 
 pub fn build_daily_list(app: &App, width: usize) -> ListModel {
     let ViewMode::Daily(state) = &app.view else {
@@ -20,23 +16,6 @@ pub fn build_daily_list(app: &App, width: usize) -> ListModel {
     };
 
     let mut rows = Vec::new();
-
-    let date_header = app
-        .current_date
-        .format(&app.config.header_date_format)
-        .to_string();
-    let hidden_count = app.hidden_completed_count();
-    let header_line = if app.hide_completed && hidden_count > 0 {
-        RatatuiLine::from(vec![
-            Span::styled(date_header, Style::default().fg(theme::MODE_DAILY)),
-            Span::styled(
-                format!(" (Hiding {hidden_count} completed)"),
-                Style::default().dim(),
-            ),
-        ])
-    } else {
-        header_line(date_header, Style::default().fg(theme::MODE_DAILY))
-    };
 
     let calendar_events = app.calendar_store.events_for_date(app.current_date);
     let show_calendar_name = app.calendar_store.visible_calendar_count > 1;
@@ -61,13 +40,35 @@ pub fn build_daily_list(app: &App, width: usize) -> ListModel {
         visible_projected_idx += 1;
 
         let visible_idx = visible_projected_idx - 1;
-        rows.push(rows::build_projected_row(
-            app,
-            projected_entry,
-            is_selected,
-            visible_idx,
-            width,
-        ));
+        let is_editing = is_selected
+            && matches!(
+                app.input_mode,
+                InputMode::Edit(EditContext::LaterEdit { .. })
+            );
+
+        if is_editing {
+            let content_style = entry_style(&projected_entry.entry_type);
+            let text = edit_text(app, true, &projected_entry.content);
+            let prefix = projected_entry.entry_type.prefix();
+            let prefix_width = prefix.width();
+            let text_width = width.saturating_sub(prefix_width);
+            rows.extend(build_edit_rows_with_prefix_width(
+                prefix,
+                prefix_width,
+                content_style,
+                &text,
+                text_width,
+                None,
+            ));
+        } else {
+            rows.push(rows::build_projected_row(
+                app,
+                projected_entry,
+                is_selected,
+                visible_idx,
+                width,
+            ));
+        }
     }
 
     let mut visible_entry_idx = 0;
@@ -124,5 +125,5 @@ pub fn build_daily_list(app: &App, width: usize) -> ListModel {
         rows.push(rows::build_message_row(message, Style::default().dim()));
     }
 
-    ListModel::from_rows(Some(header_line), rows, app.scroll_offset())
+    ListModel::from_rows(None, rows, app.scroll_offset())
 }

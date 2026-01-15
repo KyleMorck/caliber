@@ -9,9 +9,8 @@ use crate::app::{App, EditContext, InputMode, ViewMode};
 use super::helpers::edit_text;
 use super::model::ListModel;
 use super::rows;
-use super::rows::{build_edit_rows_with_prefix_width, header_line};
+use super::rows::build_edit_rows_with_prefix_width;
 use super::shared::{date_suffix_style, entry_style, format_date_suffix};
-use super::theme;
 
 pub fn build_filter_list(app: &App, width: usize) -> ListModel {
     let ViewMode::Filter(state) = &app.view else {
@@ -19,9 +18,6 @@ pub fn build_filter_list(app: &App, width: usize) -> ListModel {
     };
 
     let mut rows = Vec::new();
-
-    let header = format!("Filter: {}", state.query);
-    let header_line = header_line(header, Style::default().fg(theme::MODE_FILTER));
 
     let is_quick_adding = matches!(
         app.input_mode,
@@ -92,5 +88,5 @@ pub fn build_filter_list(app: &App, width: usize) -> ListModel {
         ));
     }
 
-    ListModel::from_rows(Some(header_line), rows, app.scroll_offset())
+    ListModel::from_rows(None, rows, app.scroll_offset())
 }

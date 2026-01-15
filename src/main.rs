@@ -3,7 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 use crossterm::{
-    event::{self, Event},
+    event::{self, DisableBracketedPaste, EnableBracketedPaste, Event},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -12,6 +12,7 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 use caliber::app::{App, InputMode};
 use caliber::config::{self, Config, resolve_path};
 use caliber::storage::{JournalContext, JournalSlot};
+use caliber::ui::surface::Surface;
 use caliber::{handlers, storage, ui};
 
 fn main() -> Result<(), io::Error> {
@@ -43,16 +44,24 @@ fn main() -> Result<(), io::Error> {
 
     let journal_context = JournalContext::new(hub_path, project_path.clone(), active_slot);
 
+    let surface = Surface::from_terminal();
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    // Enable bracketed paste to capture Cmd+V as a single event (which we ignore)
+    // Without this, pasted text arrives as individual key events causing issues
+    execute!(stdout, EnterAlternateScreen, EnableBracketedPaste)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let res = run_app(&mut terminal, config, journal_context);
+    let res = run_app(&mut terminal, config, journal_context, surface);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableBracketedPaste
+    )?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -89,6 +98,7 @@ fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     config: Config,
     journal_context: JournalContext,
+    surface: Surface,
 ) -> io::Result<()> {
     let date = chrono::Local::now().date_naive();
 
@@ -96,7 +106,7 @@ fn run_app<B: ratatui::backend::Backend>(
         .map_err(|e| io::Error::other(format!("Failed to create tokio runtime: {e}")))?;
     let runtime_handle = Some(runtime.handle().clone());
 
-    let mut app = App::new_with_context(config, date, journal_context, runtime_handle)?;
+    let mut app = App::new_with_context(config, date, journal_context, runtime_handle, surface)?;
 
     // Project initialization flow for git repositories
     if app.in_git_repo
@@ -154,17 +164,20 @@ fn run_app<B: ratatui::backend::Backend>(
         {
             app.status_message = None;
 
-            if app.help_visible {
-                handlers::handle_help_key(&mut app, key);
-            } else {
-                match &app.input_mode {
-                    InputMode::Prompt(_) => handlers::handle_prompt_key(&mut app, key)?,
-                    InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
-                    InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
-                    InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
-                    InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
-                    InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
-                    InputMode::Interface(_) => handlers::handle_interface_key(&mut app, key)?,
+            match &app.input_mode {
+                InputMode::Normal => handlers::handle_normal_key(&mut app, key)?,
+                InputMode::Edit(_) => handlers::handle_edit_key(&mut app, key),
+                InputMode::Reorder => handlers::handle_reorder_key(&mut app, key),
+                InputMode::Confirm(_) => handlers::handle_confirm_key(&mut app, key.code)?,
+                InputMode::Selection(_) => handlers::handle_selection_key(&mut app, key)?,
+                InputMode::CommandPalette(_) => {
+                    handlers::handle_command_palette_key(&mut app, key)?;
+                }
+                InputMode::FilterPrompt => {
+                    handlers::handle_filter_prompt_key(&mut app, key)?;
+                }
+                InputMode::DatePicker(_) => {
+                    handlers::handle_date_picker_key(&mut app, key)?;
                 }
             }
         }

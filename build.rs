@@ -10,21 +10,10 @@ struct ActionsFile {
 }
 
 #[derive(Debug, Deserialize)]
-struct FooterDef {
-    modes: Vec<String>,
-    text: String,
-}
-
-#[derive(Debug, Deserialize)]
 struct ActionDef {
     key_action_id: String,
     default_keys: Vec<String>,
     contexts: Vec<String>,
-    #[serde(default)]
-    help_sections: Vec<String>,
-    footer: Option<FooterDef>,
-    help: String,
-    readme: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,11 +29,11 @@ struct SubArgDef {
 #[derive(Debug, Deserialize)]
 struct CommandDef {
     name: String,
+    #[serde(default)]
+    group: Option<String>,
     args: Option<String>,
     subargs: Option<Vec<SubArgDef>>,
     help: String,
-    readme: String,
-    completion_hint: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,8 +47,6 @@ struct FilterDef {
     display: Option<String>,
     category: String,
     help: String,
-    readme: String,
-    completion_hint: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,18 +68,6 @@ struct DateValueDef {
     completion_hint: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct HelpEntriesFile {
-    help_entry: Vec<HelpEntryDef>,
-}
-
-#[derive(Debug, Deserialize)]
-struct HelpEntryDef {
-    section: String,
-    key: String,
-    description: String,
-}
-
 const VALID_CONTEXTS: &[&str] = &[
     "shared_normal",
     "daily_normal",
@@ -100,37 +75,7 @@ const VALID_CONTEXTS: &[&str] = &[
     "edit",
     "reorder",
     "selection",
-    "help",
-    "date_interface",
-    "project_interface",
-    "tag_interface",
-    "command_prompt",
-    "filter_prompt",
-];
-
-const VALID_HELP_SECTIONS: &[&str] = &[
-    "daily",
-    "filter",
-    "edit",
-    "reorder",
-    "selection",
-    "date",
-    "project",
-    "tag",
-    "commands",
-    "filters",
-    "help",
-];
-
-const VALID_FOOTER_MODES: &[&str] = &[
-    "normal_daily",
-    "normal_filter",
-    "edit",
-    "reorder",
-    "selection",
-    "date_interface",
-    "project_interface",
-    "tag_interface",
+    "command_palette",
 ];
 
 const VALID_DATE_SCOPES: &[&str] = &["entry", "filter"];
@@ -145,23 +90,6 @@ fn to_pascal_case(s: &str) -> String {
             }
         })
         .collect()
-}
-
-fn format_key_for_display(key: &str) -> String {
-    match key {
-        "down" => "↓".to_string(),
-        "up" => "↑".to_string(),
-        "left" => "←".to_string(),
-        "right" => "→".to_string(),
-        "ret" => "Enter".to_string(),
-        "esc" => "Esc".to_string(),
-        "tab" => "Tab".to_string(),
-        "backspace" => "Bksp".to_string(),
-        "space" => "Space".to_string(),
-        "S-tab" => "Shift+Tab".to_string(),
-        _ if key.starts_with("S-") => format!("Shift+{}", &key[2..]),
-        _ => key.to_string(),
-    }
 }
 
 fn expand_contexts(contexts: &[String]) -> Vec<String> {
@@ -218,6 +146,8 @@ fn is_valid_key_spec(s: &str) -> bool {
             | "right"
             | "home"
             | "end"
+            | "pageup"
+            | "pagedown"
             | "space"
     ) || remaining.len() == 1
         || (remaining.starts_with('f')
@@ -231,13 +161,6 @@ fn validate_actions(actions: &[ActionDef]) {
     for action in actions {
         if !seen_ids.insert(&action.key_action_id) {
             panic!("Duplicate action ID: {}", action.key_action_id);
-        }
-
-        if action.help_sections.is_empty() && action.footer.is_none() {
-            panic!(
-                "Action '{}' must have at least one help_section or footer",
-                action.key_action_id
-            );
         }
 
         for key in &action.default_keys {
@@ -255,26 +178,6 @@ fn validate_actions(actions: &[ActionDef]) {
                     "Invalid context '{}' for action '{}'. Valid values: {:?}",
                     ctx, action.key_action_id, VALID_CONTEXTS
                 );
-            }
-        }
-
-        for section in &action.help_sections {
-            if !VALID_HELP_SECTIONS.contains(&section.as_str()) {
-                panic!(
-                    "Invalid help_section '{}' for action '{}'. Valid values: {:?}",
-                    section, action.key_action_id, VALID_HELP_SECTIONS
-                );
-            }
-        }
-
-        if let Some(footer) = &action.footer {
-            for mode in &footer.modes {
-                if !VALID_FOOTER_MODES.contains(&mode.as_str()) {
-                    panic!(
-                        "Invalid footer mode '{}' for action '{}'. Valid values: {:?}",
-                        mode, action.key_action_id, VALID_FOOTER_MODES
-                    );
-                }
             }
         }
     }
@@ -312,20 +215,6 @@ fn generate_actions_code(actions: &[ActionDef]) -> String {
     code.push_str("}\n\n");
 
     code.push_str("#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]\n");
-    code.push_str("pub enum FooterMode {\n");
-    for mode in VALID_FOOTER_MODES {
-        code.push_str(&format!("    {},\n", to_pascal_case(mode)));
-    }
-    code.push_str("}\n\n");
-
-    code.push_str("#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]\n");
-    code.push_str("pub enum HelpSection {\n");
-    for section in VALID_HELP_SECTIONS {
-        code.push_str(&format!("    {},\n", to_pascal_case(section)));
-    }
-    code.push_str("}\n\n");
-
-    code.push_str("#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]\n");
     code.push_str("pub enum KeyActionId {\n");
     for action in actions {
         code.push_str(&format!("    {},\n", to_pascal_case(&action.key_action_id)));
@@ -338,11 +227,6 @@ fn generate_actions_code(actions: &[ActionDef]) -> String {
     code.push_str("    pub id: KeyActionId,\n");
     code.push_str("    pub default_keys: &'static [&'static str],\n");
     code.push_str("    pub contexts: &'static [KeyContext],\n");
-    code.push_str("    pub help_sections: &'static [HelpSection],\n");
-    code.push_str("    pub footer_modes: &'static [FooterMode],\n");
-    code.push_str("    pub footer_text: &'static str,\n");
-    code.push_str("    pub help: &'static str,\n");
-    code.push_str("    pub readme: &'static str,\n");
     code.push_str("}\n\n");
 
     code.push_str("pub static KEY_ACTIONS: &[KeyAction] = &[\n");
@@ -359,34 +243,11 @@ fn generate_actions_code(actions: &[ActionDef]) -> String {
             .map(|c| format!("KeyContext::{}", to_pascal_case(c)))
             .collect();
 
-        let help_sections_str: Vec<String> = action
-            .help_sections
-            .iter()
-            .map(|s| format!("HelpSection::{}", to_pascal_case(s)))
-            .collect();
-
-        let (footer_modes_str, footer_text) = match &action.footer {
-            Some(f) => {
-                let modes: Vec<String> = f
-                    .modes
-                    .iter()
-                    .map(|m| format!("FooterMode::{}", to_pascal_case(m)))
-                    .collect();
-                (modes, f.text.as_str())
-            }
-            None => (Vec::new(), ""),
-        };
-
         code.push_str(&format!(
-            "    KeyAction {{\n        id: KeyActionId::{},\n        default_keys: &[{}],\n        contexts: &[{}],\n        help_sections: &[{}],\n        footer_modes: &[{}],\n        footer_text: r#\"{}\"#,\n        help: r#\"{}\"#,\n        readme: r#\"{}\"#,\n    }},\n",
+            "    KeyAction {{\n        id: KeyActionId::{},\n        default_keys: &[{}],\n        contexts: &[{}],\n    }},\n",
             to_pascal_case(&action.key_action_id),
             keys_str.join(", "),
-            contexts_str.join(", "),
-            help_sections_str.join(", "),
-            footer_modes_str.join(", "),
-            footer_text,
-            action.help,
-            action.readme
+            contexts_str.join(", ")
         ));
     }
     code.push_str("];\n\n");
@@ -398,16 +259,6 @@ fn generate_actions_code(actions: &[ActionDef]) -> String {
 
     code.push_str("pub fn key_actions_for_context(context: KeyContext) -> impl Iterator<Item = &'static KeyAction> {\n");
     code.push_str("    KEY_ACTIONS.iter().filter(move |a| a.contexts.contains(&context))\n");
-    code.push_str("}\n\n");
-
-    code.push_str(
-        "pub fn footer_actions(mode: FooterMode) -> impl Iterator<Item = &'static KeyAction> {\n",
-    );
-    code.push_str("    KEY_ACTIONS.iter().filter(move |a| a.footer_modes.contains(&mode))\n");
-    code.push_str("}\n\n");
-
-    code.push_str("pub fn help_section_keys(section: HelpSection) -> impl Iterator<Item = &'static KeyAction> {\n");
-    code.push_str("    KEY_ACTIONS.iter().filter(move |a| a.help_sections.contains(&section))\n");
     code.push_str("}\n\n");
 
     let mut keymap: HashMap<String, Vec<(String, String)>> = HashMap::new();
@@ -516,11 +367,10 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
     code.push_str("#[derive(Clone, Debug, PartialEq)]\n");
     code.push_str("pub struct Command {\n");
     code.push_str("    pub name: &'static str,\n");
+    code.push_str("    pub group: &'static str,\n");
     code.push_str("    pub args: Option<&'static str>,\n");
     code.push_str("    pub subargs: &'static [SubArg],\n");
     code.push_str("    pub help: &'static str,\n");
-    code.push_str("    pub readme: &'static str,\n");
-    code.push_str("    pub completion_hint: &'static str,\n");
     code.push_str("}\n\n");
 
     code.push_str("pub static COMMANDS: &[Command] = &[\n");
@@ -543,9 +393,10 @@ fn generate_commands_code(commands: &[CommandDef]) -> String {
             }
             None => "&[]".to_string(),
         };
+        let group = cmd.group.as_deref().unwrap_or("Commands");
         code.push_str(&format!(
-            "    Command {{\n        name: r#\"{}\"#,\n        args: {},\n        subargs: {},\n        help: r#\"{}\"#,\n        readme: r#\"{}\"#,\n        completion_hint: r#\"{}\"#,\n    }},\n",
-            cmd.name, args, subargs, cmd.help, cmd.readme, cmd.completion_hint
+            "    Command {{\n        name: r#\"{}\"#,\n        group: r#\"{}\"#,\n        args: {},\n        subargs: {},\n        help: r#\"{}\"#,\n    }},\n",
+            cmd.name, group, args, subargs, cmd.help
         ));
     }
     code.push_str("];\n\n");
@@ -584,21 +435,17 @@ fn generate_filters_code(filters: &[FilterDef]) -> String {
     code.push_str("    pub display: &'static str,\n");
     code.push_str("    pub category: FilterCategory,\n");
     code.push_str("    pub help: &'static str,\n");
-    code.push_str("    pub readme: &'static str,\n");
-    code.push_str("    pub completion_hint: &'static str,\n");
     code.push_str("}\n\n");
 
     code.push_str("pub static FILTER_SYNTAX: &[FilterSyntax] = &[\n");
     for filter in filters {
         let display = filter.display.as_deref().unwrap_or(&filter.syntax);
         code.push_str(&format!(
-            "    FilterSyntax {{\n        syntax: r#\"{}\"#,\n        display: r#\"{}\"#,\n        category: FilterCategory::{},\n        help: r#\"{}\"#,\n        readme: r#\"{}\"#,\n        completion_hint: r#\"{}\"#,\n    }},\n",
+            "    FilterSyntax {{\n        syntax: r#\"{}\"#,\n        display: r#\"{}\"#,\n        category: FilterCategory::{},\n        help: r#\"{}\"#,\n    }},\n",
             filter.syntax,
             display,
             to_pascal_case(&filter.category),
-            filter.help,
-            filter.readme,
-            filter.completion_hint
+            filter.help
         ));
     }
     code.push_str("];\n\n");
@@ -676,74 +523,6 @@ fn generate_date_values_code(date_values: &[DateValueDef]) -> String {
     code
 }
 
-fn generate_help_entries_code(entries: &[HelpEntryDef]) -> String {
-    let mut code = String::new();
-
-    code.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq)]\n");
-    code.push_str("pub struct HelpEntry {\n");
-    code.push_str("    pub section: &'static str,\n");
-    code.push_str("    pub key: &'static str,\n");
-    code.push_str("    pub description: &'static str,\n");
-    code.push_str("}\n\n");
-
-    code.push_str("pub static HELP_ENTRIES: &[HelpEntry] = &[\n");
-    for entry in entries {
-        code.push_str(&format!(
-            "    HelpEntry {{ section: \"{}\", key: \"{}\", description: \"{}\" }},\n",
-            entry.section, entry.key, entry.description
-        ));
-    }
-    code.push_str("];\n\n");
-
-    code.push_str("pub fn help_entries_for_section(section: &str) -> impl Iterator<Item = &'static HelpEntry> {\n");
-    code.push_str("    HELP_ENTRIES.iter().filter(move |e| e.section == section)\n");
-    code.push_str("}\n");
-
-    code
-}
-
-fn format_keys_display(action: &ActionDef) -> String {
-    let format_single = |k: &str| {
-        let display = format_key_for_display(k);
-        if display == "`" {
-            "`` ` ``".to_string()
-        } else {
-            format!("`{}`", display)
-        }
-    };
-
-    if action.default_keys.len() == 1 {
-        format_single(&action.default_keys[0])
-    } else {
-        action
-            .default_keys
-            .iter()
-            .map(|k| format_single(k))
-            .collect::<Vec<_>>()
-            .join("/")
-    }
-}
-
-fn generate_keys_table_by_section(actions: &[ActionDef], section: &str) -> String {
-    let filtered: Vec<_> = actions
-        .iter()
-        .filter(|a| a.help_sections.contains(&section.to_string()))
-        .collect();
-    if filtered.is_empty() {
-        return String::new();
-    }
-
-    let mut table = String::from("| Key | Action |\n|-----|--------|\n");
-    for action in filtered {
-        table.push_str(&format!(
-            "| {} | {} |\n",
-            format_keys_display(action),
-            action.help
-        ));
-    }
-    table
-}
-
 fn generate_commands_table(commands: &[CommandDef]) -> String {
     let mut table = String::from("| Key | Action |\n|-----|--------|\n");
 
@@ -776,24 +555,11 @@ fn generate_filter_syntax_table(filters: &[FilterDef]) -> String {
     table
 }
 
-fn generate_help_entries_table(entries: &[HelpEntryDef], section: &str) -> String {
-    let mut table = String::from("| Type | Syntax |\n|------|--------|");
-
-    for entry in entries {
-        if entry.section == section {
-            table.push_str(&format!("\n| {} | {} |", entry.key, entry.description));
-        }
-    }
-
-    table
-}
-
 fn generate_readme(
     manifest_dir: &Path,
-    actions: &[ActionDef],
+    _actions: &[ActionDef],
     commands: &[CommandDef],
     filters: &[FilterDef],
-    help_entries: &[HelpEntryDef],
 ) {
     let template_path = manifest_dir.join("docs/templates/README.template.md");
     let readme_path = manifest_dir.join("README.md");
@@ -806,16 +572,16 @@ fn generate_readme(
 
     let template = fs::read_to_string(&template_path).expect("Failed to read README.template.md");
 
-    let daily_table = generate_keys_table_by_section(actions, "daily");
-    let reorder_table = generate_keys_table_by_section(actions, "reorder");
-    let edit_table = generate_keys_table_by_section(actions, "edit");
-    let date_table = generate_keys_table_by_section(actions, "date");
-    let project_table = generate_keys_table_by_section(actions, "project");
-    let selection_table = generate_keys_table_by_section(actions, "selection");
-    let filter_table = generate_keys_table_by_section(actions, "filter");
+    let daily_table = String::new();
+    let reorder_table = String::new();
+    let edit_table = String::new();
+    let date_table = String::new();
+    let project_table = String::new();
+    let selection_table = String::new();
+    let filter_table = String::new();
     let commands_table = generate_commands_table(commands);
     let filter_syntax_table = generate_filter_syntax_table(filters);
-    let date_syntax_table = generate_help_entries_table(help_entries, "date_syntax");
+    let date_syntax_table = String::new();
 
     let readme = template
         .replace("<!-- GENERATED:DAILY_KEYS -->", &daily_table)
@@ -848,7 +614,6 @@ fn main() {
     println!("cargo:rerun-if-changed=src/registry/commands.toml");
     println!("cargo:rerun-if-changed=src/registry/filters.toml");
     println!("cargo:rerun-if-changed=src/registry/date_values.toml");
-    println!("cargo:rerun-if-changed=src/registry/help_entries.toml");
 
     let actions_toml =
         fs::read_to_string(registry_dir.join("actions.toml")).expect("Failed to read actions.toml");
@@ -858,8 +623,6 @@ fn main() {
         fs::read_to_string(registry_dir.join("filters.toml")).expect("Failed to read filters.toml");
     let date_values_toml = fs::read_to_string(registry_dir.join("date_values.toml"))
         .expect("Failed to read date_values.toml");
-    let help_entries_toml = fs::read_to_string(registry_dir.join("help_entries.toml"))
-        .expect("Failed to read help_entries.toml");
 
     let actions: ActionsFile = toml::from_str(&actions_toml).expect("Failed to parse actions.toml");
     let commands: CommandsFile =
@@ -867,8 +630,6 @@ fn main() {
     let filters: FiltersFile = toml::from_str(&filters_toml).expect("Failed to parse filters.toml");
     let date_values: DateValuesFile =
         toml::from_str(&date_values_toml).expect("Failed to parse date_values.toml");
-    let help_entries: HelpEntriesFile =
-        toml::from_str(&help_entries_toml).expect("Failed to parse help_entries.toml");
 
     validate_actions(&actions.action);
     validate_date_values(&date_values.date_value);
@@ -882,8 +643,6 @@ fn main() {
     code.push_str(&generate_filters_code(&filters.filter));
     code.push('\n');
     code.push_str(&generate_date_values_code(&date_values.date_value));
-    code.push('\n');
-    code.push_str(&generate_help_entries_code(&help_entries.help_entry));
 
     fs::write(&out_path, code).expect("Failed to write generated code");
 
@@ -892,6 +651,5 @@ fn main() {
         &actions.action,
         &commands.command,
         &filters.filter,
-        &help_entries.help_entry,
     );
 }

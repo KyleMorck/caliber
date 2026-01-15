@@ -1,26 +1,25 @@
+pub(crate) mod agenda_widget;
+pub(crate) mod autocomplete;
+mod calendar;
 mod container;
 mod context;
 mod daily;
-mod date_interface;
 mod filter;
 mod footer;
 mod header;
 mod help;
 mod helpers;
-mod hints;
-mod interface_modal;
 mod layout;
 mod model;
 mod overlay;
 mod prep;
-mod project_interface;
 mod render;
 mod rows;
 mod scroll;
 mod scroll_indicator;
 mod shared;
-mod tag_interface;
-mod theme;
+pub mod surface;
+pub(crate) mod theme;
 mod view_model;
 mod views;
 
@@ -30,7 +29,6 @@ use ratatui::text::Line as RatatuiLine;
 pub use context::RenderContext;
 pub use daily::build_daily_list;
 pub use filter::build_filter_list;
-pub use help::get_help_total_lines;
 pub use prep::prepare_render;
 pub use render::render_app;
 pub use rows::build_calendar_row;
@@ -50,12 +48,4 @@ pub fn render_daily_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
 
 pub fn render_filter_view(app: &App, width: usize) -> Vec<RatatuiLine<'static>> {
     filter::build_filter_list(app, width).into_lines()
-}
-
-pub fn render_footer(app: &App) -> RatatuiLine<'static> {
-    footer::render_footer(footer::FooterModel::new(
-        &app.view,
-        &app.input_mode,
-        &app.keymap,
-    ))
 }

@@ -2,16 +2,12 @@ use std::io;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::app::{
-    App, ConfirmContext, InputMode, InsertPosition, InterfaceContext, PromptContext, SelectedItem,
-    ViewMode,
-};
+use crate::app::{App, ConfirmContext, InputMode, InsertPosition, SelectedItem, ViewMode};
 use crate::config::Config;
 use crate::cursor::CursorBuffer;
 use crate::dispatch::KeySpec;
 use crate::registry::{KeyActionId, KeyContext};
 use crate::storage;
-use crate::ui;
 
 fn shifted_char_to_digit(c: char) -> Option<char> {
     match c {
@@ -29,107 +25,110 @@ fn shifted_char_to_digit(c: char) -> Option<char> {
     }
 }
 
+/// Handle Up/Down navigation in hint dropdown. Returns true if handled.
+fn handle_hint_navigation(app: &mut App, code: KeyCode) -> bool {
+    if matches!(code, KeyCode::Up | KeyCode::Down) && app.hint_state.is_active() {
+        if code == KeyCode::Down {
+            app.hint_state.select_next();
+        } else {
+            app.hint_state.select_prev();
+        }
+        return true;
+    }
+    false
+}
+
 fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
     use KeyActionId::*;
     match action {
-        MoveDown => app.move_down(),
-        MoveUp => app.move_up(),
-        JumpToFirst => app.jump_to_first(),
-        JumpToLast => app.jump_to_last(),
-        EditEntry => app.edit_current_entry(),
-        ToggleEntry => {
-            app.toggle_current_entry()?;
-        }
-        DeleteEntry => {
-            app.delete_current_entry()?;
-        }
-        YankEntry => app.yank_current_entry(),
-        Paste => {
-            app.paste_from_clipboard()?;
-        }
-        Undo => app.undo(),
-        Redo => {
-            app.redo()?;
-        }
-        RemoveLastTag => {
-            app.remove_last_tag_from_current_entry()?;
-        }
-        RemoveAllTags => {
-            app.remove_all_tags_from_current_entry()?;
-        }
-        ToggleJournal => {
-            app.toggle_journal()?;
-        }
-        EnterSelectionMode => app.enter_selection_mode(),
-        CycleEntryTypeNormal => {
-            app.cycle_current_entry_type()?;
-        }
-        ToggleHelp => {
-            if app.help_visible {
-                app.help_visible = false;
-                app.help_scroll = 0;
-            } else {
-                app.help_visible = true;
+        Submit => match &app.input_mode {
+            InputMode::Edit(_) => {
+                app.accept_hint();
+                app.clear_hints();
+                app.exit_edit();
+            }
+            InputMode::Reorder => app.save_reorder_mode(),
+            InputMode::Normal => match app.view {
+                ViewMode::Daily(_) => app.new_task(InsertPosition::Bottom),
+                ViewMode::Filter(_) => app.filter_quick_add(),
+            },
+            _ => {}
+        },
+        Cancel => match &app.input_mode {
+            InputMode::Edit(_) => {
+                app.clear_hints();
+                app.cancel_edit_mode();
+            }
+            InputMode::Reorder => app.cancel_reorder_mode(),
+            InputMode::Selection(_) => app.cancel_selection_mode(),
+            InputMode::CommandPalette(_) => app.close_command_palette(),
+            InputMode::FilterPrompt => app.cancel_filter_prompt(),
+            InputMode::DatePicker(_) => app.close_date_picker(),
+            InputMode::Normal | InputMode::Confirm(_) => {}
+        },
+        MoveDown => match &app.input_mode {
+            InputMode::Reorder => app.reorder_move_down(),
+            InputMode::Selection(_) => app.selection_move_down(),
+            _ => app.move_down(),
+        },
+        MoveUp => match &app.input_mode {
+            InputMode::Reorder => app.reorder_move_up(),
+            InputMode::Selection(_) => app.selection_move_up(),
+            _ => app.move_up(),
+        },
+        MoveLeft => {
+            if app.is_daily_view() {
+                app.prev_day()?;
             }
         }
-        ToggleFilterPrompt => {
-            if matches!(
-                app.input_mode,
-                InputMode::Prompt(PromptContext::Filter { .. })
-            ) {
-                if app.prompt_is_empty() {
-                    app.clear_hints();
-                    app.cancel_prompt();
-                }
-            } else {
-                app.enter_filter_input();
+        MoveRight => {
+            if app.is_daily_view() {
+                app.next_day()?;
             }
         }
-        ToggleCommandPrompt => {
-            if matches!(
-                app.input_mode,
-                InputMode::Prompt(PromptContext::Command { .. })
-            ) {
-                if app.prompt_is_empty() {
-                    app.clear_hints();
-                    app.cancel_prompt();
-                }
-            } else {
-                app.enter_command_mode();
-                app.update_hints();
+        JumpToFirst => match &app.input_mode {
+            InputMode::Selection(_) => app.selection_jump_to_first(),
+            _ => app.jump_to_first(),
+        },
+        JumpToLast => match &app.input_mode {
+            InputMode::Selection(_) => app.selection_jump_to_last(),
+            _ => app.jump_to_last(),
+        },
+        PrevWeek => {
+            if app.is_daily_view() {
+                app.prev_week()?;
             }
         }
-        ToggleDateInterface => {
-            if matches!(
-                app.input_mode,
-                InputMode::Interface(InterfaceContext::Date(_))
-            ) {
-                app.cancel_interface();
-            } else {
-                app.open_date_interface();
+        NextWeek => {
+            if app.is_daily_view() {
+                app.next_week()?;
             }
         }
-        ToggleProjectInterface => {
-            if matches!(
-                app.input_mode,
-                InputMode::Interface(InterfaceContext::Project(_))
-            ) {
-                app.cancel_interface();
-            } else {
-                app.open_project_interface();
+        PrevMonth => {
+            if app.is_daily_view() {
+                app.prev_month()?;
             }
         }
-        ToggleTagInterface => {
-            if matches!(
-                app.input_mode,
-                InputMode::Interface(InterfaceContext::Tag(_))
-            ) {
-                app.cancel_interface();
-            } else {
-                app.open_tag_interface();
+        NextMonth => {
+            if app.is_daily_view() {
+                app.next_month()?;
             }
         }
-        NewEntryBottom => app.new_task(InsertPosition::Bottom),
+        PrevYear => {
+            if app.is_daily_view() {
+                app.prev_year()?;
+            }
+        }
+        NextYear => {
+            if app.is_daily_view() {
+                app.next_year()?;
+            }
+        }
+        GotoToday => {
+            if app.is_daily_view() {
+                app.goto_today()?;
+            }
+        }
         NewEntryBelow => {
             if let SelectedItem::Projected { entry, .. } = app.get_selected_item() {
                 app.go_to_source(entry.source_date, entry.line_index)?;
@@ -138,40 +137,107 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
             }
         }
         NewEntryAbove => app.new_task(InsertPosition::Above),
-        PrevDay => {
-            app.prev_day()?;
-        }
-        NextDay => {
-            app.next_day()?;
-        }
-        GotoToday => {
-            app.goto_today()?;
-        }
-        TidyEntries => app.tidy_entries(),
-        EnterReorderMode => app.enter_reorder_mode(),
-        ToggleHideCompleted => app.toggle_hide_completed(),
-        ToggleFilter => {
-            if matches!(app.view, ViewMode::Filter(_)) {
-                app.cancel_filter();
+        Edit => app.edit_current_entry(),
+        ToggleComplete => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.toggle_selected()?;
             } else {
-                app.return_to_filter()?;
+                app.toggle_current_entry()?;
             }
         }
-        FilterQuickAdd => app.filter_quick_add(),
-        RefreshFilter => {
-            app.refresh_filter()?;
+        Delete => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.delete_selected()?;
+            } else {
+                app.delete_current_entry()?;
+            }
         }
-        SaveEdit => {
-            app.accept_hint();
-            app.clear_hints();
-            app.exit_edit();
+        DeferDate => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.defer_selected()?;
+            } else {
+                app.defer_current_entry()?;
+            }
+        }
+        RemoveDate => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.remove_date_from_selected()?;
+            } else {
+                app.remove_date_from_current_entry()?;
+            }
+        }
+        Yank => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.yank_selected();
+            } else {
+                app.yank_current_entry();
+            }
+        }
+        Paste => {
+            app.paste_from_clipboard()?;
+        }
+        Undo => app.undo(),
+        Redo => {
+            app.redo()?;
+        }
+        RemoveLastTag => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.remove_last_tag_from_selected()?;
+            } else {
+                app.remove_last_tag_from_current_entry()?;
+            }
+        }
+        RemoveAllTags => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.remove_all_tags_from_selected()?;
+            } else {
+                app.remove_all_tags_from_current_entry()?;
+            }
+        }
+        CycleEntryType => match &app.input_mode {
+            InputMode::Edit(_) => app.cycle_edit_entry_type(),
+            InputMode::Selection(_) => {
+                app.cycle_selected_entry_types()?;
+            }
+            _ => {
+                app.cycle_current_entry_type()?;
+            }
+        },
+        Selection => {
+            if matches!(app.input_mode, InputMode::Selection(_)) {
+                app.selection_toggle_current();
+            } else {
+                app.enter_selection_mode();
+            }
+        }
+        SelectionExtendRange => app.selection_extend_to_cursor(),
+        ToggleFilterView => {
+            app.cycle_view()?;
+        }
+        ToggleJournal => {
+            app.toggle_journal()?;
+        }
+        CommandPalette => {
+            app.toggle_command_palette();
+        }
+        ToggleCalendarSidebar => {
+            app.toggle_calendar_sidebar();
+        }
+        ToggleAgenda => {
+            app.toggle_agenda();
+        }
+        FilterQuickAdd => app.filter_quick_add(),
+        Refresh => {
+            app.refresh_filter()?;
         }
         SaveAndNew => {
             app.accept_hint();
             app.clear_hints();
             app.commit_and_add_new();
         }
-        CycleEntryType => app.cycle_edit_entry_type(),
+        ReorderMode => app.enter_reorder_mode(),
+        TidyEntries => app.tidy_entries(),
+        Hide => app.toggle_hide_completed(),
         Autocomplete => {
             app.accept_hint();
             if let Some(ref mut buffer) = app.edit_buffer {
@@ -179,186 +245,20 @@ fn dispatch_action(app: &mut App, action: KeyActionId) -> io::Result<bool> {
             }
             app.update_hints();
         }
-        ReorderMoveDown => app.reorder_move_down(),
-        ReorderMoveUp => app.reorder_move_up(),
-        ReorderSave => app.save_reorder_mode(),
-        SelectionToggle => app.selection_toggle_current(),
-        SelectionExtendRange => app.selection_extend_to_cursor(),
-        SelectionMoveDown => app.selection_move_down(),
-        SelectionMoveUp => app.selection_move_up(),
-        SelectionJumpToFirst => app.selection_jump_to_first(),
-        SelectionJumpToLast => app.selection_jump_to_last(),
-        SelectionDelete => {
-            app.delete_selected()?;
+        Quit => {
+            app.should_quit = true;
         }
-        SelectionToggleComplete => {
-            app.toggle_selected()?;
+        FilterPrompt => {
+            app.enter_filter_prompt()?;
         }
-        SelectionYank => app.yank_selected(),
-        SelectionRemoveLastTag => {
-            app.remove_last_tag_from_selected()?;
-        }
-        SelectionRemoveAllTags => {
-            app.remove_all_tags_from_selected()?;
-        }
-        SelectionCycleType => {
-            app.cycle_selected_entry_types()?;
-        }
-        HelpScrollDown => {
-            let total_lines = ui::get_help_total_lines(&app.keymap);
-            let max_scroll = total_lines.saturating_sub(app.help_visible_height);
-            if app.help_scroll < max_scroll {
-                app.help_scroll += 1;
+        DatePicker => {
+            if app.is_daily_view() {
+                app.open_date_picker();
             }
         }
-        HelpScrollUp => {
-            app.help_scroll = app.help_scroll.saturating_sub(1);
-        }
-        InterfaceMoveUp => app.interface_move_up(),
-        InterfaceMoveDown => app.interface_move_down(),
-        InterfaceMoveLeft => app.interface_move_left(),
-        InterfaceMoveRight => app.interface_move_right(),
-        InterfaceSubmit => {
-            app.interface_submit()?;
-        }
-        InterfaceDelete => app.interface_delete(),
-        InterfaceRename => app.interface_rename(),
-        InterfaceHide => app.interface_hide(),
-        InterfaceNextMonth => app.date_interface_next_month(),
-        InterfacePrevMonth => app.date_interface_prev_month(),
-        InterfaceNextYear => app.date_interface_next_year(),
-        InterfacePrevYear => app.date_interface_prev_year(),
-        InterfaceToday => app.date_interface_goto_today(),
-        Cancel => match &app.input_mode {
-            InputMode::Edit(_) => {
-                app.clear_hints();
-                app.cancel_edit_mode();
-            }
-            InputMode::Reorder => app.cancel_reorder_mode(),
-            InputMode::Selection(_) => app.cancel_selection_mode(),
-            InputMode::Prompt(_) => {
-                app.clear_hints();
-                app.cancel_prompt();
-            }
-            InputMode::Interface(InterfaceContext::Date(_))
-            | InputMode::Interface(InterfaceContext::Project(_))
-            | InputMode::Interface(InterfaceContext::Tag(_)) => app.cancel_interface(),
-            InputMode::Normal | InputMode::Confirm(_) => {
-                if app.help_visible {
-                    app.help_visible = false;
-                    app.help_scroll = 0;
-                } else if matches!(app.view, ViewMode::Filter(_)) {
-                    app.cancel_filter();
-                }
-            }
-        },
-        NoOp | QuickFilterTag | AppendFavoriteTag | SelectionAppendTag => {}
+        NoOp => {}
     }
     Ok(true)
-}
-
-pub fn handle_help_key(app: &mut App, key: KeyEvent) {
-    let spec = KeySpec::from_event(&key);
-    if let Some(action) = app.keymap.get(KeyContext::Help, &spec) {
-        let _ = dispatch_action(app, action);
-    }
-}
-
-/// Handle keyboard input in prompt mode (command `:` or filter `/`).
-///
-/// Autocomplete behavior differs by key:
-/// - Enter: autocomplete, then submit (unless input ends with `:`)
-/// - Tab: autocomplete, then add space (unless input ends with `:`)
-pub fn handle_prompt_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
-    let is_command = matches!(
-        app.input_mode,
-        InputMode::Prompt(PromptContext::Command { .. })
-    );
-
-    // Check keymap for cancel action (always) and toggle action (only when empty)
-    let context = if is_command {
-        KeyContext::CommandPrompt
-    } else {
-        KeyContext::FilterPrompt
-    };
-    let spec = KeySpec::from_event(&key);
-    if let Some(action) = app.keymap.get(context, &spec) {
-        // Cancel always works, toggle only when empty
-        let should_dispatch = matches!(action, KeyActionId::Cancel)
-            || (app.prompt_is_empty()
-                && matches!(
-                    action,
-                    KeyActionId::ToggleFilterPrompt | KeyActionId::ToggleCommandPrompt
-                ));
-        if should_dispatch {
-            let _ = dispatch_action(app, action);
-            return Ok(());
-        }
-    }
-
-    match key.code {
-        KeyCode::Enter => {
-            app.accept_hint();
-            if app.input_needs_continuation() {
-                app.update_hints();
-            } else {
-                app.clear_hints();
-                match &app.input_mode {
-                    InputMode::Prompt(PromptContext::Command { .. }) => {
-                        app.execute_command()?;
-                    }
-                    InputMode::Prompt(PromptContext::Filter { .. }) => {
-                        app.execute_filter()?;
-                    }
-                    InputMode::Prompt(PromptContext::RenameTag { old_tag, buffer }) => {
-                        let new_tag = buffer.content().trim().to_string();
-                        let old_tag = old_tag.clone();
-                        app.execute_rename_tag(&old_tag, &new_tag)?;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        KeyCode::Tab => {
-            app.accept_hint();
-            if !app.input_needs_continuation()
-                && let Some(buffer) = app.prompt_buffer_mut()
-            {
-                buffer.insert_char(' ');
-            }
-            app.update_hints();
-        }
-        KeyCode::Backspace if app.prompt_is_empty() => {
-            app.clear_hints();
-            app.cancel_prompt();
-        }
-        _ => {
-            let is_rename_tag = matches!(
-                app.input_mode,
-                InputMode::Prompt(PromptContext::RenameTag { .. })
-            );
-
-            if let Some(buffer) = app.prompt_buffer_mut() {
-                let should_handle = if is_rename_tag {
-                    match key.code {
-                        KeyCode::Char(c) if c.is_ascii_alphanumeric() || c == '_' || c == '-' => {
-                            !buffer.is_empty() || c.is_ascii_alphabetic()
-                        }
-                        KeyCode::Char(_) => false,
-                        _ => true,
-                    }
-                } else {
-                    true
-                };
-
-                if should_handle {
-                    handle_text_input(buffer, key);
-                }
-            }
-            app.update_hints();
-        }
-    }
-    Ok(())
 }
 
 pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
@@ -394,6 +294,10 @@ pub fn handle_normal_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
 }
 
 pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
+    if handle_hint_navigation(app, key.code) {
+        return;
+    }
+
     let spec = KeySpec::from_event(&key);
     if let Some(action) = app.keymap.get(KeyContext::Edit, &spec) {
         let _ = dispatch_action(app, action);
@@ -418,6 +322,32 @@ pub fn handle_edit_key(app: &mut App, key: KeyEvent) {
     }
 }
 
+pub fn handle_command_palette_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
+    let spec = KeySpec::from_event(&key);
+    if let Some(action) = app.keymap.get(KeyContext::CommandPalette, &spec) {
+        match action {
+            KeyActionId::Cancel => app.close_command_palette(),
+            KeyActionId::CommandPalette => app.toggle_command_palette(),
+            KeyActionId::MoveUp => app.command_palette_select_prev(),
+            KeyActionId::MoveDown => app.command_palette_select_next(),
+            KeyActionId::MoveLeft => app.command_palette_prev_tab(),
+            KeyActionId::MoveRight => app.command_palette_next_tab(),
+            KeyActionId::Submit => {
+                app.execute_selected_palette_item()?;
+                app.close_command_palette();
+            }
+            KeyActionId::Delete => {
+                app.palette_delete_selected()?;
+            }
+            KeyActionId::Hide => {
+                app.palette_hide_selected()?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 pub fn handle_reorder_key(app: &mut App, key: KeyEvent) {
     let spec = KeySpec::from_event(&key);
     if let Some(action) = app.keymap.get(KeyContext::Reorder, &spec) {
@@ -425,7 +355,7 @@ pub fn handle_reorder_key(app: &mut App, key: KeyEvent) {
     }
 }
 
-fn handle_text_input(buffer: &mut CursorBuffer, key: KeyEvent) -> bool {
+pub(crate) fn handle_text_input(buffer: &mut CursorBuffer, key: KeyEvent) -> bool {
     let KeyEvent {
         code, modifiers, ..
     } = key;
@@ -490,7 +420,7 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
 
                 let caliber_dir = root.join(".caliber");
                 if let Err(e) = std::fs::create_dir_all(&caliber_dir) {
-                    app.set_status(format!("Failed to create project: {e}"));
+                    app.set_error(format!("Failed to create project: {e}"));
                     app.input_mode = InputMode::Normal;
                     return Ok(());
                 }
@@ -504,12 +434,12 @@ pub fn handle_confirm_key(app: &mut App, key: KeyCode) -> io::Result<()> {
                     if let Some(parent) = journal_path.parent()
                         && let Err(e) = std::fs::create_dir_all(parent)
                     {
-                        app.set_status(format!("Failed to create journal directory: {e}"));
+                        app.set_error(format!("Failed to create journal directory: {e}"));
                         app.input_mode = InputMode::Normal;
                         return Ok(());
                     }
                     if let Err(e) = std::fs::write(&journal_path, "") {
-                        app.set_status(format!("Failed to create journal: {e}"));
+                        app.set_error(format!("Failed to create journal: {e}"));
                         app.input_mode = InputMode::Normal;
                         return Ok(());
                     }
@@ -564,73 +494,59 @@ pub fn handle_selection_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     Ok(())
 }
 
-pub fn handle_interface_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
-    match &app.input_mode {
-        InputMode::Interface(InterfaceContext::Date(_)) => handle_date_interface(app, key),
-        InputMode::Interface(InterfaceContext::Project(_)) => handle_list_interface(
-            app,
-            key,
-            '.',
-            KeyContext::ProjectInterface,
-            App::project_interface_select,
-        ),
-        InputMode::Interface(InterfaceContext::Tag(_)) => handle_list_interface(
-            app,
-            key,
-            ',',
-            KeyContext::TagInterface,
-            App::tag_interface_select,
-        ),
-        _ => Ok(()),
+pub fn handle_filter_prompt_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
+    if handle_hint_navigation(app, key.code) {
+        return Ok(());
     }
-}
 
-fn handle_date_interface(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match key.code {
-        KeyCode::Esc | KeyCode::Char('\\') => {
-            app.cancel_interface();
-        }
-        KeyCode::Char(c) if c.is_ascii_digit() || c == '/' => {
-            app.date_interface_input_char(c);
-        }
-        KeyCode::Backspace => {
-            if app.date_interface_input_is_empty() {
-                app.cancel_interface();
-            } else {
-                app.date_interface_input_backspace();
-            }
-        }
-        KeyCode::Delete => {
-            app.date_interface_input_delete();
-        }
         KeyCode::Enter => {
-            app.interface_submit()?;
+            app.accept_hint();
+            app.submit_filter_prompt()?;
+        }
+        KeyCode::Esc => {
+            app.cancel_filter_prompt();
+        }
+        KeyCode::Tab => {
+            if app.accept_hint()
+                && let ViewMode::Filter(state) = &mut app.view
+            {
+                state.query_buffer.insert_char(' ');
+            }
+            app.update_hints();
         }
         _ => {
-            let spec = KeySpec::from_event(&key);
-            if let Some(action) = app.keymap.get(KeyContext::DateInterface, &spec) {
-                dispatch_action(app, action)?;
+            if let ViewMode::Filter(state) = &mut app.view {
+                handle_text_input(&mut state.query_buffer, key);
             }
+            app.clear_status();
+            app.update_hints();
         }
     }
+
     Ok(())
 }
 
-fn handle_list_interface(
-    app: &mut App,
-    key: KeyEvent,
-    toggle_key: char,
-    context: KeyContext,
-    select_fn: fn(&mut App) -> io::Result<()>,
-) -> io::Result<()> {
+pub fn handle_date_picker_key(app: &mut App, key: KeyEvent) -> io::Result<()> {
     match key.code {
-        KeyCode::Esc => app.cancel_interface(),
-        KeyCode::Char(c) if c == toggle_key => app.cancel_interface(),
-        KeyCode::Enter => select_fn(app)?,
+        KeyCode::Enter => app.submit_date_picker()?,
+        KeyCode::Esc => app.close_date_picker(),
         _ => {
-            let spec = KeySpec::from_event(&key);
-            if let Some(action) = app.keymap.get(context, &spec) {
-                dispatch_action(app, action)?;
+            let InputMode::DatePicker(state) = &mut app.input_mode else {
+                return Ok(());
+            };
+            match key.code {
+                KeyCode::Char(c) if c.is_ascii_digit() || c == '/' => {
+                    if state.buffer.content().len() < 10 {
+                        state.buffer.insert_char(c);
+                    }
+                }
+                KeyCode::Backspace => {
+                    state.buffer.delete_char_before();
+                }
+                KeyCode::Left => state.buffer.move_left(),
+                KeyCode::Right => state.buffer.move_right(),
+                _ => {}
             }
         }
     }

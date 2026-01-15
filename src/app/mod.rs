@@ -1,42 +1,42 @@
 pub mod actions;
+mod calendar;
 mod command;
-mod date_interface;
+mod date_picker;
 mod edit_mode;
 mod entry_ops;
 mod filter_ops;
 pub mod hints;
-mod interface_ops;
 mod journal;
 mod navigation;
+mod palette;
 mod reorder;
 mod selection_ops;
-mod tag_interface;
 mod tag_ops;
 
 pub use entry_ops::{DeleteTarget, EntryLocation, TagRemovalTarget, ToggleTarget, YankTarget};
-pub use hints::{HintContext, HintMode};
+pub use hints::{HintContext, HintItem, HintMode};
 
 use std::collections::{BTreeSet, HashMap};
 use std::io;
 use std::path::Path;
 
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Local, NaiveDate};
 
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 
-use crate::calendar::{
-    CalendarFetchResult, CalendarStore, fetch_all_calendars, get_visible_calendar_ids, update_store,
-};
-use crate::config::Config;
+use crate::calendar::{CalendarStore, fetch_all_calendars, get_visible_calendar_ids, update_store};
+use crate::ui::agenda_widget::{AgendaCache, collect_agenda_cache};
+
+use self::calendar::CalendarState;
+
+use crate::config::{Config, SidebarDefault};
 use crate::cursor::CursorBuffer;
 use crate::dispatch::Keymap;
 use crate::storage::{
-    self, DayInfo, Entry, EntryType, JournalContext, JournalSlot, Line, ProjectRegistry, RawEntry,
+    self, Entry, EntryType, JournalContext, JournalSlot, Line, ProjectRegistry, RawEntry,
 };
 
-pub const DAILY_HEADER_LINES: usize = 1;
-pub const FILTER_HEADER_LINES: usize = 1;
 pub const DATE_SUFFIX_WIDTH: usize = " (MM/DD)".len();
 
 /// State specific to the Daily view
@@ -76,6 +76,21 @@ pub struct FilterState {
     pub entries: Vec<Entry>,
     pub selected: usize,
     pub scroll_offset: usize,
+}
+
+/// Which palette is currently active
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CommandPaletteMode {
+    Commands,
+    Projects,
+    Tags,
+}
+
+/// State for command palette input and selection
+#[derive(Clone, Debug)]
+pub struct CommandPaletteState {
+    pub mode: CommandPaletteMode,
+    pub selected: usize,
 }
 
 /// State for multi-select operations
@@ -161,116 +176,6 @@ impl SelectionState {
     }
 }
 
-/// Tracks the last interaction type in the date interface for smart submit
-#[derive(Clone, Debug, Default, PartialEq)]
-pub enum LastInteraction {
-    /// User typed into the query field
-    Typed,
-    /// User navigated the calendar (default)
-    #[default]
-    Calendar,
-}
-
-/// State for the date interface popup
-#[derive(Clone, Debug)]
-pub struct DateInterfaceState {
-    /// Currently selected date
-    pub selected: NaiveDate,
-    /// First day of the displayed month
-    pub display_month: NaiveDate,
-    /// Cached day info for the display month
-    pub day_cache: HashMap<NaiveDate, DayInfo>,
-    /// Query input for quick date entry
-    pub query: CursorBuffer,
-    /// Last interaction type for smart submit behavior
-    pub last_interaction: LastInteraction,
-}
-
-impl DateInterfaceState {
-    #[must_use]
-    pub fn new(date: NaiveDate) -> Self {
-        Self {
-            selected: date,
-            display_month: NaiveDate::from_ymd_opt(date.year(), date.month(), 1).unwrap(),
-            day_cache: HashMap::new(),
-            query: CursorBuffer::empty(),
-            last_interaction: LastInteraction::Calendar,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ProjectInterfaceState {
-    pub selected: usize,
-    pub scroll_offset: usize,
-    pub projects: Vec<storage::ProjectInfo>,
-}
-
-impl Default for ProjectInterfaceState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ProjectInterfaceState {
-    #[must_use]
-    pub fn new() -> Self {
-        let registry = storage::ProjectRegistry::load();
-        let mut projects: Vec<_> = registry
-            .projects
-            .into_iter()
-            .filter(|p| !p.hide_from_registry)
-            .collect();
-        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-        Self {
-            selected: 0,
-            scroll_offset: 0,
-            projects,
-        }
-    }
-
-    #[must_use]
-    pub fn selected_project(&self) -> Option<&storage::ProjectInfo> {
-        self.projects.get(self.selected)
-    }
-
-    /// Remove the selected project from the registry and return its ID.
-    pub fn remove_selected(&mut self) -> Option<String> {
-        let project = self.selected_project()?;
-        let id = project.id.clone();
-
-        if std::env::var("CALIBER_SKIP_REGISTRY").is_err() {
-            let mut registry = storage::ProjectRegistry::load();
-            if registry.remove(&id) {
-                let _ = registry.save();
-            }
-        }
-
-        self.projects.remove(self.selected);
-        if self.selected >= self.projects.len() && self.selected > 0 {
-            self.selected -= 1;
-        }
-
-        Some(id)
-    }
-
-    /// Hide the selected project by setting hide_from_registry in its config.
-    pub fn hide_selected(&mut self) -> Option<String> {
-        let project = self.selected_project()?;
-        let id = project.id.clone();
-        let path = project.path.clone();
-
-        if storage::set_hide_from_registry(&path, true).is_ok() {
-            self.projects.remove(self.selected);
-            if self.selected >= self.projects.len() && self.selected > 0 {
-                self.selected -= 1;
-            }
-            return Some(id);
-        }
-        None
-    }
-}
-
 /// Information about a tag in the journal
 #[derive(Clone, Debug)]
 pub struct TagInfo {
@@ -278,35 +183,47 @@ pub struct TagInfo {
     pub count: usize,
 }
 
-/// State for the tag interface popup
-#[derive(Clone, Debug)]
-pub struct TagInterfaceState {
-    pub selected: usize,
-    pub scroll_offset: usize,
-    pub tags: Vec<TagInfo>,
-}
-
-impl TagInterfaceState {
-    #[must_use]
-    pub fn new(tags: Vec<TagInfo>) -> Self {
-        Self {
-            selected: 0,
-            scroll_offset: 0,
-            tags,
-        }
-    }
-
-    #[must_use]
-    pub fn selected_tag(&self) -> Option<&TagInfo> {
-        self.tags.get(self.selected)
-    }
-}
-
 /// Which view is currently active and its state
 #[derive(Clone)]
 pub enum ViewMode {
     Daily(DailyState),
     Filter(FilterState),
+}
+
+impl ViewMode {
+    /// Returns a mutable reference to the selected index
+    pub fn selected_mut(&mut self) -> &mut usize {
+        match self {
+            ViewMode::Daily(state) => &mut state.selected,
+            ViewMode::Filter(state) => &mut state.selected,
+        }
+    }
+
+    /// Returns the current selected index
+    #[must_use]
+    pub fn selected(&self) -> usize {
+        match self {
+            ViewMode::Daily(state) => state.selected,
+            ViewMode::Filter(state) => state.selected,
+        }
+    }
+
+    /// Returns a mutable reference to the scroll offset
+    pub fn scroll_offset_mut(&mut self) -> &mut usize {
+        match self {
+            ViewMode::Daily(state) => &mut state.scroll_offset,
+            ViewMode::Filter(state) => &mut state.scroll_offset,
+        }
+    }
+
+    /// Returns the current scroll offset
+    #[must_use]
+    pub fn scroll_offset(&self) -> usize {
+        match self {
+            ViewMode::Daily(state) => state.scroll_offset,
+            ViewMode::Filter(state) => state.scroll_offset,
+        }
+    }
 }
 
 /// Context for what is being edited
@@ -325,7 +242,11 @@ pub enum EditContext {
         date: NaiveDate,
         entry_type: EntryType,
     },
-    // Note: LaterEdit removed - edit is blocked on projected entries
+    /// Editing a Later projected entry (edits source, refreshes projection)
+    LaterEdit {
+        source_date: NaiveDate,
+        line_index: usize,
+    },
 }
 
 /// Context for confirmation dialogs
@@ -335,27 +256,10 @@ pub enum ConfirmContext {
     DeleteTag(String),
 }
 
-/// Context for prompt input modes (owns its buffer)
+/// State for the quick date picker overlay
 #[derive(Clone, Debug)]
-pub enum PromptContext {
-    Command {
-        buffer: CursorBuffer,
-    },
-    Filter {
-        buffer: CursorBuffer,
-    },
-    RenameTag {
-        old_tag: String,
-        buffer: CursorBuffer,
-    },
-}
-
-/// Context for interface overlays
-#[derive(Clone, Debug)]
-pub enum InterfaceContext {
-    Date(DateInterfaceState),
-    Project(ProjectInterfaceState),
-    Tag(TagInterfaceState),
+pub struct DatePickerState {
+    pub buffer: CursorBuffer,
 }
 
 /// What keyboard handler to use
@@ -366,8 +270,9 @@ pub enum InputMode {
     Reorder,
     Selection(SelectionState),
     Confirm(ConfirmContext),
-    Prompt(PromptContext),
-    Interface(InterfaceContext),
+    CommandPalette(CommandPaletteState),
+    FilterPrompt,
+    DatePicker(DatePickerState),
 }
 
 /// Where to insert a new entry
@@ -375,6 +280,20 @@ pub enum InsertPosition {
     Bottom,
     Below,
     Above,
+}
+
+/// Which sidebar is currently shown
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SidebarType {
+    Calendar,
+    Agenda,
+}
+
+/// Status message with error flag for styling
+#[derive(Clone)]
+pub struct StatusMessage {
+    pub text: String,
+    pub is_error: bool,
 }
 
 /// The currently selected item, accounting for hidden completed entries
@@ -399,16 +318,13 @@ pub struct App {
     pub current_date: NaiveDate,
     pub last_daily_date: NaiveDate,
     pub lines: Vec<Line>,
-    pub entry_indices: Vec<usize>,
     pub view: ViewMode,
+    pub entry_indices: Vec<usize>,
     pub input_mode: InputMode,
     pub edit_buffer: Option<CursorBuffer>,
     pub should_quit: bool,
     pub needs_redraw: bool,
-    pub status_message: Option<String>,
-    pub help_visible: bool,
-    pub help_scroll: usize,
-    pub help_visible_height: usize,
+    pub status_message: Option<StatusMessage>,
     pub last_filter_query: Option<String>,
     pub config: Config,
     pub journal_context: JournalContext,
@@ -418,11 +334,15 @@ pub struct App {
     pub cached_journal_tags: Vec<TagInfo>,
     pub executor: actions::ActionExecutor,
     pub keymap: Keymap,
-    original_edit_content: Option<String>,
+    pub original_edit_content: Option<String>,
     pub calendar_store: CalendarStore,
-    runtime_handle: Option<Handle>,
-    calendar_rx: Option<mpsc::Receiver<CalendarFetchResult>>,
-    calendar_tx: Option<mpsc::Sender<CalendarFetchResult>>,
+    pub calendar_state: CalendarState,
+    pub active_sidebar: Option<SidebarType>,
+    pub agenda_cache: Option<AgendaCache>,
+    pub runtime_handle: Option<Handle>,
+    pub calendar_rx: Option<mpsc::Receiver<crate::calendar::CalendarFetchResult>>,
+    pub calendar_tx: Option<mpsc::Sender<crate::calendar::CalendarFetchResult>>,
+    pub(crate) surface: crate::ui::surface::Surface,
 }
 
 impl App {
@@ -430,7 +350,7 @@ impl App {
         Self::new_with_date(config, Local::now().date_naive())
     }
 
-    /// Creates a new App with a specific date, detecting paths from config
+    /// Creates a new App with a specific date, detecting paths from config.
     pub fn new_with_date(config: Config, date: NaiveDate) -> io::Result<Self> {
         let hub_path = config
             .hub_file
@@ -439,7 +359,8 @@ impl App {
             .unwrap_or_else(crate::config::get_default_journal_path);
         let project_path = storage::detect_project_journal();
         let context = JournalContext::new(hub_path, project_path, JournalSlot::Hub);
-        Self::new_with_context(config, date, context, None)
+        let surface = crate::ui::surface::Surface::default();
+        Self::new_with_context(config, date, context, None, surface)
     }
 
     /// Creates a new App with explicit context (for testing and main)
@@ -448,6 +369,7 @@ impl App {
         date: NaiveDate,
         journal_context: JournalContext,
         runtime_handle: Option<Handle>,
+        surface: crate::ui::surface::Surface,
     ) -> io::Result<Self> {
         let path = journal_context.active_path().to_path_buf();
         let lines = storage::load_day_lines(date, &path)?;
@@ -457,6 +379,7 @@ impl App {
         let in_git_repo = storage::find_git_root().is_some();
         let cached_journal_tags = Vec::new();
         let hide_completed = config.hide_completed;
+        let sidebar_default = config.sidebar_default;
 
         let keymap = Keymap::new(&config.keys).unwrap_or_else(|e| {
             eprintln!("Invalid key config: {e}");
@@ -481,9 +404,6 @@ impl App {
             should_quit: false,
             needs_redraw: false,
             status_message: None,
-            help_visible: false,
-            help_scroll: 0,
-            help_visible_height: 0,
             last_filter_query: None,
             config,
             journal_context,
@@ -495,18 +415,33 @@ impl App {
             keymap,
             original_edit_content: None,
             calendar_store: CalendarStore::new(),
+            calendar_state: CalendarState::new(date),
+            active_sidebar: match sidebar_default {
+                SidebarDefault::None => None,
+                SidebarDefault::Agenda => Some(SidebarType::Agenda),
+                SidebarDefault::Calendar => Some(SidebarType::Calendar),
+            },
+            agenda_cache: None,
             runtime_handle,
             calendar_rx,
             calendar_tx,
+            surface,
         };
 
         if hide_completed {
             app.clamp_selection_to_visible();
         }
 
+        app.refresh_calendar_cache();
         app.trigger_calendar_fetch();
 
         Ok(app)
+    }
+
+    /// Returns true if currently in Daily view
+    #[must_use]
+    pub fn is_daily_view(&self) -> bool {
+        matches!(self.view, ViewMode::Daily(_))
     }
 
     /// Returns the active journal path
@@ -548,7 +483,8 @@ impl App {
 
         handle.spawn(async move {
             let result = fetch_all_calendars(&config, &visible_ids).await;
-            let _ = tx.send(result).await;
+            // Receiver dropped is expected on app shutdown - silent discard is intentional
+            drop(tx.send(result).await);
         });
     }
 
@@ -558,7 +494,22 @@ impl App {
         };
         if let Ok(result) = rx.try_recv() {
             update_store(&mut self.calendar_store, result);
+            self.refresh_calendar_cache();
+            self.invalidate_agenda_cache();
         }
+    }
+
+    pub fn ensure_agenda_cache(&mut self) {
+        if self.agenda_cache.is_none() {
+            self.agenda_cache = Some(collect_agenda_cache(
+                &self.calendar_store,
+                self.active_path(),
+            ));
+        }
+    }
+
+    pub fn invalidate_agenda_cache(&mut self) {
+        self.agenda_cache = None;
     }
 
     /// Returns the number of calendar events for the current date.
@@ -577,6 +528,18 @@ impl App {
         let path = self.journal_context.project_path()?;
         let registry = ProjectRegistry::load();
         registry.find_by_path(path).cloned()
+    }
+
+    /// Get the display name for the current journal
+    #[must_use]
+    pub fn journal_display_name(&self) -> String {
+        match self.active_journal() {
+            JournalSlot::Hub => "HUB".to_string(),
+            JournalSlot::Project => self
+                .get_current_project_info()
+                .map(|p| p.name)
+                .unwrap_or_else(|| "Project".to_string()),
+        }
     }
 
     #[must_use]
@@ -613,7 +576,21 @@ impl App {
     }
 
     pub fn set_status(&mut self, msg: impl Into<String>) {
-        self.status_message = Some(msg.into());
+        self.status_message = Some(StatusMessage {
+            text: msg.into(),
+            is_error: false,
+        });
+    }
+
+    pub fn set_error(&mut self, msg: impl Into<String>) {
+        self.status_message = Some(StatusMessage {
+            text: msg.into(),
+            is_error: true,
+        });
+    }
+
+    pub fn clear_status(&mut self) {
+        self.status_message = None;
     }
 
     pub fn execute_action(&mut self, action: Box<dyn actions::Action>) -> io::Result<()> {
@@ -631,6 +608,7 @@ impl App {
                 return Err(e);
             }
         }
+        self.refresh_calendar_cache();
         Ok(())
     }
 
@@ -640,6 +618,8 @@ impl App {
         {
             self.set_status(format!("Failed to save: {e}"));
         }
+        self.invalidate_agenda_cache();
+        self.refresh_calendar_cache();
     }
 
     pub fn undo(&mut self) {
@@ -654,6 +634,7 @@ impl App {
             Ok(None) => {}
             Err(e) => self.set_status(format!("Undo failed: {e}")),
         }
+        self.refresh_calendar_cache();
     }
 
     pub fn redo(&mut self) -> io::Result<()> {
@@ -668,6 +649,7 @@ impl App {
             Ok(None) => {}
             Err(e) => self.set_status(format!("Redo failed: {e}")),
         }
+        self.refresh_calendar_cache();
         Ok(())
     }
 
@@ -723,16 +705,23 @@ impl App {
 
     /// Update hints based on current input buffer and mode.
     pub fn update_hints(&mut self) {
-        let (input, mode) = match &self.input_mode {
-            InputMode::Prompt(PromptContext::Command { buffer }) => {
-                (buffer.content().to_string(), HintMode::Command)
-            }
-            InputMode::Prompt(PromptContext::Filter { buffer }) => {
-                (buffer.content().to_string(), HintMode::Filter)
-            }
+        let (input, mode, saved_filters) = match &self.input_mode {
             InputMode::Edit(_) => {
                 if let Some(ref buffer) = self.edit_buffer {
-                    (buffer.content().to_string(), HintMode::Entry)
+                    (buffer.content().to_string(), HintMode::Entry, vec![])
+                } else {
+                    self.hint_state = HintContext::Inactive;
+                    return;
+                }
+            }
+            InputMode::FilterPrompt => {
+                if let ViewMode::Filter(state) = &self.view {
+                    let filters: Vec<String> = self.config.filters.keys().cloned().collect();
+                    (
+                        state.query_buffer.content().to_string(),
+                        HintMode::Filter,
+                        filters,
+                    )
                 } else {
                     self.hint_state = HintContext::Inactive;
                     return;
@@ -746,19 +735,14 @@ impl App {
 
         self.refresh_tag_cache();
 
-        let saved_filters: Vec<String> = if mode == HintMode::Filter {
-            self.config.filters.keys().cloned().collect()
-        } else {
-            Vec::new()
-        };
-
         let tag_names: Vec<String> = self
             .cached_journal_tags
             .iter()
             .map(|t| t.name.clone())
             .collect();
 
-        self.hint_state = HintContext::compute(&input, mode, &tag_names, &saved_filters);
+        let hint = HintContext::compute(&input, mode, &tag_names, &saved_filters);
+        self.hint_state = hint.with_previous_selection(&self.hint_state);
     }
 
     /// Clear any active hints.
@@ -799,20 +783,17 @@ impl App {
         }
 
         match &mut self.input_mode {
-            InputMode::Prompt(PromptContext::Command { buffer }) => {
-                for c in completion.chars() {
-                    buffer.insert_char(c);
-                }
-            }
-            InputMode::Prompt(PromptContext::Filter { buffer }) => {
-                for c in completion.chars() {
-                    buffer.insert_char(c);
-                }
-            }
             InputMode::Edit(_) => {
                 if let Some(ref mut buffer) = self.edit_buffer {
                     for c in completion.chars() {
                         buffer.insert_char(c);
+                    }
+                }
+            }
+            InputMode::FilterPrompt => {
+                if let ViewMode::Filter(state) = &mut self.view {
+                    for c in completion.chars() {
+                        state.query_buffer.insert_char(c);
                     }
                 }
             }
@@ -821,98 +802,5 @@ impl App {
 
         self.clear_hints();
         true
-    }
-
-    /// Get the content of the current prompt buffer (if in prompt mode)
-    #[must_use]
-    pub fn prompt_content(&self) -> Option<&str> {
-        match &self.input_mode {
-            InputMode::Prompt(PromptContext::Command { buffer }) => Some(buffer.content()),
-            InputMode::Prompt(PromptContext::Filter { buffer }) => Some(buffer.content()),
-            InputMode::Prompt(PromptContext::RenameTag { buffer, .. }) => Some(buffer.content()),
-            _ => None,
-        }
-    }
-
-    /// Check if the current prompt buffer is empty
-    #[must_use]
-    pub fn prompt_is_empty(&self) -> bool {
-        match &self.input_mode {
-            InputMode::Prompt(PromptContext::Command { buffer }) => buffer.is_empty(),
-            InputMode::Prompt(PromptContext::Filter { buffer }) => buffer.is_empty(),
-            InputMode::Prompt(PromptContext::RenameTag { buffer, .. }) => buffer.is_empty(),
-            _ => true,
-        }
-    }
-
-    /// Get a mutable reference to the current prompt buffer (if in prompt mode)
-    pub fn prompt_buffer_mut(&mut self) -> Option<&mut CursorBuffer> {
-        match &mut self.input_mode {
-            InputMode::Prompt(PromptContext::Command { buffer }) => Some(buffer),
-            InputMode::Prompt(PromptContext::Filter { buffer }) => Some(buffer),
-            InputMode::Prompt(PromptContext::RenameTag { buffer, .. }) => Some(buffer),
-            _ => None,
-        }
-    }
-
-    #[must_use]
-    pub fn input_needs_continuation(&self) -> bool {
-        self.prompt_content()
-            .map(|c| c.ends_with(':'))
-            .unwrap_or(false)
-    }
-
-    /// Enter command prompt mode
-    pub fn enter_command_mode(&mut self) {
-        self.input_mode = InputMode::Prompt(PromptContext::Command {
-            buffer: CursorBuffer::empty(),
-        });
-    }
-
-    /// Enter filter prompt mode
-    pub fn enter_filter_mode(&mut self) {
-        let buffer = match &self.view {
-            ViewMode::Filter(state) => state.query_buffer.clone(),
-            ViewMode::Daily(_) => CursorBuffer::empty(),
-        };
-        self.input_mode = InputMode::Prompt(PromptContext::Filter { buffer });
-    }
-
-    pub fn cancel_prompt(&mut self) {
-        self.input_mode = InputMode::Normal;
-    }
-
-    pub fn open_project_interface(&mut self) {
-        self.input_mode =
-            InputMode::Interface(InterfaceContext::Project(ProjectInterfaceState::new()));
-    }
-
-    pub fn project_interface_select(&mut self) -> std::io::Result<()> {
-        let project_info = {
-            let InputMode::Interface(InterfaceContext::Project(ref state)) = self.input_mode else {
-                return Ok(());
-            };
-            state
-                .selected_project()
-                .map(|p| (p.id.clone(), p.available))
-        };
-
-        match project_info {
-            Some((id, true)) => {
-                self.input_mode = InputMode::Normal;
-                self.switch_to_registered_project(&id)?;
-            }
-            Some((id, false)) => {
-                self.set_status(format!("Project '{}' is unavailable", id));
-            }
-            None => {
-                self.input_mode = InputMode::Normal;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn cancel_interface(&mut self) {
-        self.input_mode = InputMode::Normal;
     }
 }

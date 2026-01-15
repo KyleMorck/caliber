@@ -1,652 +1,229 @@
-# Action definitions
-# Order matters: TOML order = display order in footer, help, and README
-
-# =============================================================================
-# Daily Mode + Shared Keys (interleaved for optimal display order)
-# =============================================================================
-
-# --- Entry Creation ---
-
 [[action]]
-key_action_id = "new_entry_bottom"
+key_action_id = "submit"
 default_keys = ["ret"]
-contexts = ["daily_normal"]
-help_sections = ["daily"]
-footer = { modes = ["normal_daily"], text = "New entry" }
-help = "New entry at end"
-readme = "Create a new entry at the bottom of the list"
+contexts = ["daily_normal", "filter_normal", "edit", "reorder", "command_palette"]
 
 [[action]]
-key_action_id = "new_entry_below"
-default_keys = ["o"]
-contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "New entry below"
-readme = "Create a new entry below the selected one"
-
-[[action]]
-key_action_id = "new_entry_above"
-default_keys = ["O"]
-contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "New entry above"
-readme = "Create a new entry above the selected one"
-
-# --- Entry Editing ---
-
-[[action]]
-key_action_id = "edit_entry"
-default_keys = ["i"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-footer = { modes = ["normal_daily"], text = "Edit" }
-help = "Edit selected"
-readme = "Edit the currently selected entry"
-
-[[action]]
-key_action_id = "toggle_entry"
-default_keys = ["c"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-footer = { modes = ["normal_daily", "normal_filter"], text = "Toggle" }
-help = "Toggle task complete"
-readme = "Toggle task completion status"
-
-[[action]]
-key_action_id = "delete_entry"
-default_keys = ["d"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-footer = { modes = ["normal_filter"], text = "Delete" }
-help = "Delete entry"
-readme = "Delete the selected entry"
-
-[[action]]
-key_action_id = "yank_entry"
-default_keys = ["y"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Yank to clipboard"
-readme = "Copy the selected entry to clipboard"
-
-[[action]]
-key_action_id = "paste"
-default_keys = ["p"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Paste from clipboard"
-readme = "Paste clipboard content as entries below cursor"
-
-[[action]]
-key_action_id = "undo"
-default_keys = ["u"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Undo last action"
-readme = "Undo the last action"
-
-[[action]]
-key_action_id = "redo"
-default_keys = ["U"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Redo undone action"
-readme = "Redo the last undone action"
-
-# --- Tag Operations ---
-
-[[action]]
-key_action_id = "remove_last_tag"
-default_keys = ["x"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Remove last tag"
-readme = "Remove the last trailing tag from the selected entry"
-
-[[action]]
-key_action_id = "remove_all_tags"
-default_keys = ["X"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Remove all tags"
-readme = "Remove all trailing tags from the selected entry"
-
-# Documentation-only: handled by direct key logic, not keymap dispatch.
-[[action]]
-key_action_id = "quick_filter_tag"
-default_keys = ["0-9"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Filter favorite tag"
-readme = "Quick filter by favorite tag (configured in config.toml)"
-
-# Documentation-only: handled by direct key logic, not keymap dispatch.
-[[action]]
-key_action_id = "append_favorite_tag"
-default_keys = ["S-0-9"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Append favorite tag"
-readme = "Append favorite tag to the selected entry (configured in config.toml)"
-
-[[action]]
-key_action_id = "cycle_entry_type_normal"
-default_keys = ["S-tab"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Cycle entry type"
-readme = "Cycle through entry types (task -> note -> event)"
-
-# --- Navigation ---
+key_action_id = "cancel"
+default_keys = ["esc"]
+contexts = ["shared_normal", "edit", "reorder", "selection", "command_palette"]
 
 [[action]]
 key_action_id = "move_down"
 default_keys = ["down", "j"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Navigate down"
-readme = "Move selection to the next entry"
+contexts = ["shared_normal", "reorder", "selection", "command_palette"]
 
 [[action]]
 key_action_id = "move_up"
 default_keys = ["up", "k"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Navigate up"
-readme = "Move selection to the previous entry"
+contexts = ["shared_normal", "reorder", "selection", "command_palette"]
+
+[[action]]
+key_action_id = "move_left"
+default_keys = ["left", "h"]
+contexts = ["daily_normal", "command_palette"]
+
+[[action]]
+key_action_id = "move_right"
+default_keys = ["right", "l"]
+contexts = ["daily_normal", "command_palette"]
 
 [[action]]
 key_action_id = "jump_to_first"
 default_keys = ["g"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Jump to first"
-readme = "Jump to the first entry"
+contexts = ["shared_normal", "selection"]
 
 [[action]]
 key_action_id = "jump_to_last"
 default_keys = ["G"]
-contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Jump to last"
-readme = "Jump to the last entry"
+contexts = ["shared_normal", "selection"]
 
 [[action]]
-key_action_id = "prev_day"
-default_keys = ["[", "h", "left"]
+key_action_id = "prev_week"
+default_keys = ["K", "pageup"]
 contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "Previous day"
-readme = "Navigate to the previous day"
 
 [[action]]
-key_action_id = "next_day"
-default_keys = ["]", "l", "right"]
+key_action_id = "next_week"
+default_keys = ["J", "pagedown"]
 contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "Next day"
-readme = "Navigate to the next day"
+
+[[action]]
+key_action_id = "prev_month"
+default_keys = ["["]
+contexts = ["daily_normal"]
+
+[[action]]
+key_action_id = "next_month"
+default_keys = ["]"]
+contexts = ["daily_normal"]
+
+[[action]]
+key_action_id = "prev_year"
+default_keys = ["{"]
+contexts = ["daily_normal"]
+
+[[action]]
+key_action_id = "next_year"
+default_keys = ["}"]
+contexts = ["daily_normal"]
 
 [[action]]
 key_action_id = "goto_today"
 default_keys = ["t"]
 contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "Go to today"
-readme = "Navigate to today's entries"
-
-# --- View Management ---
 
 [[action]]
-key_action_id = "toggle_hide_completed"
-default_keys = ["z"]
+key_action_id = "new_entry_below"
+default_keys = ["o"]
 contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "Toggle hide completed"
-readme = "Toggle visibility of completed tasks"
 
 [[action]]
-key_action_id = "tidy_entries"
-default_keys = ["T"]
+key_action_id = "new_entry_above"
+default_keys = ["O"]
 contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "Tidy entries"
-readme = "Tidy entries into pre-configured order by type"
 
 [[action]]
-key_action_id = "enter_reorder_mode"
-default_keys = ["r"]
-contexts = ["daily_normal"]
-help_sections = ["daily"]
-help = "Reorder mode"
-readme = "Enter reorder mode to manually arrange entries"
-
-[[action]]
-key_action_id = "enter_selection_mode"
-default_keys = ["v"]
+key_action_id = "edit"
+default_keys = ["i"]
 contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Selection mode"
-readme = "Enter selection mode for multi-entry operations"
-
-# --- Mode Switching ---
 
 [[action]]
-key_action_id = "toggle_filter"
-default_keys = ["tab"]
-contexts = ["daily_normal", "filter_normal"]
-help_sections = ["daily", "filter"]
-help = "Toggle filter view"
-readme = "Toggle between daily view and filter view"
+key_action_id = "toggle_complete"
+default_keys = ["space"]
+contexts = ["shared_normal", "selection"]
 
 [[action]]
-key_action_id = "toggle_journal"
-default_keys = ["`"]
+key_action_id = "delete"
+default_keys = ["d"]
+contexts = ["shared_normal", "selection", "command_palette"]
+
+[[action]]
+key_action_id = "defer_date"
+default_keys = [">"]
+contexts = ["shared_normal", "selection"]
+
+[[action]]
+key_action_id = "remove_date"
+default_keys = ["D"]
+contexts = ["shared_normal", "selection"]
+
+[[action]]
+key_action_id = "yank"
+default_keys = ["y"]
+contexts = ["shared_normal", "selection"]
+
+[[action]]
+key_action_id = "paste"
+default_keys = ["p"]
 contexts = ["shared_normal"]
-help_sections = ["daily", "filter"]
-help = "Toggle Hub/Project journal"
-readme = "Switch between Hub and Project journal"
 
 [[action]]
-key_action_id = "toggle_filter_prompt"
-default_keys = ["/"]
-contexts = ["shared_normal", "filter_prompt"]
-help_sections = ["daily", "filter"]
-footer = { modes = ["normal_daily"], text = "Filter" }
-help = "Filter mode"
-readme = "Toggle filter mode to search entries"
+key_action_id = "undo"
+default_keys = ["u"]
+contexts = ["shared_normal"]
 
 [[action]]
-key_action_id = "toggle_command_prompt"
-default_keys = [":"]
-contexts = ["shared_normal", "command_prompt"]
-help_sections = ["daily", "filter"]
-help = "Command mode"
-readme = "Toggle command mode for :quit, :project, etc."
+key_action_id = "redo"
+default_keys = ["U"]
+contexts = ["shared_normal"]
 
 [[action]]
-key_action_id = "toggle_help"
-default_keys = ["?"]
-contexts = ["shared_normal", "help"]
-help_sections = ["daily", "filter"]
-footer = { modes = ["normal_daily", "normal_filter"], text = "Help" }
-help = "Toggle help"
-readme = "Toggle the help overlay"
+key_action_id = "remove_last_tag"
+default_keys = ["x"]
+contexts = ["shared_normal", "selection"]
 
 [[action]]
-key_action_id = "toggle_date_interface"
-default_keys = ["\\"]
-contexts = ["shared_normal", "date_interface"]
-help_sections = ["daily", "filter"]
-help = "Toggle date interface"
-readme = "Toggle the date interface for date navigation"
-
-[[action]]
-key_action_id = "toggle_project_interface"
-default_keys = ["."]
-contexts = ["shared_normal", "project_interface"]
-help_sections = ["daily", "filter"]
-help = "Toggle project interface"
-readme = "Toggle the project interface for switching projects"
-
-[[action]]
-key_action_id = "toggle_tag_interface"
-default_keys = [","]
-contexts = ["shared_normal", "tag_interface"]
-help_sections = ["daily", "filter"]
-help = "Toggle tag interface"
-readme = "Toggle the tag interface for managing tags"
-
-# =============================================================================
-# Filter Normal Mode
-# =============================================================================
-
-[[action]]
-key_action_id = "filter_quick_add"
-default_keys = ["ret"]
-contexts = ["filter_normal"]
-help_sections = ["filter"]
-help = "Quick add to today"
-readme = "Add a new entry to today matching the current filter type"
-
-[[action]]
-key_action_id = "refresh_filter"
-default_keys = ["r"]
-contexts = ["filter_normal"]
-help_sections = ["filter"]
-footer = { modes = ["normal_filter"], text = "Refresh" }
-help = "Refresh results"
-readme = "Refresh the filter results"
-
-# =============================================================================
-# Edit Mode
-# =============================================================================
-
-[[action]]
-key_action_id = "save_edit"
-default_keys = ["ret"]
-contexts = ["edit"]
-help_sections = ["edit"]
-footer = { modes = ["edit"], text = "Save" }
-help = "Save and exit"
-readme = "Save the entry and exit edit mode"
-
-[[action]]
-key_action_id = "save_and_new"
-default_keys = ["down"]
-contexts = ["edit"]
-help_sections = ["edit"]
-footer = { modes = ["edit"], text = "Save+new" }
-help = "Save and new"
-readme = "Save the current entry and create a new one"
-
-# Documentation-only: handled by direct key logic, not keymap dispatch.
-[[action]]
-key_action_id = "autocomplete"
-default_keys = ["tab"]
-contexts = ["edit"]
-help_sections = ["edit"]
-footer = { modes = ["edit"], text = "Complete" }
-help = "Autocomplete hint"
-readme = "Accept the current autocomplete hint and continue editing"
+key_action_id = "remove_all_tags"
+default_keys = ["X"]
+contexts = ["shared_normal", "selection"]
 
 [[action]]
 key_action_id = "cycle_entry_type"
 default_keys = ["S-tab"]
-contexts = ["edit"]
-help_sections = ["edit"]
-footer = { modes = ["edit"], text = "Type" }
-help = "Cycle entry type"
-readme = "Cycle through entry types (task, note, event)"
-
-# =============================================================================
-# Reorder Mode
-# =============================================================================
+contexts = ["shared_normal", "edit", "selection"]
 
 [[action]]
-key_action_id = "reorder_move_down"
-default_keys = ["down", "j"]
-contexts = ["reorder"]
-help_sections = ["reorder"]
-footer = { modes = ["reorder"], text = "Move down" }
-help = "Move entry down"
-readme = "Move the selected entry down in the list"
-
-[[action]]
-key_action_id = "reorder_move_up"
-default_keys = ["up", "k"]
-contexts = ["reorder"]
-help_sections = ["reorder"]
-help = "Move entry up"
-readme = "Move the selected entry up in the list"
-
-[[action]]
-key_action_id = "reorder_save"
-default_keys = ["ret", "r"]
-contexts = ["reorder"]
-help_sections = ["reorder"]
-footer = { modes = ["reorder"], text = "Save" }
-help = "Save"
-readme = "Save the new order"
-
-# =============================================================================
-# Selection Mode
-# =============================================================================
-
-[[action]]
-key_action_id = "selection_toggle"
+key_action_id = "selection"
 default_keys = ["v"]
-contexts = ["selection"]
-help_sections = ["selection"]
-footer = { modes = ["selection"], text = "Toggle selection" }
-help = "Toggle selection"
-readme = "Toggle selection on the current entry"
+contexts = ["shared_normal", "selection"]
 
 [[action]]
 key_action_id = "selection_extend_range"
 default_keys = ["V"]
 contexts = ["selection"]
-help_sections = ["selection"]
-footer = { modes = ["selection"], text = "Select Range" }
-help = "Select range"
-readme = "Select all entries between last selection and cursor"
 
 [[action]]
-key_action_id = "selection_move_down"
-default_keys = ["down", "j"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Move cursor down"
-readme = "Move cursor down without changing selection"
+key_action_id = "toggle_filter_view"
+default_keys = ["tab"]
+contexts = ["daily_normal", "filter_normal"]
 
 [[action]]
-key_action_id = "selection_move_up"
-default_keys = ["up", "k"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Move cursor up"
-readme = "Move cursor up without changing selection"
+key_action_id = "filter_prompt"
+default_keys = ["/"]
+contexts = ["shared_normal"]
 
 [[action]]
-key_action_id = "selection_jump_to_first"
-default_keys = ["g"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Jump to first"
-readme = "Jump to first selectable entry"
+key_action_id = "toggle_journal"
+default_keys = ["`"]
+contexts = ["shared_normal"]
 
 [[action]]
-key_action_id = "selection_jump_to_last"
-default_keys = ["G"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Jump to last"
-readme = "Jump to last entry"
+key_action_id = "command_palette"
+default_keys = ["q"]
+contexts = ["shared_normal", "command_palette"]
 
 [[action]]
-key_action_id = "selection_delete"
-default_keys = ["d"]
-contexts = ["selection"]
-help_sections = ["selection"]
-footer = { modes = ["selection"], text = "Delete" }
-help = "Delete selected"
-readme = "Delete all selected entries"
-
-[[action]]
-key_action_id = "selection_toggle_complete"
-default_keys = ["c"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Toggle completion"
-readme = "Toggle completion status of all selected entries"
-
-[[action]]
-key_action_id = "selection_yank"
-default_keys = ["y"]
-contexts = ["selection"]
-help_sections = ["selection"]
-footer = { modes = ["selection"], text = "Yank" }
-help = "Yank selected"
-readme = "Copy all selected entries to clipboard"
-
-[[action]]
-key_action_id = "selection_remove_last_tag"
-default_keys = ["x"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Remove last tag"
-readme = "Remove the last trailing tag from all selected entries"
-
-[[action]]
-key_action_id = "selection_remove_all_tags"
-default_keys = ["X"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Remove all tags"
-readme = "Remove all trailing tags from all selected entries"
-
-# Documentation-only: handled by direct key logic, not keymap dispatch.
-[[action]]
-key_action_id = "selection_append_tag"
-default_keys = ["S-0-9"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Append favorite tag"
-readme = "Append favorite tag to all selected entries"
-
-[[action]]
-key_action_id = "selection_cycle_type"
-default_keys = ["S-tab"]
-contexts = ["selection"]
-help_sections = ["selection"]
-help = "Cycle entry type"
-readme = "Cycle through entry types on all selected entries"
-
-# =============================================================================
-# Help Popup
-# =============================================================================
-
-[[action]]
-key_action_id = "help_scroll_down"
-default_keys = ["down", "j"]
-contexts = ["help"]
-help_sections = ["help"]
-help = "Scroll down"
-readme = "Scroll the help content down"
-
-[[action]]
-key_action_id = "help_scroll_up"
-default_keys = ["up", "k"]
-contexts = ["help"]
-help_sections = ["help"]
-help = "Scroll up"
-readme = "Scroll the help content up"
-
-# =============================================================================
-# Unified Interface Actions (shared across all interfaces)
-# =============================================================================
-
-[[action]]
-key_action_id = "interface_move_up"
-default_keys = ["up", "k"]
-contexts = ["date_interface", "project_interface", "tag_interface"]
-help_sections = ["date", "project", "tag"]
-help = "Move up"
-readme = "Move selection up (when list/calendar focused)"
-
-[[action]]
-key_action_id = "interface_move_down"
-default_keys = ["down", "j"]
-contexts = ["date_interface", "project_interface", "tag_interface"]
-help_sections = ["date", "project", "tag"]
-help = "Move down"
-readme = "Move selection down (when list/calendar focused)"
-
-[[action]]
-key_action_id = "interface_move_left"
-default_keys = ["left", "h"]
-contexts = ["date_interface", "project_interface", "tag_interface"]
-help_sections = ["date"]
-help = "Move left"
-readme = "Move left in calendar (date interface only, when calendar focused)"
-
-[[action]]
-key_action_id = "interface_move_right"
-default_keys = ["right", "l"]
-contexts = ["date_interface", "project_interface", "tag_interface"]
-help_sections = ["date"]
-help = "Move right"
-readme = "Move right in calendar (date interface only, when calendar focused)"
-
-[[action]]
-key_action_id = "interface_submit"
+key_action_id = "filter_quick_add"
 default_keys = ["ret"]
-contexts = ["date_interface", "project_interface", "tag_interface"]
-help_sections = ["date", "project", "tag"]
-footer = { modes = ["date_interface", "project_interface", "tag_interface"], text = "Submit" }
-help = "Submit/Select"
-readme = "Submit selection or autocomplete (context-aware)"
+contexts = ["filter_normal"]
 
 [[action]]
-key_action_id = "interface_delete"
-default_keys = ["d"]
-contexts = ["project_interface", "tag_interface"]
-help_sections = ["project", "tag"]
-footer = { modes = ["project_interface", "tag_interface"], text = "Delete" }
-help = "Delete/Remove"
-readme = "Delete tag or remove project (when list focused)"
-
-[[action]]
-key_action_id = "interface_rename"
+key_action_id = "refresh"
 default_keys = ["r"]
-contexts = ["tag_interface"]
-help_sections = ["tag"]
-footer = { modes = ["tag_interface"], text = "Rename" }
-help = "Rename tag"
-readme = "Rename tag throughout journal (when list focused)"
+contexts = ["filter_normal"]
 
 [[action]]
-key_action_id = "interface_hide"
-default_keys = ["h"]
-contexts = ["project_interface"]
-help_sections = ["project"]
-footer = { modes = ["project_interface"], text = "Hide" }
-help = "Hide project"
-readme = "Hide project from registry (when list focused)"
+key_action_id = "save_and_new"
+default_keys = ["down"]
+contexts = ["edit"]
 
 [[action]]
-key_action_id = "interface_prev_month"
-default_keys = ["["]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "← Month" }
-help = "Previous month"
-readme = "Navigate to previous month (when calendar focused)"
+key_action_id = "reorder_mode"
+default_keys = ["r"]
+contexts = ["daily_normal"]
 
 [[action]]
-key_action_id = "interface_next_month"
-default_keys = ["]"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "→ Month" }
-help = "Next month"
-readme = "Navigate to next month (when calendar focused)"
+key_action_id = "tidy_entries"
+default_keys = ["T"]
+contexts = ["daily_normal"]
 
 [[action]]
-key_action_id = "interface_prev_year"
-default_keys = ["{"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "← Year" }
-help = "Previous year"
-readme = "Navigate to previous year (when calendar focused)"
+key_action_id = "hide"
+default_keys = ["z"]
+contexts = ["daily_normal", "command_palette"]
 
 [[action]]
-key_action_id = "interface_next_year"
-default_keys = ["}"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "→ Year" }
-help = "Next year"
-readme = "Navigate to next year (when calendar focused)"
+key_action_id = "autocomplete"
+default_keys = ["tab"]
+contexts = ["edit"]
 
 [[action]]
-key_action_id = "interface_today"
-default_keys = ["t"]
-contexts = ["date_interface"]
-help_sections = ["date"]
-footer = { modes = ["date_interface"], text = "Today" }
-help = "Go to today"
-readme = "Navigate to today's date (when calendar focused)"
-
-# =============================================================================
-# Unified Cancel Action
-# =============================================================================
+key_action_id = "toggle_calendar_sidebar"
+default_keys = ["."]
+contexts = ["shared_normal"]
 
 [[action]]
-key_action_id = "cancel"
-default_keys = ["esc"]
-contexts = ["edit", "reorder", "selection", "filter_normal", "filter_prompt", "command_prompt", "date_interface", "project_interface", "tag_interface", "help"]
-help_sections = ["edit", "reorder", "selection", "filter", "date", "project", "tag"]
-help = "Cancel"
-readme = "Cancel the current operation and return to normal mode"
+key_action_id = "toggle_agenda"
+default_keys = [","]
+contexts = ["shared_normal"]
+
+[[action]]
+key_action_id = "date_picker"
+default_keys = ["\\"]
+contexts = ["daily_normal"]
+
+[[action]]
+key_action_id = "quit"
+default_keys = ["C-q"]
+contexts = ["shared_normal"]

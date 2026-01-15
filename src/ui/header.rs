@@ -1,7 +1,6 @@
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
-    style::{Color, Style},
     text::{Line as RatatuiLine, Span},
     widgets::Paragraph,
 };
@@ -15,10 +14,7 @@ impl HeaderModel {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            left: Some(RatatuiLine::from(Span::styled(
-                "Caliber",
-                Style::default().fg(Color::Cyan),
-            ))),
+            left: None,
             right: None,
         }
     }

@@ -11,6 +11,7 @@ use caliber::config::Config;
 use caliber::handlers;
 use caliber::storage::{JournalContext, JournalSlot};
 use caliber::ui;
+use caliber::ui::surface::Surface;
 
 pub struct TestContext {
     pub app: App,
@@ -40,7 +41,8 @@ impl TestContext {
         let context = JournalContext::new(journal_path, None, JournalSlot::Hub);
 
         let config = Config::default();
-        let app = App::new_with_context(config, date, context, None).expect("Failed to create app");
+        let app = App::new_with_context(config, date, context, None, Surface::default())
+            .expect("Failed to create app");
 
         Self { app, temp_dir }
     }
@@ -60,7 +62,8 @@ impl TestContext {
         std::fs::write(&journal_path, content).expect("Failed to write journal");
 
         let context = JournalContext::new(journal_path, None, JournalSlot::Hub);
-        let app = App::new_with_context(config, date, context, None).expect("Failed to create app");
+        let app = App::new_with_context(config, date, context, None, Surface::default())
+            .expect("Failed to create app");
 
         Self { app, temp_dir }
     }
@@ -82,31 +85,30 @@ impl TestContext {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) {
-        if self.app.help_visible {
-            handlers::handle_help_key(&mut self.app, key);
-        } else {
-            match &self.app.input_mode {
-                InputMode::Prompt(_) => {
-                    let _ = handlers::handle_prompt_key(&mut self.app, key);
-                }
-                InputMode::Normal => {
-                    let _ = handlers::handle_normal_key(&mut self.app, key);
-                }
-                InputMode::Edit(_) => {
-                    handlers::handle_edit_key(&mut self.app, key);
-                }
-                InputMode::Reorder => {
-                    handlers::handle_reorder_key(&mut self.app, key);
-                }
-                InputMode::Confirm(_) => {
-                    let _ = handlers::handle_confirm_key(&mut self.app, key.code);
-                }
-                InputMode::Selection(_) => {
-                    let _ = handlers::handle_selection_key(&mut self.app, key);
-                }
-                InputMode::Interface(_) => {
-                    let _ = handlers::handle_interface_key(&mut self.app, key);
-                }
+        match &self.app.input_mode {
+            InputMode::Normal => {
+                let _ = handlers::handle_normal_key(&mut self.app, key);
+            }
+            InputMode::Edit(_) => {
+                handlers::handle_edit_key(&mut self.app, key);
+            }
+            InputMode::Reorder => {
+                handlers::handle_reorder_key(&mut self.app, key);
+            }
+            InputMode::Confirm(_) => {
+                let _ = handlers::handle_confirm_key(&mut self.app, key.code);
+            }
+            InputMode::Selection(_) => {
+                let _ = handlers::handle_selection_key(&mut self.app, key);
+            }
+            InputMode::CommandPalette(_) => {
+                let _ = handlers::handle_command_palette_key(&mut self.app, key);
+            }
+            InputMode::FilterPrompt => {
+                let _ = handlers::handle_filter_prompt_key(&mut self.app, key);
+            }
+            InputMode::DatePicker(_) => {
+                let _ = handlers::handle_date_picker_key(&mut self.app, key);
             }
         }
     }
@@ -114,7 +116,7 @@ impl TestContext {
     pub fn render_daily(&mut self) -> Vec<String> {
         let context = ui::RenderContext::for_test(80, 24);
         let _ = ui::prepare_render(&mut self.app, &context);
-        ui::build_daily_list(&self.app, context.content_width)
+        ui::build_daily_list(&self.app, context.main_area.width as usize)
             .into_lines()
             .iter()
             .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect())
@@ -124,7 +126,7 @@ impl TestContext {
     pub fn render_filter(&mut self) -> Vec<String> {
         let context = ui::RenderContext::for_test(80, 24);
         let _ = ui::prepare_render(&mut self.app, &context);
-        ui::build_filter_list(&self.app, context.content_width)
+        ui::build_filter_list(&self.app, context.main_area.width as usize)
             .into_lines()
             .iter()
             .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect())
@@ -142,15 +144,6 @@ impl TestContext {
         self.render_current().iter().any(|line| line.contains(text))
     }
 
-    pub fn render_footer(&self) -> String {
-        let line = ui::render_footer(&self.app);
-        line.spans.iter().map(|s| s.content.as_ref()).collect()
-    }
-
-    pub fn footer_contains(&self, text: &str) -> bool {
-        self.render_footer().contains(text)
-    }
-
     pub fn find_line(&mut self, text: &str) -> Option<String> {
         self.render_current()
             .into_iter()
@@ -161,7 +154,7 @@ impl TestContext {
         self.app
             .status_message
             .as_ref()
-            .is_some_and(|s| s.contains(text))
+            .is_some_and(|s| s.text.contains(text))
     }
 
     pub fn journal_path(&self) -> PathBuf {

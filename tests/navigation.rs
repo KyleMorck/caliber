@@ -111,21 +111,3 @@ fn l_key_navigates_to_future_dates() {
         NaiveDate::from_ymd_opt(2026, 1, 16).unwrap()
     );
 }
-
-#[test]
-fn bracket_keys_navigate_between_days() {
-    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let mut ctx = TestContext::with_date(date);
-
-    ctx.press(KeyCode::Char('['));
-    assert_eq!(
-        ctx.app.current_date,
-        NaiveDate::from_ymd_opt(2026, 1, 14).unwrap()
-    );
-
-    ctx.press(KeyCode::Char(']'));
-    assert_eq!(
-        ctx.app.current_date,
-        NaiveDate::from_ymd_opt(2026, 1, 15).unwrap()
-    );
-}

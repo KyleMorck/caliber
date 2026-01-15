@@ -58,7 +58,7 @@ completion_hint = "Day of week. In entries: next occurrence. In filters: use +/-
 
 [[date_value]]
 syntax = "d[1-999]"
-display = "d[1-999]"
+display = "d[1-999][+/-]"
 pattern = "^d[1-9][0-9]{0,2}$"
 scopes = ["entry", "filter"]
 help = "Relative days"
@@ -70,24 +70,8 @@ completion_hint = "Relative days (d1, d7, d30). Use +/- suffix for direction."
 # =============================================================================
 
 [[date_value]]
-syntax = "every-day"
-display = "@every-day"
-scopes = ["entry"]
-help = "Recurring every day"
-readme = "Recurring every day."
-completion_hint = "Recurring every day."
-
-[[date_value]]
-syntax = "every-weekday"
-display = "@every-weekday"
-scopes = ["entry"]
-help = "Recurring Monday-Friday"
-readme = "Recurring Monday through Friday."
-completion_hint = "Recurring Monday through Friday."
-
-[[date_value]]
 syntax = "every-[mon-sun]"
-display = "@every-[mon-sun]"
+display = "every-[mon-sun]"
 values = ["every-mon", "every-tue", "every-wed", "every-thu", "every-fri", "every-sat", "every-sun"]
 scopes = ["entry"]
 help = "Recurring day of week"
@@ -95,8 +79,24 @@ readme = "Recurring on a specific day of week (@every-mon, @every-tue, etc.)."
 completion_hint = "Recurring on day of week (@every-mon through @every-sun)."
 
 [[date_value]]
+syntax = "every-day"
+display = "every-day"
+scopes = ["entry"]
+help = "Recurring every day"
+readme = "Recurring every day."
+completion_hint = "Recurring every day."
+
+[[date_value]]
+syntax = "every-weekday"
+display = "every-weekday"
+scopes = ["entry"]
+help = "Recurring Monday-Friday"
+readme = "Recurring Monday through Friday."
+completion_hint = "Recurring Monday through Friday."
+
+[[date_value]]
 syntax = "every-[1-31]"
-display = "@every-[1-31]"
+display = "every-[1-31]"
 pattern = "^every-([1-9]|[12][0-9]|3[01])$"
 scopes = ["entry"]
 help = "Recurring day of month"

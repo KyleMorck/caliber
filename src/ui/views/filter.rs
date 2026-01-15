@@ -1,25 +1,27 @@
 use crate::app::App;
+use crate::ui::container::view_content_container_config;
+use crate::ui::context::RenderContext;
+use crate::ui::filter::build_filter_list;
+use crate::ui::layout::PanelId;
+use crate::ui::theme;
+use crate::ui::view_model::{PanelContent, PanelModel};
 
-use super::super::container::ContainerConfig;
-use super::super::filter::build_filter_list;
-use super::super::layout::PanelId;
-use super::super::theme;
-use super::super::view_model::{PanelContent, PanelModel};
-use super::ViewSpec;
+use super::{ViewSpec, list_panel_content_area};
 
-pub fn build_filter_view_spec(
-    app: &App,
-    context: &super::super::context::RenderContext,
-) -> ViewSpec {
-    let config = ContainerConfig {
-        title: None,
-        border_color: theme::BORDER_FILTER,
-        focused_border_color: Some(theme::BORDER_FOCUSED),
-    };
-    let list = build_filter_list(app, context.content_width);
+pub fn build_filter_view_spec(app: &App, context: &RenderContext) -> ViewSpec {
+    let config = view_content_container_config(theme::FILTER_BORDER);
+    let list = build_filter_list(app, list_content_width_for_filter(context));
 
     let panel_id = PanelId(0);
     let panel = PanelModel::new(panel_id, config, PanelContent::EntryList(list));
 
     ViewSpec::single_panel(panel)
+}
+
+pub(crate) fn list_content_width_for_filter(context: &RenderContext) -> usize {
+    list_panel_content_area(context, theme::FILTER_BORDER).width as usize
+}
+
+pub(crate) fn list_content_height_for_filter(context: &RenderContext) -> usize {
+    list_panel_content_area(context, theme::FILTER_BORDER).height as usize
 }

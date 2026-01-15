@@ -1,3 +1,22 @@
+//! # Edit Action Pattern
+//!
+//! Unlike other actions (e.g., `DeleteEntries`), `EditEntry` does NOT perform
+//! the mutation in `execute()`. The edit has already been applied to the entry
+//! before the action is created.
+//!
+//! ## Why This Pattern?
+//!
+//! Edits happen immediately in the UI for responsiveness. The `EditEntry` action
+//! captures the before/after state purely for undo/redo capability.
+//!
+//! ## Flow
+//!
+//! 1. User edits entry content in edit mode
+//! 2. On save, `exit_edit()` applies the change and creates `EditEntry` action
+//! 3. `EditEntry::execute()` returns `RestoreEdit` (does no work itself)
+//! 4. Undo calls `RestoreEdit::execute()` which restores original content
+//! 5. Redo calls `RedoEdit::execute()` which re-applies the new content
+
 use std::io;
 
 use crate::app::{App, EntryLocation, ViewMode};

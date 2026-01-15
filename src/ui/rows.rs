@@ -1,7 +1,7 @@
 use chrono::Timelike;
 use ratatui::{
     style::{Color, Style, Stylize},
-    text::{Line as RatatuiLine, Span},
+    text::Span,
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -23,7 +23,7 @@ pub fn build_calendar_row(
 ) -> RowModel {
     let prefix = "* ";
     let prefix_width = prefix.width();
-    let indicator = theme::GLYPH_UNSELECTED;
+    let indicator = theme::GLYPH_CALENDAR.to_string();
 
     let content = format_calendar_event(event, show_calendar_name);
     let available = width.saturating_sub(prefix_width);
@@ -37,10 +37,7 @@ pub fn build_calendar_row(
     let (_, rest_of_prefix) = split_prefix(prefix);
 
     RowModel::new(
-        Some(Span::styled(
-            indicator.to_string(),
-            Style::default().fg(theme::CALENDAR_INDICATOR),
-        )),
+        Some(Span::styled(indicator, Style::default().fg(event.color))),
         Some(Span::styled(rest_of_prefix, content_style)),
         style_content(&display_text, content_style),
         None,
@@ -97,14 +94,14 @@ pub fn build_filter_selected_row(app: &App, entry: &Entry, index: usize, width: 
     let prefix_width = prefix.width();
     let (date_suffix, date_suffix_width) = format_date_suffix(entry.source_date);
 
-    let sel_prefix = format!(" {}", entry.entry_type.prefix());
+    let (_, rest_of_prefix) = split_prefix(prefix);
     let available = width.saturating_sub(prefix_width + date_suffix_width);
     let display_text = truncate_with_tags(&text, available);
 
     let resolver = IndicatorResolver::new(app);
     RowModel::new(
         Some(resolver.filter_cursor_indicator(index)),
-        Some(Span::styled(sel_prefix.to_string(), content_style)),
+        Some(Span::styled(rest_of_prefix, content_style)),
         style_content(&display_text, content_style),
         Some(Span::styled(date_suffix, date_suffix_style(content_style))),
     )
@@ -154,16 +151,23 @@ fn build_entry_row(app: &App, spec: EntryRowSpec<'_>) -> RowModel {
         EntryIndicator::Daily => resolver.entry_indicator(
             spec.is_selected,
             spec.visible_idx,
-            theme::ENTRY_CURSOR,
+            resolver.cursor_color(),
             &first_char,
             content_style,
         ),
         EntryIndicator::Filter => {
             resolver.filter_list_indicator(&first_char, spec.visible_idx, content_style)
         }
-        EntryIndicator::Projected(source_type) => {
-            resolver.projected_indicator(spec.is_selected, source_type)
-        }
+        EntryIndicator::Projected(source_type) => match source_type {
+            SourceType::Later => resolver.entry_indicator(
+                spec.is_selected,
+                spec.visible_idx,
+                theme::PROJECTED_DATE,
+                &first_char,
+                content_style,
+            ),
+            _ => resolver.projected_indicator(spec.is_selected, source_type, content_style),
+        },
     };
 
     let suffix_span = suffix_text.map(|text| Span::styled(text, date_suffix_style(content_style)));
@@ -192,10 +196,6 @@ pub fn build_filter_row(app: &App, entry: &Entry, index: usize, width: usize) ->
     )
 }
 
-pub fn header_line(text: impl Into<String>, style: Style) -> RatatuiLine<'static> {
-    RatatuiLine::from(Span::styled(text.into(), style))
-}
-
 pub fn build_edit_rows_with_prefix_width(
     prefix: &str,
     prefix_width: usize,
@@ -204,7 +204,8 @@ pub fn build_edit_rows_with_prefix_width(
     text_width: usize,
     suffix: Option<Span<'static>>,
 ) -> Vec<RowModel> {
-    let wrapped = wrap_text(text, text_width);
+    let wrap_width = text_width.saturating_sub(1).max(1);
+    let wrapped = wrap_text(text, wrap_width);
 
     if wrapped.is_empty() {
         return vec![RowModel::new(
@@ -262,18 +263,23 @@ impl<'a> IndicatorResolver<'a> {
         }
     }
 
+    fn cursor_color(&self) -> Color {
+        theme::context_primary(self.app.active_journal())
+    }
+
     fn filter_cursor_indicator(&self, index: usize) -> Span<'static> {
-        if self.selection_active(index) {
-            Span::styled(
-                theme::GLYPH_SELECTED,
-                Style::default().fg(theme::ENTRY_SELECTION),
-            )
+        let in_selection_mode = matches!(self.app.input_mode, InputMode::Selection(_));
+        let glyph = if self.selection_active(index) {
+            theme::GLYPH_SELECTED
         } else {
-            Span::styled(
-                theme::GLYPH_CURSOR,
-                Style::default().fg(theme::ENTRY_CURSOR),
-            )
-        }
+            theme::GLYPH_CURSOR
+        };
+        let color = if in_selection_mode || self.selection_active(index) {
+            theme::EDIT_PRIMARY
+        } else {
+            self.cursor_color()
+        };
+        Span::styled(glyph, Style::default().fg(color))
     }
 
     fn filter_list_indicator(
@@ -285,14 +291,19 @@ impl<'a> IndicatorResolver<'a> {
         if self.selection_active(index) {
             Span::styled(
                 theme::GLYPH_UNSELECTED,
-                Style::default().fg(theme::ENTRY_SELECTION),
+                Style::default().fg(theme::EDIT_PRIMARY),
             )
         } else {
             Span::styled(first_char.to_string(), content_style)
         }
     }
 
-    fn projected_indicator(&self, is_cursor: bool, kind: &SourceType) -> Span<'static> {
+    fn projected_indicator(
+        &self,
+        is_cursor: bool,
+        kind: &SourceType,
+        content_style: Style,
+    ) -> Span<'static> {
         let indicator = match kind {
             SourceType::Later => theme::GLYPH_PROJECTED_LATER,
             SourceType::Recurring => theme::GLYPH_PROJECTED_RECURRING,
@@ -301,15 +312,9 @@ impl<'a> IndicatorResolver<'a> {
         };
 
         if is_cursor {
-            Span::styled(
-                indicator,
-                Style::default().fg(theme::ENTRY_PROJECTED_ACTIVE),
-            )
+            Span::styled(indicator, Style::default().fg(theme::PROJECTED_DATE))
         } else {
-            Span::styled(
-                indicator,
-                Style::default().fg(theme::ENTRY_PROJECTED_INACTIVE),
-            )
+            Span::styled(indicator.to_string(), content_style)
         }
     }
 
@@ -327,27 +332,22 @@ impl<'a> IndicatorResolver<'a> {
             if matches!(self.app.input_mode, InputMode::Reorder) {
                 Span::styled(
                     theme::GLYPH_REORDER,
-                    Style::default().fg(theme::ENTRY_SELECTION),
+                    Style::default().fg(theme::EDIT_PRIMARY),
                 )
             } else if matches!(self.app.input_mode, InputMode::Selection(_)) {
-                if is_selected_in_selection {
-                    Span::styled(
-                        theme::GLYPH_SELECTED,
-                        Style::default().fg(theme::ENTRY_SELECTION),
-                    )
+                let glyph = if is_selected_in_selection {
+                    theme::GLYPH_SELECTED
                 } else {
-                    Span::styled(
-                        theme::GLYPH_CURSOR,
-                        Style::default().fg(theme::ENTRY_CURSOR),
-                    )
-                }
+                    theme::GLYPH_CURSOR
+                };
+                Span::styled(glyph, Style::default().fg(theme::EDIT_PRIMARY))
             } else {
                 Span::styled(theme::GLYPH_CURSOR, Style::default().fg(cursor_color))
             }
         } else if is_selected_in_selection {
             Span::styled(
                 theme::GLYPH_UNSELECTED,
-                Style::default().fg(theme::ENTRY_SELECTION),
+                Style::default().fg(theme::EDIT_PRIMARY),
             )
         } else {
             Span::styled(default_first_char.to_string(), default_style)
@@ -367,28 +367,19 @@ fn format_calendar_event(event: &CalendarEvent, show_calendar_name: bool) -> Str
         let end_hour = event.end.hour();
         let same_period = (start_hour < 12) == (end_hour < 12);
 
-        let time_str = if same_period {
-            let start_time = event.start.format("%-I:%M").to_string();
-            let end_time = event.end.format("%-I:%M%P").to_string();
-            format!("{start_time}-{end_time}")
-        } else {
-            let start_time = event.start.format("%-I:%M%P").to_string();
-            let end_time = event.end.format("%-I:%M%P").to_string();
-            format!("{start_time}-{end_time}")
-        };
+        let start_fmt = if same_period { "%-I:%M" } else { "%-I:%M%P" };
+        let time_str = format!(
+            "{}-{}",
+            event.start.format(start_fmt),
+            event.end.format("%-I:%M%P")
+        );
         parts.push(time_str);
     }
 
+    let main_text = parts.join(" - ");
     if show_calendar_name {
-        parts.push(format!("({})", event.calendar_name));
-    }
-
-    if parts.len() == 1 {
-        parts.into_iter().next().unwrap()
-    } else if show_calendar_name && parts.len() > 1 {
-        let last = parts.pop().unwrap();
-        format!("{} {last}", parts.join(" - "))
+        format!("{main_text} ({})", event.calendar_name)
     } else {
-        parts.join(" - ")
+        main_text
     }
 }

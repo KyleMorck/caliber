@@ -272,165 +272,52 @@ Now `/$next` expands to `!tasks #next`. Combine them: `$t #work` expands to `!ta
 
 ### Daily Mode
 
-| Key | Action |
-|-----|--------|
-| `Enter` | New entry at end |
-| `o` | New entry below |
-| `O` | New entry above |
-| `i` | Edit selected |
-| `c` | Toggle task complete |
-| `d` | Delete entry |
-| `y` | Yank to clipboard |
-| `p` | Paste from clipboard |
-| `u` | Undo last action |
-| `U` | Redo undone action |
-| `x` | Remove last tag |
-| `X` | Remove all tags |
-| `0-9` | Filter favorite tag |
-| `Shift+0-9` | Append favorite tag |
-| `Shift+Tab` | Cycle entry type |
-| `↓`/`j` | Navigate down |
-| `↑`/`k` | Navigate up |
-| `g` | Jump to first |
-| `G` | Jump to last |
-| `[`/`h`/`←` | Previous day |
-| `]`/`l`/`→` | Next day |
-| `t` | Go to today |
-| `z` | Toggle hide completed |
-| `T` | Tidy entries |
-| `r` | Reorder mode |
-| `v` | Selection mode |
-| `Tab` | Toggle filter view |
-| `` ` `` | Toggle Hub/Project journal |
-| `/` | Filter mode |
-| `:` | Command mode |
-| `?` | Toggle help |
-| `\` | Toggle date interface |
-| `.` | Toggle project interface |
-| `,` | Toggle tag interface |
 
 
 ### Filter Mode
 
-| Key | Action |
-|-----|--------|
-| `i` | Edit selected |
-| `c` | Toggle task complete |
-| `d` | Delete entry |
-| `y` | Yank to clipboard |
-| `p` | Paste from clipboard |
-| `u` | Undo last action |
-| `U` | Redo undone action |
-| `x` | Remove last tag |
-| `X` | Remove all tags |
-| `0-9` | Filter favorite tag |
-| `Shift+0-9` | Append favorite tag |
-| `Shift+Tab` | Cycle entry type |
-| `↓`/`j` | Navigate down |
-| `↑`/`k` | Navigate up |
-| `g` | Jump to first |
-| `G` | Jump to last |
-| `v` | Selection mode |
-| `Tab` | Toggle filter view |
-| `` ` `` | Toggle Hub/Project journal |
-| `/` | Filter mode |
-| `:` | Command mode |
-| `?` | Toggle help |
-| `\` | Toggle date interface |
-| `.` | Toggle project interface |
-| `,` | Toggle tag interface |
-| `Enter` | Quick add to today |
-| `r` | Refresh results |
-| `Esc` | Cancel |
 
 
 ### Edit Mode
 
-| Key | Action |
-|-----|--------|
-| `Enter` | Save and exit |
-| `↓` | Save and new |
-| `Tab` | Autocomplete hint |
-| `Shift+Tab` | Cycle entry type |
-| `Esc` | Cancel |
 
 
 ### Reorder Mode
 
 Press `r` to manually arrange entries within a day.
 
-| Key | Action |
-|-----|--------|
-| `↓`/`j` | Move entry down |
-| `↑`/`k` | Move entry up |
-| `Enter`/`r` | Save |
-| `Esc` | Cancel |
 
 
 ### Selection Mode
 
 Press `v` for batch operations on multiple entries.
 
-| Key | Action |
-|-----|--------|
-| `v` | Toggle selection |
-| `V` | Select range |
-| `↓`/`j` | Move cursor down |
-| `↑`/`k` | Move cursor up |
-| `g` | Jump to first |
-| `G` | Jump to last |
-| `d` | Delete selected |
-| `c` | Toggle completion |
-| `y` | Yank selected |
-| `x` | Remove last tag |
-| `X` | Remove all tags |
-| `Shift+0-9` | Append favorite tag |
-| `Shift+Tab` | Cycle entry type |
-| `Esc` | Cancel |
 
 
 ### Date Interface
 
 Press `\` to open the calendar interface.
 
-| Key | Action |
-|-----|--------|
-| `↑`/`k` | Move up |
-| `↓`/`j` | Move down |
-| `←`/`h` | Move left |
-| `→`/`l` | Move right |
-| `Enter` | Submit/Select |
-| `[` | Previous month |
-| `]` | Next month |
-| `{` | Previous year |
-| `}` | Next year |
-| `t` | Go to today |
-| `Esc` | Cancel |
 
 
 ### Project Interface
 
 Press `+` to open the project switcher.
 
-| Key | Action |
-|-----|--------|
-| `↑`/`k` | Move up |
-| `↓`/`j` | Move down |
-| `Enter` | Submit/Select |
-| `d` | Delete/Remove |
-| `h` | Hide project |
-| `Esc` | Cancel |
 
 
 ### Commands
 
 | Key | Action |
 |-----|--------|
-| `:date ` | Open date interface |
-| `:project ` | Open project interface |
-| `:tag ` | Open tag interface |
-| `:scratchpad ` | Open scratchpad for quick notes |
 | `:quit ` | Quit application |
+| `:scratchpad ` | Open scratchpad for quick notes |
+| `:reload-config ` | Reload configuration after editing |
+| `:edit-config ` | Open base config in default editor |
+| `:edit-hub-config ` | Open hub config in default editor |
+| `:edit-project-config ` | Open project config in default editor |
+| `:edit-journal ` | Open current journal in default editor |
+| `:add-gitignore ` | Add .caliber to project's .gitignore |
 
 
 ### Filter Syntax
@@ -441,26 +328,23 @@ Press `+` to open the project switcher.
 | `!completed` | Completed tasks |
 | `!notes` | Notes only |
 | `!events` | Events only |
-| `@on:DATE` | Entries on date |
-| `@before:DATE` | Entries before date |
-| `@after:DATE` | Entries after date |
-| `@overdue` | Entries with past @date |
+| `mm/dd` | Entries on exact date |
+| `mm/dd..` | From date to today |
+| `..mm/dd` | All past through date |
+| `mm/dd..mm/dd` | Between two dates |
+| `@overdue` | Incomplete tasks with past @date |
 | `@later` | Entries with @date patterns |
-| `@recurring` | Entries with @every-* patterns |
-| `not:#tag` | Entries without tag |
-| `not:!type` | Exclude entry type |
-| `not:word` | Entries not containing text |
+| `@recurring` | Show recurring entries (hidden by default) |
+| `-#tag` | Entries without tag |
+| `-!type` | Exclude entry type |
+| `-word` | Entries not containing text |
 | `#tag` | Entries with tag |
 | `$name` | Saved filter |
 | `word` | Entries containing text |
 
 ### Date Syntax
 
-| Type | Syntax |
-|------|--------|
-| Dates | MM/DD, MM/DD/YY, MM/DD/YYYY, YYYY/MM/DD |
-| Relative | today, tomorrow, yesterday, [mon-sun], d[1-999] (+/- for direction) |
-| Recurring | every-[mon-sun], every-[1-31], every-day, every-weekday |
+
 
 ## Journal Format
 

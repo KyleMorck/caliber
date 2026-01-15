@@ -6,6 +6,7 @@ use crate::registry::{
     COMMANDS, Command, DATE_VALUES, DateScope, DateValue, FILTER_SYNTAX, FilterCategory,
     FilterSyntax,
 };
+use crate::ui::theme;
 
 /// Compiled regexes for pattern-based date values, keyed by pattern string.
 static PATTERN_CACHE: LazyLock<std::collections::HashMap<&'static str, Regex>> =
@@ -30,6 +31,8 @@ pub enum HintContext {
     Tags {
         prefix: String,
         matches: Vec<String>,
+        selected: usize,
+        scroll_offset: usize,
     },
     /// Command hints (from registry)
     Commands {
@@ -40,22 +43,30 @@ pub enum HintContext {
     FilterTypes {
         prefix: String,
         matches: Vec<&'static FilterSyntax>,
+        selected: usize,
+        scroll_offset: usize,
     },
     /// Date operation hints (@on:, @before:, @after:, @overdue)
     DateOps {
         prefix: String,
         matches: Vec<&'static FilterSyntax>,
+        selected: usize,
+        scroll_offset: usize,
     },
     /// Date value hints (entry dates or filter date values)
     DateValues {
         prefix: String,
         scope: DateScope,
         matches: Vec<&'static DateValue>,
+        selected: usize,
+        scroll_offset: usize,
     },
     /// Saved filter hints ($name)
     SavedFilters {
         prefix: String,
         matches: Vec<String>,
+        selected: usize,
+        scroll_offset: usize,
     },
     /// Negation hints - wraps inner context for recursive hints
     Negation { inner: Box<HintContext> },
@@ -70,6 +81,12 @@ pub enum HintMode {
     Filter,
     /// Entry editing mode
     Entry,
+}
+
+#[derive(Clone, Debug)]
+pub struct HintItem {
+    pub label: String,
+    pub selectable: bool,
 }
 
 impl HintContext {
@@ -180,6 +197,7 @@ impl HintContext {
         }
     }
 
+    #[allow(dead_code)]
     fn compute_date_completion(input: &str, dv: &DateValue) -> Option<String> {
         let input_lower = input.to_lowercase();
         let (base, suffix) = Self::strip_direction_suffix(&input_lower);
@@ -255,7 +273,12 @@ impl HintContext {
         if let Some(tag_prefix) = current_token.strip_prefix('#')
             && let Some((prefix, matches)) = Self::match_tags(tag_prefix, journal_tags)
         {
-            return Self::Tags { prefix, matches };
+            return Self::Tags {
+                prefix,
+                matches,
+                selected: 0,
+                scroll_offset: 0,
+            };
         }
 
         Self::Inactive
@@ -282,10 +305,16 @@ impl HintContext {
                 .iter()
                 .filter(|dv| dv.scopes.contains(&DateScope::Entry))
                 .collect();
+            let selected = Self::first_selectable_index(&Self::date_display_items(
+                &DateScope::Entry,
+                &matches,
+            ));
             return Some(Self::DateValues {
                 prefix: date_prefix.to_string(),
                 scope: DateScope::Entry,
                 matches,
+                selected,
+                scroll_offset: 0,
             });
         }
 
@@ -312,10 +341,14 @@ impl HintContext {
             return None;
         }
 
+        let selected =
+            Self::first_selectable_index(&Self::date_display_items(&DateScope::Entry, &matches));
         Some(Self::DateValues {
             prefix: date_prefix.to_string(),
             scope: DateScope::Entry,
             matches,
+            selected,
+            scroll_offset: 0,
         })
     }
 
@@ -326,7 +359,7 @@ impl HintContext {
     ) -> Self {
         if input.is_empty() {
             return Self::GuidanceMessage {
-                message: "Type to search, or use ! @ # $ not: for filters",
+                message: "Type to search, or use ! @ # $ - for filters",
             };
         }
 
@@ -336,12 +369,12 @@ impl HintContext {
 
         let current_token = input.split_whitespace().last().unwrap_or("");
 
-        if let Some(neg_suffix) = current_token.strip_prefix("not:") {
+        if let Some(neg_suffix) = current_token.strip_prefix('-') {
             let inner = Self::compute_filter_token(neg_suffix, journal_tags, saved_filters);
             if matches!(inner, Self::Inactive) && neg_suffix.is_empty() {
                 return Self::Negation {
                     inner: Box::new(Self::GuidanceMessage {
-                        message: "! @ # or text to negate",
+                        message: "! # or text to negate",
                     }),
                 };
             }
@@ -364,7 +397,12 @@ impl HintContext {
         if let Some(tag_prefix) = token.strip_prefix('#')
             && let Some((prefix, matches)) = Self::match_tags(tag_prefix, journal_tags)
         {
-            return Self::Tags { prefix, matches };
+            return Self::Tags {
+                prefix,
+                matches,
+                selected: 0,
+                scroll_offset: 0,
+            };
         }
 
         if let Some(type_prefix) = token.strip_prefix('!') {
@@ -384,27 +422,20 @@ impl HintContext {
             return Self::FilterTypes {
                 prefix: type_prefix.to_string(),
                 matches,
+                selected: 0,
+                scroll_offset: 0,
             };
         }
 
-        if let Some(date_prefix) = token.strip_prefix('@') {
-            for filter in FILTER_SYNTAX.iter() {
-                if filter.category == FilterCategory::DateOp
-                    && filter.syntax.ends_with(':')
-                    && let Some(filter_prefix) = filter.syntax.strip_prefix('@')
-                    && let Some(date_value) = date_prefix.strip_prefix(filter_prefix)
-                {
-                    return Self::compute_date_value_hints(date_value);
-                }
-            }
-
+        // Content pattern filters: @overdue, @later, @recurring
+        if let Some(content_prefix) = token.strip_prefix('@') {
             let matches: Vec<&'static FilterSyntax> = FILTER_SYNTAX
                 .iter()
-                .filter(|f| f.category == FilterCategory::DateOp)
+                .filter(|f| f.category == FilterCategory::ContentPattern)
                 .filter(|f| {
                     f.syntax
                         .get(1..)
-                        .is_some_and(|s| s.starts_with(date_prefix))
+                        .is_some_and(|s| s.starts_with(content_prefix))
                 })
                 .collect();
 
@@ -412,8 +443,10 @@ impl HintContext {
                 return Self::Inactive;
             }
             return Self::DateOps {
-                prefix: date_prefix.to_string(),
+                prefix: content_prefix.to_string(),
                 matches,
+                selected: 0,
+                scroll_offset: 0,
             };
         }
 
@@ -432,42 +465,12 @@ impl HintContext {
             return Self::SavedFilters {
                 prefix: filter_prefix.to_string(),
                 matches,
+                selected: 0,
+                scroll_offset: 0,
             };
         }
 
         Self::Inactive
-    }
-
-    fn compute_date_value_hints(value_prefix: &str) -> Self {
-        // Empty prefix: show all filter date values
-        if value_prefix.is_empty() {
-            let matches: Vec<&'static DateValue> = DATE_VALUES
-                .iter()
-                .filter(|dv| dv.scopes.contains(&DateScope::Filter))
-                .collect();
-            return Self::DateValues {
-                prefix: value_prefix.to_string(),
-                scope: DateScope::Filter,
-                matches,
-            };
-        }
-
-        // Find all matching date values using unified matching
-        let matches: Vec<&'static DateValue> = DATE_VALUES
-            .iter()
-            .filter(|dv| dv.scopes.contains(&DateScope::Filter))
-            .filter(|dv| Self::matches_date_value(value_prefix, dv))
-            .collect();
-
-        if matches.is_empty() {
-            return Self::Inactive;
-        }
-
-        Self::DateValues {
-            prefix: value_prefix.to_string(),
-            scope: DateScope::Filter,
-            matches,
-        }
     }
 
     fn suffix_after(s: &str, prefix_len: usize) -> String {
@@ -478,26 +481,57 @@ impl HintContext {
     pub fn first_completion(&self) -> Option<String> {
         match self {
             Self::Inactive | Self::GuidanceMessage { .. } => None,
-            Self::Tags { prefix, matches } => {
-                matches.first().map(|t| Self::suffix_after(t, prefix.len()))
-            }
+            Self::Tags {
+                prefix,
+                matches,
+                selected,
+                ..
+            } => matches
+                .get(*selected)
+                .map(|t| Self::suffix_after(t, prefix.len())),
             Self::Commands { prefix, matches } => matches
                 .first()
                 .map(|c| Self::suffix_after(c.name, prefix.len())),
-            Self::FilterTypes { prefix, matches } => matches
-                .first()
+            Self::FilterTypes {
+                prefix,
+                matches,
+                selected,
+                ..
+            } => matches
+                .get(*selected)
                 .map(|f| Self::suffix_after(f.syntax, 1 + prefix.len())),
-            Self::DateOps { prefix, matches } => matches
-                .first()
+            Self::DateOps {
+                prefix,
+                matches,
+                selected,
+                ..
+            } => matches
+                .get(*selected)
                 .map(|f| Self::suffix_after(f.syntax, 1 + prefix.len())),
             Self::DateValues {
-                prefix, matches, ..
-            } => matches
-                .first()
-                .and_then(|dv| Self::compute_date_completion(prefix, dv)),
-            Self::SavedFilters { prefix, matches } => {
-                matches.first().map(|f| Self::suffix_after(f, prefix.len()))
+                prefix,
+                matches,
+                selected,
+                scope,
+                ..
+            } => {
+                let options = Self::date_display_items(scope, matches);
+                options.get(*selected).and_then(|item| {
+                    if !item.selectable {
+                        return None;
+                    }
+                    let trimmed = item.label.trim_start_matches('@');
+                    Some(Self::suffix_after(trimmed, prefix.len()))
+                })
             }
+            Self::SavedFilters {
+                prefix,
+                matches,
+                selected,
+                ..
+            } => matches
+                .get(*selected)
+                .map(|f| Self::suffix_after(f, prefix.len())),
             Self::Negation { inner } => inner.first_completion(),
         }
     }
@@ -517,17 +551,26 @@ impl HintContext {
 
         match effective {
             Self::Commands { prefix, matches } if !prefix.is_empty() => {
-                matches.first().map(|c| c.completion_hint)
+                matches.first().map(|c| c.help)
             }
-            Self::FilterTypes { prefix, matches } if !prefix.is_empty() => {
-                matches.first().map(|f| f.completion_hint)
-            }
-            Self::DateOps { prefix, matches } if !prefix.is_empty() => {
-                matches.first().map(|f| f.completion_hint)
-            }
+            Self::FilterTypes {
+                prefix,
+                matches,
+                selected,
+                ..
+            } if !prefix.is_empty() => matches.get(*selected).map(|f| f.help),
+            Self::DateOps {
+                prefix,
+                matches,
+                selected,
+                ..
+            } if !prefix.is_empty() => matches.get(*selected).map(|f| f.help),
             Self::DateValues {
-                prefix, matches, ..
-            } if !prefix.is_empty() => matches.first().map(|dv| dv.completion_hint),
+                prefix,
+                matches,
+                selected,
+                ..
+            } if !prefix.is_empty() => matches.get(*selected).map(|dv| dv.completion_hint),
             Self::DateValues {
                 scope: DateScope::Filter,
                 ..
@@ -545,19 +588,18 @@ impl HintContext {
         };
 
         match effective {
-            Self::Tags { .. } => Color::Yellow,
-            Self::Commands { .. } => Color::Blue,
-            Self::FilterTypes { .. }
-            | Self::DateOps { .. }
-            | Self::DateValues { .. }
-            | Self::SavedFilters { .. } => Color::Magenta,
+            Self::Tags { .. } => theme::TAG,
+            Self::Commands { .. } => theme::HUB_PRIMARY,
+            Self::FilterTypes { .. } | Self::DateOps { .. } => Color::Magenta,
+            Self::DateValues { .. } => theme::PROJECTED_DATE,
+            Self::SavedFilters { .. } => Color::Magenta,
             Self::Inactive | Self::GuidanceMessage { .. } | Self::Negation { .. } => Color::Reset,
         }
     }
 
     /// Get formatted display items for rendering
     #[must_use]
-    pub fn display_items(&self, negation_prefix: &str) -> Vec<String> {
+    pub fn display_items(&self, negation_prefix: &str) -> Vec<HintItem> {
         let effective = match self {
             Self::Negation { inner } => inner.as_ref(),
             other => other,
@@ -567,48 +609,351 @@ impl HintContext {
             Self::Inactive | Self::GuidanceMessage { .. } | Self::Negation { .. } => vec![],
             Self::Tags { matches, .. } => matches
                 .iter()
-                .map(|t| format!("{}#{t}", negation_prefix))
+                .map(|t| HintItem {
+                    label: format!("{}#{t}", negation_prefix),
+                    selectable: true,
+                })
                 .collect(),
-            Self::Commands { matches, .. } => {
-                matches.iter().map(|cmd| format!(":{}", cmd.name)).collect()
-            }
+            Self::Commands { matches, .. } => matches
+                .iter()
+                .map(|cmd| HintItem {
+                    label: format!(":{}", cmd.name),
+                    selectable: true,
+                })
+                .collect(),
             Self::FilterTypes { matches, .. } => matches
                 .iter()
-                .map(|f| format!("{}{}", negation_prefix, f.syntax))
+                .map(|f| HintItem {
+                    label: format!("{}{}", negation_prefix, f.syntax),
+                    selectable: true,
+                })
                 .collect(),
             Self::DateOps { matches, .. } => matches
                 .iter()
-                .map(|f| format!("{}{}", negation_prefix, f.syntax))
+                .map(|f| HintItem {
+                    label: format!("{}{}", negation_prefix, f.syntax),
+                    selectable: true,
+                })
                 .collect(),
-            Self::DateValues { matches, scope, .. } => {
-                let mut seen = std::collections::HashSet::new();
-                matches
-                    .iter()
-                    .filter_map(|dv| {
-                        let item = match scope {
-                            DateScope::Entry => {
-                                // Check display (not syntax) for @ prefix to avoid @@every-*
-                                if dv.display.starts_with('@') {
-                                    dv.display.to_string()
-                                } else {
-                                    format!("@{}", dv.display)
-                                }
-                            }
-                            DateScope::Filter => dv.display.to_string(),
-                        };
-                        // Deduplicate grouped items (e.g., [mon-sun] appears once)
-                        if seen.insert(item.clone()) {
-                            Some(item)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            }
+            Self::DateValues { matches, scope, .. } => Self::date_display_items(scope, matches),
             Self::SavedFilters { matches, .. } => matches
                 .iter()
-                .map(|f| format!("{}${f}", negation_prefix))
+                .map(|f| HintItem {
+                    label: format!("{}${f}", negation_prefix),
+                    selectable: true,
+                })
                 .collect(),
+        }
+    }
+
+    fn format_date_value(scope: &DateScope, value: &str) -> String {
+        match scope {
+            DateScope::Entry => {
+                if value.starts_with('@') {
+                    value.to_string()
+                } else {
+                    format!("@{value}")
+                }
+            }
+            DateScope::Filter => value.to_string(),
+        }
+    }
+
+    fn date_display_items(scope: &DateScope, matches: &[&'static DateValue]) -> Vec<HintItem> {
+        let mut seen = std::collections::HashSet::new();
+        let mut items = Vec::new();
+
+        for dv in matches {
+            let selectable = !(dv.pattern.is_some() && dv.values.is_none());
+            if let Some(values) = dv.values {
+                for value in values {
+                    let label = Self::format_date_value(scope, value);
+                    if seen.insert(label.clone()) {
+                        items.push(HintItem { label, selectable });
+                    }
+                }
+            } else {
+                let label = Self::format_date_value(scope, dv.display);
+                if seen.insert(label.clone()) {
+                    items.push(HintItem { label, selectable });
+                }
+            }
+        }
+
+        items
+    }
+
+    fn first_selectable_index(items: &[HintItem]) -> usize {
+        items.iter().position(|item| item.selectable).unwrap_or(0)
+    }
+
+    const VISIBLE_HINTS: usize = 5;
+
+    fn adjust_scroll_offset(selected: usize, scroll_offset: &mut usize) {
+        if selected >= *scroll_offset + Self::VISIBLE_HINTS {
+            *scroll_offset = selected + 1 - Self::VISIBLE_HINTS;
+        }
+        if selected < *scroll_offset {
+            *scroll_offset = selected;
+        }
+    }
+
+    pub fn select_next(&mut self) {
+        match self {
+            Self::Tags {
+                matches,
+                selected,
+                scroll_offset,
+                ..
+            } => {
+                if !matches.is_empty() {
+                    *selected = (*selected + 1).min(matches.len().saturating_sub(1));
+                    Self::adjust_scroll_offset(*selected, scroll_offset);
+                }
+            }
+            Self::FilterTypes {
+                matches,
+                selected,
+                scroll_offset,
+                ..
+            }
+            | Self::DateOps {
+                matches,
+                selected,
+                scroll_offset,
+                ..
+            } => {
+                if !matches.is_empty() {
+                    *selected = (*selected + 1).min(matches.len().saturating_sub(1));
+                    Self::adjust_scroll_offset(*selected, scroll_offset);
+                }
+            }
+            Self::DateValues {
+                matches,
+                scope,
+                selected,
+                scroll_offset,
+                ..
+            } => {
+                let items = Self::date_display_items(scope, matches);
+                if !items.is_empty() {
+                    let start = (*selected).saturating_add(1);
+                    if let Some((index, _)) = items
+                        .iter()
+                        .enumerate()
+                        .skip(start)
+                        .find(|(_, item)| item.selectable)
+                    {
+                        *selected = index;
+                        Self::adjust_scroll_offset(*selected, scroll_offset);
+                    }
+                }
+            }
+            Self::SavedFilters {
+                matches,
+                selected,
+                scroll_offset,
+                ..
+            } => {
+                if !matches.is_empty() {
+                    *selected = (*selected + 1).min(matches.len().saturating_sub(1));
+                    Self::adjust_scroll_offset(*selected, scroll_offset);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        match self {
+            Self::Tags {
+                selected,
+                scroll_offset,
+                ..
+            }
+            | Self::FilterTypes {
+                selected,
+                scroll_offset,
+                ..
+            }
+            | Self::DateOps {
+                selected,
+                scroll_offset,
+                ..
+            }
+            | Self::SavedFilters {
+                selected,
+                scroll_offset,
+                ..
+            } => {
+                *selected = selected.saturating_sub(1);
+                Self::adjust_scroll_offset(*selected, scroll_offset);
+            }
+            Self::DateValues {
+                matches,
+                scope,
+                selected,
+                scroll_offset,
+                ..
+            } => {
+                if *selected == 0 {
+                    return;
+                }
+                let items = Self::date_display_items(scope, matches);
+                if let Some((index, _)) = items
+                    .iter()
+                    .enumerate()
+                    .take(*selected)
+                    .rev()
+                    .find(|(_, item)| item.selectable)
+                {
+                    *selected = index;
+                    Self::adjust_scroll_offset(*selected, scroll_offset);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    #[must_use]
+    pub fn with_previous_selection(self, previous: &HintContext) -> Self {
+        match (self, previous) {
+            (
+                HintContext::Tags {
+                    prefix,
+                    matches,
+                    selected: _,
+                    ..
+                },
+                HintContext::Tags {
+                    selected,
+                    scroll_offset,
+                    ..
+                },
+            ) => {
+                let selected = (*selected).min(matches.len().saturating_sub(1));
+                HintContext::Tags {
+                    prefix,
+                    matches,
+                    selected,
+                    scroll_offset: *scroll_offset,
+                }
+            }
+            (
+                HintContext::FilterTypes {
+                    prefix,
+                    matches,
+                    selected: _,
+                    ..
+                },
+                HintContext::FilterTypes {
+                    selected,
+                    scroll_offset,
+                    ..
+                },
+            ) => {
+                let selected = (*selected).min(matches.len().saturating_sub(1));
+                HintContext::FilterTypes {
+                    prefix,
+                    matches,
+                    selected,
+                    scroll_offset: *scroll_offset,
+                }
+            }
+            (
+                HintContext::DateOps {
+                    prefix,
+                    matches,
+                    selected: _,
+                    ..
+                },
+                HintContext::DateOps {
+                    selected,
+                    scroll_offset,
+                    ..
+                },
+            ) => {
+                let selected = (*selected).min(matches.len().saturating_sub(1));
+                HintContext::DateOps {
+                    prefix,
+                    matches,
+                    selected,
+                    scroll_offset: *scroll_offset,
+                }
+            }
+            (
+                HintContext::DateValues {
+                    prefix,
+                    scope,
+                    matches,
+                    selected: _,
+                    ..
+                },
+                HintContext::DateValues {
+                    selected,
+                    scroll_offset,
+                    ..
+                },
+            ) => {
+                let items = Self::date_display_items(&scope, &matches);
+                let mut selected = (*selected).min(items.len().saturating_sub(1));
+                if !items.get(selected).is_some_and(|item| item.selectable) {
+                    selected = Self::first_selectable_index(&items);
+                }
+                HintContext::DateValues {
+                    prefix,
+                    scope,
+                    matches,
+                    selected,
+                    scroll_offset: *scroll_offset,
+                }
+            }
+            (
+                HintContext::SavedFilters {
+                    prefix,
+                    matches,
+                    selected: _,
+                    ..
+                },
+                HintContext::SavedFilters {
+                    selected,
+                    scroll_offset,
+                    ..
+                },
+            ) => {
+                let selected = (*selected).min(matches.len().saturating_sub(1));
+                HintContext::SavedFilters {
+                    prefix,
+                    matches,
+                    selected,
+                    scroll_offset: *scroll_offset,
+                }
+            }
+            (next, _) => next,
+        }
+    }
+
+    #[must_use]
+    pub fn selected_index(&self) -> usize {
+        match self {
+            Self::Tags { selected, .. }
+            | Self::FilterTypes { selected, .. }
+            | Self::DateOps { selected, .. }
+            | Self::DateValues { selected, .. }
+            | Self::SavedFilters { selected, .. } => *selected,
+            _ => 0,
+        }
+    }
+
+    #[must_use]
+    pub fn scroll_offset(&self) -> usize {
+        match self {
+            Self::Tags { scroll_offset, .. }
+            | Self::FilterTypes { scroll_offset, .. }
+            | Self::DateOps { scroll_offset, .. }
+            | Self::DateValues { scroll_offset, .. }
+            | Self::SavedFilters { scroll_offset, .. } => *scroll_offset,
+            _ => 0,
         }
     }
 }

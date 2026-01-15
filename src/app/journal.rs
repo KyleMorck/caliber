@@ -11,12 +11,13 @@ use super::{App, ConfirmContext, InputMode};
 impl App {
     fn reset_journal_view(&mut self) -> io::Result<()> {
         self.reset_daily_view(Local::now().date_naive())?;
-        // Trigger calendar refresh for the new journal context
+        self.refresh_calendar_cache();
+        self.invalidate_agenda_cache();
         self.trigger_calendar_fetch();
         Ok(())
     }
 
-    fn apply_config(&mut self, config: Config) {
+    pub(crate) fn apply_config(&mut self, config: Config) {
         self.keymap = Keymap::new(&config.keys).unwrap_or_default();
         self.hide_completed = config.hide_completed;
         self.config = config;

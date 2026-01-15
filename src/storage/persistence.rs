@@ -3,7 +3,10 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
+
+use super::date_parsing::ParseContext;
+use super::filter::LATER_DATE_REGEX;
 
 /// Information about a day's content for calendar display.
 #[derive(Debug, Clone, Default)]
@@ -12,6 +15,7 @@ pub struct DayInfo {
     pub has_incomplete_tasks: bool,
     pub has_events: bool,
     pub has_calendar_events: bool,
+    pub has_overdue_tasks: bool,
 }
 
 use super::entries::{EntryType, Line, RawEntry, parse_lines, serialize_lines};
@@ -319,9 +323,12 @@ pub fn scan_days_in_range(
     path: &Path,
 ) -> io::Result<HashMap<NaiveDate, DayInfo>> {
     let journal = load_journal(path)?;
+    let today = Local::now().date_naive();
     let mut result = HashMap::new();
     let mut current_date: Option<NaiveDate> = None;
     let mut current_info = DayInfo::default();
+    // Track overdue target dates to mark after scanning
+    let mut overdue_targets: Vec<NaiveDate> = Vec::new();
 
     for line in journal.lines() {
         if let Some(date) = parse_day_header(line) {
@@ -343,6 +350,20 @@ pub fn scan_days_in_range(
             if trimmed.starts_with("- [ ] ") {
                 current_info.has_entries = true;
                 current_info.has_incomplete_tasks = true;
+                // Check for overdue @date pattern - mark the TARGET date as overdue
+                if let Some(caps) = LATER_DATE_REGEX.captures(trimmed)
+                    && let Some(date_match) = caps.get(1)
+                    && let Some(target) = super::date_parsing::parse_date(
+                        date_match.as_str(),
+                        ParseContext::Filter,
+                        today,
+                    )
+                    && target < today
+                    && target >= start
+                    && target <= end
+                {
+                    overdue_targets.push(target);
+                }
             } else if trimmed.starts_with("* ") {
                 current_info.has_entries = true;
                 current_info.has_events = true;
@@ -362,6 +383,10 @@ pub fn scan_days_in_range(
         && current_info.has_entries
     {
         result.insert(date, current_info);
+    }
+
+    for target in overdue_targets {
+        result.entry(target).or_default().has_overdue_tasks = true;
     }
 
     Ok(result)

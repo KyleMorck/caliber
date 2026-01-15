@@ -18,7 +18,7 @@ impl ListModel {
         Self {
             header,
             rows,
-            scroll: ScrollModel::new(offset, total, 0),
+            scroll: ScrollModel::new(offset, total),
         }
     }
 
@@ -30,6 +30,17 @@ impl ListModel {
             lines.push(header);
         }
         lines.extend(self.rows.into_iter().map(RowModel::into_line));
+        lines
+    }
+
+    #[must_use]
+    pub fn lines(&self) -> Vec<RatatuiLine<'static>> {
+        let header_count = self.header.as_ref().map_or(0, |_| 1);
+        let mut lines = Vec::with_capacity(self.rows.len() + header_count);
+        if let Some(header) = self.header.clone() {
+            lines.push(header);
+        }
+        lines.extend(self.rows.iter().cloned().map(RowModel::into_line));
         lines
     }
 }
@@ -94,16 +105,11 @@ impl RowModel {
 pub struct ScrollModel {
     pub offset: usize,
     pub total: usize,
-    pub visible: usize,
 }
 
 impl ScrollModel {
     #[must_use]
-    pub fn new(offset: usize, total: usize, visible: usize) -> Self {
-        Self {
-            offset,
-            total,
-            visible,
-        }
+    pub fn new(offset: usize, total: usize) -> Self {
+        Self { offset, total }
     }
 }

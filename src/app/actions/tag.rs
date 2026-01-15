@@ -1,17 +1,16 @@
 use std::io;
 
-use crate::app::{App, EntryLocation, ViewMode};
-use crate::storage::{self, Line};
+use crate::app::{App, EntryLocation};
 use crate::ui::{remove_all_trailing_tags, remove_last_trailing_tag};
 
+use super::content_ops::{
+    ContentTarget, execute_content_append, execute_content_operation, get_entry_content,
+    set_entry_content,
+};
 use super::types::{Action, ActionDescription, StatusVisibility};
 
-/// Target for tag operations - includes original content for undo
-#[derive(Clone)]
-pub struct TagTarget {
-    pub location: EntryLocation,
-    pub original_content: String,
-}
+/// Target for tag operations (type alias for ContentTarget)
+pub type TagTarget = ContentTarget;
 
 /// Action to remove the last trailing tag from entries
 pub struct RemoveLastTag {
@@ -36,7 +35,7 @@ impl RemoveLastTag {
 impl Action for RemoveLastTag {
     fn execute(&mut self, app: &mut App) -> io::Result<Box<dyn Action>> {
         for target in &self.targets {
-            execute_tag_removal_raw(app, &target.location, remove_last_trailing_tag)?;
+            execute_content_operation(app, &target.location, remove_last_trailing_tag)?;
         }
 
         Ok(Box::new(RestoreContent::new(
@@ -86,7 +85,7 @@ impl RemoveAllTags {
 impl Action for RemoveAllTags {
     fn execute(&mut self, app: &mut App) -> io::Result<Box<dyn Action>> {
         for target in &self.targets {
-            execute_tag_removal_raw(app, &target.location, remove_all_trailing_tags)?;
+            execute_content_operation(app, &target.location, remove_all_trailing_tags)?;
         }
 
         Ok(Box::new(RestoreContent::new(
@@ -139,8 +138,9 @@ impl AppendTag {
 
 impl Action for AppendTag {
     fn execute(&mut self, app: &mut App) -> io::Result<Box<dyn Action>> {
+        let suffix = format!(" #{}", self.tag);
         for target in &self.targets {
-            execute_append_tag_raw(app, &target.location, &self.tag)?;
+            execute_content_append(app, &target.location, &suffix)?;
         }
 
         Ok(Box::new(RestoreContent::new(
@@ -189,18 +189,13 @@ impl RestoreContent {
 
 impl Action for RestoreContent {
     fn execute(&mut self, app: &mut App) -> io::Result<Box<dyn Action>> {
-        // Capture current content for redo
         let mut new_targets = Vec::with_capacity(self.targets.len());
         for target in &self.targets {
             let current_content = get_entry_content(app, &target.location)?;
-            set_entry_content_raw(app, &target.location, &target.original_content)?;
-            new_targets.push(TagTarget {
-                location: target.location.clone(),
-                original_content: current_content,
-            });
+            set_entry_content(app, &target.location, &target.original_content)?;
+            new_targets.push(ContentTarget::new(target.location.clone(), current_content));
         }
 
-        // Return action to redo the original operation
         let redo_action: Box<dyn Action> = match &self.operation {
             TagOperation::RemoveLast => Box::new(RemoveLastTag::new(new_targets)),
             TagOperation::RemoveAll => Box::new(RemoveAllTags::new(new_targets)),
@@ -260,166 +255,4 @@ impl Action for RestoreContent {
             }
         }
     }
-}
-
-/// Get entry content at a location
-fn get_entry_content(app: &App, location: &EntryLocation) -> io::Result<String> {
-    match location {
-        EntryLocation::Projected(entry) => {
-            let lines = storage::load_day_lines(entry.source_date, app.active_path())?;
-            if let Some(Line::Entry(raw_entry)) = lines.get(entry.line_index) {
-                Ok(raw_entry.content.clone())
-            } else {
-                Ok(String::new())
-            }
-        }
-        EntryLocation::Daily { line_idx } => {
-            if let Line::Entry(raw_entry) = &app.lines[*line_idx] {
-                Ok(raw_entry.content.clone())
-            } else {
-                Ok(String::new())
-            }
-        }
-        EntryLocation::Filter { entry, .. } => {
-            let lines = storage::load_day_lines(entry.source_date, app.active_path())?;
-            if let Some(Line::Entry(raw_entry)) = lines.get(entry.line_index) {
-                Ok(raw_entry.content.clone())
-            } else {
-                Ok(String::new())
-            }
-        }
-    }
-}
-
-/// Execute tag removal on a single target
-fn execute_tag_removal_raw<F>(app: &mut App, location: &EntryLocation, remover: F) -> io::Result<()>
-where
-    F: Fn(&str) -> Option<String>,
-{
-    let path = app.active_path().to_path_buf();
-
-    match location {
-        EntryLocation::Projected(entry) => {
-            let changed =
-                storage::mutate_entry(entry.source_date, &path, entry.line_index, |raw_entry| {
-                    if let Some(new_content) = remover(&raw_entry.content) {
-                        raw_entry.content = new_content;
-                        true
-                    } else {
-                        false
-                    }
-                })?;
-
-            if changed == Some(true) {
-                app.refresh_projected_entries();
-            }
-        }
-        EntryLocation::Daily { line_idx } => {
-            if let Line::Entry(raw_entry) = &mut app.lines[*line_idx]
-                && let Some(new_content) = remover(&raw_entry.content)
-            {
-                raw_entry.content = new_content;
-                app.save();
-            }
-        }
-        EntryLocation::Filter { index, entry } => {
-            let new_content =
-                storage::mutate_entry(entry.source_date, &path, entry.line_index, |raw_entry| {
-                    if let Some(new_content) = remover(&raw_entry.content) {
-                        raw_entry.content = new_content.clone();
-                        Some(new_content)
-                    } else {
-                        None
-                    }
-                })?;
-
-            if let Some(Some(content)) = new_content {
-                if let ViewMode::Filter(state) = &mut app.view
-                    && let Some(filter_entry) = state.entries.get_mut(*index)
-                {
-                    filter_entry.content = content;
-                }
-
-                if entry.source_date == app.current_date {
-                    app.reload_current_day()?;
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Execute tag append on a single target
-fn execute_append_tag_raw(app: &mut App, location: &EntryLocation, tag: &str) -> io::Result<()> {
-    let path = app.active_path().to_path_buf();
-    let tag_with_hash = format!(" #{tag}");
-
-    match location {
-        EntryLocation::Projected(entry) => {
-            storage::mutate_entry(entry.source_date, &path, entry.line_index, |raw_entry| {
-                raw_entry.content.push_str(&tag_with_hash);
-            })?;
-
-            app.refresh_projected_entries();
-        }
-        EntryLocation::Daily { line_idx } => {
-            if let Line::Entry(raw_entry) = &mut app.lines[*line_idx] {
-                raw_entry.content.push_str(&tag_with_hash);
-                app.save();
-            }
-        }
-        EntryLocation::Filter { index, entry } => {
-            storage::mutate_entry(entry.source_date, &path, entry.line_index, |raw_entry| {
-                raw_entry.content.push_str(&tag_with_hash);
-            })?;
-
-            if let ViewMode::Filter(state) = &mut app.view
-                && let Some(filter_entry) = state.entries.get_mut(*index)
-            {
-                filter_entry.content.push_str(&tag_with_hash);
-            }
-
-            if entry.source_date == app.current_date {
-                app.reload_current_day()?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Set entry content directly (for undo/restore)
-fn set_entry_content_raw(app: &mut App, location: &EntryLocation, content: &str) -> io::Result<()> {
-    let path = app.active_path().to_path_buf();
-
-    match location {
-        EntryLocation::Projected(entry) => {
-            storage::mutate_entry(entry.source_date, &path, entry.line_index, |raw_entry| {
-                raw_entry.content = content.to_string();
-            })?;
-
-            app.refresh_projected_entries();
-        }
-        EntryLocation::Daily { line_idx } => {
-            if let Line::Entry(raw_entry) = &mut app.lines[*line_idx] {
-                raw_entry.content = content.to_string();
-                app.save();
-            }
-        }
-        EntryLocation::Filter { index, entry } => {
-            storage::mutate_entry(entry.source_date, &path, entry.line_index, |raw_entry| {
-                raw_entry.content = content.to_string();
-            })?;
-
-            if let ViewMode::Filter(state) = &mut app.view
-                && let Some(filter_entry) = state.entries.get_mut(*index)
-            {
-                filter_entry.content = content.to_string();
-            }
-
-            if entry.source_date == app.current_date {
-                app.reload_current_day()?;
-            }
-        }
-    }
-    Ok(())
 }

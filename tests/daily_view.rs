@@ -135,15 +135,15 @@ fn shift_t_key_tidies_entries_by_type() {
 }
 
 #[test]
-fn c_key_toggles_task_completion() {
+fn space_toggles_task_completion() {
     let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let content = "# 2026/01/15\n- [ ] My task\n";
     let mut ctx = TestContext::with_journal_content(date, content);
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
     assert!(ctx.screen_contains("[x]"));
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
     assert!(ctx.screen_contains("[ ]"));
 
     let journal = ctx.read_journal();
@@ -238,16 +238,6 @@ fn reorder_skips_hidden_completed_entries() {
 }
 
 #[test]
-fn config_header_date_format_customizes_display() {
-    let mut config = Config::default();
-    config.header_date_format = "%A, %B %d".to_string();
-    let date = NaiveDate::from_ymd_opt(2026, 1, 4).unwrap();
-    let mut ctx = TestContext::with_config_and_content(date, "", config);
-
-    assert!(ctx.screen_contains("Sunday, January 04"));
-}
-
-#[test]
 fn config_hide_completed_hides_on_startup() {
     let mut config = Config::default();
     config.hide_completed = true;
@@ -257,61 +247,4 @@ fn config_hide_completed_hides_on_startup() {
 
     assert!(ctx.screen_contains("Incomplete"));
     assert!(!ctx.screen_contains("Complete"));
-    assert!(ctx.screen_contains("Hiding 1 completed"));
-}
-
-#[test]
-fn backslash_opens_and_closes_date_interface() {
-    use caliber::app::InputMode;
-
-    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let mut ctx = TestContext::with_date(date);
-
-    // Opens date interface
-    ctx.press(KeyCode::Char('\\'));
-    assert!(matches!(ctx.app.input_mode, InputMode::Interface(_)));
-
-    // Toggle closes it
-    ctx.press(KeyCode::Char('\\'));
-    assert!(matches!(ctx.app.input_mode, InputMode::Normal));
-}
-
-#[test]
-fn date_interface_navigation_changes_selected_date() {
-    use caliber::app::{InputMode, InterfaceContext};
-
-    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let mut ctx = TestContext::with_date(date);
-
-    ctx.press(KeyCode::Char('\\'));
-
-    // Navigate right one day
-    ctx.press(KeyCode::Char('l'));
-
-    if let InputMode::Interface(InterfaceContext::Date(ref state)) = ctx.app.input_mode {
-        assert_eq!(
-            state.selected,
-            NaiveDate::from_ymd_opt(2026, 1, 16).unwrap()
-        );
-    } else {
-        panic!("Expected date interface mode");
-    }
-}
-
-#[test]
-fn date_interface_enter_navigates_to_selected_date() {
-    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let mut ctx = TestContext::with_date(date);
-
-    ctx.press(KeyCode::Char('\\'));
-    // Navigate forward 5 days
-    for _ in 0..5 {
-        ctx.press(KeyCode::Char('l'));
-    }
-    ctx.press(KeyCode::Enter);
-
-    assert_eq!(
-        ctx.app.current_date,
-        NaiveDate::from_ymd_opt(2026, 1, 20).unwrap()
-    );
 }

@@ -1,4 +1,4 @@
-use unicode_width::UnicodeWidthStr;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 #[derive(Clone, Debug)]
 pub struct CursorBuffer {
@@ -199,21 +199,6 @@ impl CursorBuffer {
         self.content = content.to_string();
         self.cursor_char_pos = self.content.chars().count();
     }
-
-    #[allow(dead_code)]
-    pub fn push(&mut self, c: char) {
-        self.content.push(c);
-        self.cursor_char_pos = self.content.chars().count();
-    }
-
-    #[allow(dead_code)]
-    pub fn pop(&mut self) -> Option<char> {
-        let c = self.content.pop();
-        if c.is_some() {
-            self.cursor_char_pos = self.content.chars().count();
-        }
-        c
-    }
 }
 
 /// Calculates the (row, column) position of a cursor within word-wrapped text.
@@ -261,7 +246,7 @@ pub fn cursor_position_in_wrap(
                 let mut char_pos = word_start;
 
                 for ch in word.chars() {
-                    let ch_width = ch.to_string().width();
+                    let ch_width = ch.width().unwrap_or(0);
 
                     if char_pos == cursor_display_pos {
                         return (char_row, char_col);
@@ -281,7 +266,7 @@ pub fn cursor_position_in_wrap(
         if word_width > max_width && word_line_start == 0 {
             let mut char_col = 0;
             for ch in word.chars() {
-                let ch_width = ch.to_string().width();
+                let ch_width = ch.width().unwrap_or(0);
                 if char_col + ch_width > max_width && char_col > 0 {
                     row += 1;
                     char_col = 0;

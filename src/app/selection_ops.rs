@@ -21,13 +21,27 @@ enum SelectedEntry<'a> {
 }
 
 impl App {
-    fn is_projected_index(&self, visible_idx: usize) -> bool {
-        matches!(&self.view, ViewMode::Daily(_)) && visible_idx < self.visible_projected_count()
+    fn is_read_only_projected_index(&self, visible_idx: usize) -> bool {
+        matches!(&self.view, ViewMode::Daily(_))
+            && self
+                .get_projected_at_visible_index(visible_idx)
+                .is_some_and(|e| matches!(e.source_type, SourceType::Recurring))
+    }
+
+    fn visible_recurring_count(&self) -> usize {
+        let ViewMode::Daily(state) = &self.view else {
+            return 0;
+        };
+        state
+            .projected_entries
+            .iter()
+            .filter(|e| matches!(e.source_type, SourceType::Recurring) && self.should_show_entry(e))
+            .count()
     }
 
     pub fn enter_selection_mode(&mut self) {
         let current = self.current_visible_index();
-        if current < self.visible_entry_count() && !self.is_projected_index(current) {
+        if current < self.visible_entry_count() && !self.is_read_only_projected_index(current) {
             self.input_mode = InputMode::Selection(SelectionState::new(current));
         }
     }
@@ -47,9 +61,9 @@ impl App {
         if let InputMode::Selection(ref mut state) = self.input_mode {
             state.on_cursor_move();
         }
-        let projected_count = self.visible_projected_count();
+        let recurring_count = self.visible_recurring_count();
         let current = self.current_visible_index();
-        if current > projected_count {
+        if current > recurring_count {
             self.move_up();
         }
     }
@@ -58,9 +72,9 @@ impl App {
         if let InputMode::Selection(ref mut state) = self.input_mode {
             state.on_cursor_move();
         }
-        let projected_count = self.visible_projected_count();
+        let recurring_count = self.visible_recurring_count();
         match &mut self.view {
-            ViewMode::Daily(state) => state.selected = projected_count,
+            ViewMode::Daily(state) => state.selected = recurring_count,
             ViewMode::Filter(state) => state.selected = 0,
         }
     }
@@ -74,18 +88,18 @@ impl App {
 
     pub fn selection_extend_to_cursor(&mut self) {
         let current = self.current_visible_index();
-        let projected_count = self.visible_projected_count();
+        let recurring_count = self.visible_recurring_count();
         if let InputMode::Selection(ref mut state) = self.input_mode {
             state.extend_to(current);
             if matches!(&self.view, ViewMode::Daily(_)) {
-                state.selected_indices.retain(|&idx| idx >= projected_count);
+                state.selected_indices.retain(|&idx| idx >= recurring_count);
             }
         }
     }
 
     pub fn selection_toggle_current(&mut self) {
         let current = self.current_visible_index();
-        if self.is_projected_index(current) {
+        if self.is_read_only_projected_index(current) {
             return;
         }
         if let InputMode::Selection(ref mut state) = self.input_mode {
@@ -182,11 +196,16 @@ impl App {
             .collect()
     }
 
-    /// Collect delete targets for all selected entries
     fn collect_delete_targets_from_selected(&self) -> Vec<DeleteTarget> {
         let current_date = self.current_date;
         self.collect_targets_from_selected(|entry| match entry {
-            SelectedEntry::Projected(projected) => Some(DeleteTarget::Projected(projected.clone())),
+            SelectedEntry::Projected(projected) => {
+                if matches!(projected.source_type, SourceType::Recurring) {
+                    None
+                } else {
+                    Some(DeleteTarget::Projected(projected.clone()))
+                }
+            }
             SelectedEntry::Daily { line_idx, entry } => Some(DeleteTarget::Daily {
                 line_idx,
                 entry: Entry::from_raw(entry, current_date, line_idx, SourceType::Local),
@@ -262,24 +281,25 @@ impl App {
         })
     }
 
-    /// Collect tag targets (with content) for all selected entries
-    fn collect_tag_targets_from_selected(&self) -> Vec<super::actions::TagTarget> {
+    /// Collect content targets (location + content) for all selected entries.
+    /// Used for tag operations, date operations, and other content transformations.
+    fn collect_content_targets_from_selected(&self) -> Vec<super::actions::ContentTarget> {
         self.collect_targets_from_selected(|entry| match entry {
-            SelectedEntry::Projected(projected) => Some(super::actions::TagTarget {
-                location: TagRemovalTarget::Projected(projected.clone()),
-                original_content: projected.content.clone(),
-            }),
-            SelectedEntry::Daily { line_idx, entry } => Some(super::actions::TagTarget {
-                location: TagRemovalTarget::Daily { line_idx },
-                original_content: entry.content.clone(),
-            }),
-            SelectedEntry::Filter { index, entry } => Some(super::actions::TagTarget {
-                location: TagRemovalTarget::Filter {
+            SelectedEntry::Projected(projected) => Some(super::actions::ContentTarget::new(
+                TagRemovalTarget::Projected(projected.clone()),
+                projected.content.clone(),
+            )),
+            SelectedEntry::Daily { line_idx, entry } => Some(super::actions::ContentTarget::new(
+                TagRemovalTarget::Daily { line_idx },
+                entry.content.clone(),
+            )),
+            SelectedEntry::Filter { index, entry } => Some(super::actions::ContentTarget::new(
+                TagRemovalTarget::Filter {
                     index,
                     entry: entry.clone(),
                 },
-                original_content: entry.content.clone(),
-            }),
+                entry.content.clone(),
+            )),
         })
     }
 
@@ -335,7 +355,7 @@ impl App {
 
     /// Remove last trailing tag from all selected entries
     pub fn remove_last_tag_from_selected(&mut self) -> io::Result<()> {
-        let targets = self.collect_tag_targets_from_selected();
+        let targets = self.collect_content_targets_from_selected();
         if targets.is_empty() {
             return Ok(());
         }
@@ -346,7 +366,7 @@ impl App {
 
     /// Remove all trailing tags from all selected entries
     pub fn remove_all_tags_from_selected(&mut self) -> io::Result<()> {
-        let targets = self.collect_tag_targets_from_selected();
+        let targets = self.collect_content_targets_from_selected();
         if targets.is_empty() {
             return Ok(());
         }
@@ -357,7 +377,7 @@ impl App {
 
     /// Append a tag to all selected entries
     pub fn append_tag_to_selected(&mut self, tag: &str) -> io::Result<()> {
-        let targets = self.collect_tag_targets_from_selected();
+        let targets = self.collect_content_targets_from_selected();
         if targets.is_empty() {
             return Ok(());
         }
@@ -374,6 +394,33 @@ impl App {
         }
 
         let action = super::actions::CycleEntryType::new(targets);
+        self.execute_action(Box::new(action))
+    }
+
+    /// Defer the @date by 1 day on all selected entries (skips recurring entries)
+    pub fn defer_selected(&mut self) -> io::Result<()> {
+        let targets: Vec<_> = self
+            .collect_content_targets_from_selected()
+            .into_iter()
+            .filter(|t| !super::actions::is_recurring_entry(&t.location))
+            .collect();
+
+        if targets.is_empty() {
+            return Ok(());
+        }
+
+        let action = super::actions::DeferDate::new(targets);
+        self.execute_action(Box::new(action))
+    }
+
+    /// Remove the @date from all selected entries
+    pub fn remove_date_from_selected(&mut self) -> io::Result<()> {
+        let targets = self.collect_content_targets_from_selected();
+        if targets.is_empty() {
+            return Ok(());
+        }
+
+        let action = super::actions::RemoveDate::new(targets);
         self.execute_action(Box::new(action))
     }
 

@@ -56,7 +56,7 @@ fn toggle_materializes_completed_recurring_entry() {
     );
     let mut ctx = TestContext::with_journal_content(today, &content);
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     let today_section = today.format("# %Y/%m/%d").to_string();
@@ -136,25 +136,6 @@ fn delete_blocked_on_recurring_with_hint() {
 
     let journal = ctx.read_journal();
     assert!(journal.contains("Daily task @every-day"));
-}
-
-#[test]
-fn recurring_filter_shows_only_recurring_entries() {
-    let today = chrono::Local::now().date_naive();
-    let content = format!(
-        "# {}\n- [ ] Daily task @every-day\n- [ ] One-time task @01/15\n- [ ] Regular task\n",
-        today.format("%Y/%m/%d")
-    );
-    let mut ctx = TestContext::with_journal_content(today, &content);
-
-    ctx.press(KeyCode::Char('/'));
-    ctx.type_str("@recurring");
-    ctx.press(KeyCode::Enter);
-
-    assert!(ctx.screen_contains("Daily task @every-day"));
-
-    assert!(!ctx.screen_contains("One-time task"));
-    assert!(!ctx.screen_contains("Regular task"));
 }
 
 #[test]

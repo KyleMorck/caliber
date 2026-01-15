@@ -1,6 +1,6 @@
 use std::io;
 
-use chrono::{Days, Local, NaiveDate};
+use chrono::{Days, Local, Months, NaiveDate};
 
 use crate::storage::{self, Entry, EntryType, Line, RawEntry, SourceType, strip_recurring_tags};
 
@@ -47,17 +47,11 @@ impl App {
 
     #[must_use]
     pub fn scroll_offset(&self) -> usize {
-        match &self.view {
-            ViewMode::Filter(state) => state.scroll_offset,
-            ViewMode::Daily(state) => state.scroll_offset,
-        }
+        self.view.scroll_offset()
     }
 
     pub fn scroll_offset_mut(&mut self) -> &mut usize {
-        match &mut self.view {
-            ViewMode::Filter(state) => &mut state.scroll_offset,
-            ViewMode::Daily(state) => &mut state.scroll_offset,
-        }
+        self.view.scroll_offset_mut()
     }
 
     /// Count visible projected entries (accounting for hide_completed).
@@ -112,14 +106,8 @@ impl App {
     }
 
     pub fn move_up(&mut self) {
-        match &mut self.view {
-            ViewMode::Daily(state) => {
-                state.selected = state.selected.saturating_sub(1);
-            }
-            ViewMode::Filter(state) => {
-                state.selected = state.selected.saturating_sub(1);
-            }
-        }
+        let selected = self.view.selected_mut();
+        *selected = selected.saturating_sub(1);
     }
 
     pub fn move_down(&mut self) {
@@ -138,10 +126,7 @@ impl App {
     }
 
     pub fn jump_to_first(&mut self) {
-        match &mut self.view {
-            ViewMode::Daily(state) => state.selected = 0,
-            ViewMode::Filter(state) => state.selected = 0,
-        }
+        *self.view.selected_mut() = 0;
     }
 
     pub fn jump_to_last(&mut self) {
@@ -380,6 +365,7 @@ impl App {
         self.reset_daily_view(date)?;
         self.edit_buffer = None;
         self.last_daily_date = date;
+        self.sync_calendar_state(date);
 
         Ok(())
     }
@@ -400,6 +386,52 @@ impl App {
 
     pub fn goto_today(&mut self) -> io::Result<()> {
         self.goto_day(Local::now().date_naive())
+    }
+
+    pub fn prev_week(&mut self) -> io::Result<()> {
+        if let Some(prev) = self.current_date.checked_sub_days(Days::new(7)) {
+            self.goto_day(prev)?;
+        }
+        Ok(())
+    }
+
+    pub fn next_week(&mut self) -> io::Result<()> {
+        if let Some(next) = self.current_date.checked_add_days(Days::new(7)) {
+            self.goto_day(next)?;
+        }
+        Ok(())
+    }
+
+    pub fn prev_month(&mut self) -> io::Result<()> {
+        if let Some(prev) = self.current_date.checked_sub_months(Months::new(1)) {
+            let target = super::calendar::clamp_day_to_month(self.current_date, prev);
+            self.goto_day(target)?;
+        }
+        Ok(())
+    }
+
+    pub fn next_month(&mut self) -> io::Result<()> {
+        if let Some(next) = self.current_date.checked_add_months(Months::new(1)) {
+            let target = super::calendar::clamp_day_to_month(self.current_date, next);
+            self.goto_day(target)?;
+        }
+        Ok(())
+    }
+
+    pub fn prev_year(&mut self) -> io::Result<()> {
+        if let Some(prev) = self.current_date.checked_sub_months(Months::new(12)) {
+            let target = super::calendar::clamp_day_to_month(self.current_date, prev);
+            self.goto_day(target)?;
+        }
+        Ok(())
+    }
+
+    pub fn next_year(&mut self) -> io::Result<()> {
+        if let Some(next) = self.current_date.checked_add_months(Months::new(12)) {
+            let target = super::calendar::clamp_day_to_month(self.current_date, next);
+            self.goto_day(target)?;
+        }
+        Ok(())
     }
 
     /// Navigate to the source date and select the entry at the given line index.

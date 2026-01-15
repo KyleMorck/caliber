@@ -83,59 +83,82 @@ impl Action for RestoreEntries {
 
         match &app.view {
             ViewMode::Daily(_) => {
-                let all_same_day = self
+                let (current_day_entries, other_day_entries): (Vec<_>, Vec<_>) = self
                     .entries
                     .iter()
-                    .all(|(date, _, _)| *date == app.current_date);
+                    .cloned()
+                    .partition(|(date, _, _)| *date == app.current_date);
 
-                if !all_same_day {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "Cannot restore entries from different days in daily view",
-                    ));
-                }
+                if !current_day_entries.is_empty() {
+                    let mut any_completed = false;
+                    let mut last_insert_idx = 0;
 
-                let mut any_completed = false;
-                let mut last_insert_idx = 0;
+                    for (i, (_date, line_idx, entry)) in current_day_entries.iter().enumerate() {
+                        let insert_idx = (line_idx + i).min(app.lines.len());
+                        if matches!(entry.entry_type, EntryType::Task { completed: true }) {
+                            any_completed = true;
+                        }
 
-                for (i, (_date, line_idx, entry)) in self.entries.iter().enumerate() {
-                    let insert_idx = (line_idx + i).min(app.lines.len());
-                    if matches!(entry.entry_type, EntryType::Task { completed: true }) {
-                        any_completed = true;
+                        delete_targets.push(DeleteTarget::Daily {
+                            line_idx: insert_idx,
+                            entry: entry.clone(),
+                        });
+
+                        app.lines.insert(insert_idx, Line::Entry(entry.to_raw()));
+                        last_insert_idx = insert_idx;
                     }
 
-                    delete_targets.push(DeleteTarget::Daily {
-                        line_idx: insert_idx,
-                        entry: entry.clone(),
-                    });
+                    app.entry_indices = App::compute_entry_indices(&app.lines);
 
-                    app.lines.insert(insert_idx, Line::Entry(entry.to_raw()));
-                    last_insert_idx = insert_idx;
+                    if app.hide_completed && any_completed {
+                        app.hide_completed = false;
+                    }
+
+                    let visible_idx = app
+                        .entry_indices
+                        .iter()
+                        .position(|&i| i == last_insert_idx)
+                        .map(|actual_idx| app.actual_to_visible_index(actual_idx));
+
+                    if let ViewMode::Daily(state) = &mut app.view
+                        && let Some(idx) = visible_idx
+                    {
+                        state.selected = idx;
+                    }
+                    app.save();
                 }
 
-                app.entry_indices = App::compute_entry_indices(&app.lines);
+                if !other_day_entries.is_empty() {
+                    let path = app.active_path().to_path_buf();
 
-                if app.hide_completed && any_completed {
-                    app.hide_completed = false;
+                    // Group by date for efficient file operations
+                    let mut entries_by_date: HashMap<NaiveDate, Vec<(usize, Entry)>> =
+                        HashMap::new();
+                    for (date, line_idx, entry) in &other_day_entries {
+                        entries_by_date
+                            .entry(*date)
+                            .or_default()
+                            .push((*line_idx, entry.clone()));
+                    }
+
+                    for (date, date_entries) in entries_by_date {
+                        if let Ok(mut lines) = storage::load_day_lines(date, &path) {
+                            for (i, (line_idx, entry)) in date_entries.into_iter().enumerate() {
+                                let insert_idx = (line_idx + i).min(lines.len());
+                                lines.insert(insert_idx, Line::Entry(entry.to_raw()));
+
+                                delete_targets.push(DeleteTarget::Projected(entry));
+                            }
+                            let _ = storage::save_day_lines(date, &path, &lines);
+                        }
+                    }
+
+                    app.refresh_projected_entries();
                 }
-
-                let visible_idx = app
-                    .entry_indices
-                    .iter()
-                    .position(|&i| i == last_insert_idx)
-                    .map(|actual_idx| app.actual_to_visible_index(actual_idx));
-
-                if let ViewMode::Daily(state) = &mut app.view
-                    && let Some(idx) = visible_idx
-                {
-                    state.selected = idx;
-                }
-                app.save();
             }
             ViewMode::Filter(_) => {
                 let path = app.active_path().to_path_buf();
 
-                // Group entries by date
                 let mut entries_by_date: HashMap<NaiveDate, Vec<(usize, Entry)>> = HashMap::new();
                 for (date, line_idx, entry) in &self.entries {
                     entries_by_date
@@ -149,7 +172,6 @@ impl Action for RestoreEntries {
                         for (i, (line_idx, entry)) in date_entries.into_iter().enumerate() {
                             let insert_idx = (line_idx + i).min(lines.len());
 
-                            // Create the restored entry with updated line_index
                             let restored_entry = Entry {
                                 entry_type: entry.entry_type.clone(),
                                 content: entry.content.clone(),

@@ -7,6 +7,7 @@ use helpers::TestContext;
 use caliber::app::App;
 use caliber::config::Config;
 use caliber::storage::{JournalContext, JournalSlot, Line};
+use caliber::ui::surface::Surface;
 
 #[test]
 fn edits_persist_after_app_reload() {
@@ -19,7 +20,7 @@ fn edits_persist_after_app_reload() {
 
     let context = JournalContext::new(journal_path, None, JournalSlot::Hub);
     let config = Config::default();
-    let app = App::new_with_context(config, date, context, None).unwrap();
+    let app = App::new_with_context(config, date, context, None, Surface::default()).unwrap();
 
     let has_entry = app.entry_indices.iter().any(|&i| {
         if let Line::Entry(e) = &app.lines[i] {
@@ -46,7 +47,7 @@ fn entry_type_preserved_on_save() {
     ctx.press(KeyCode::Enter);
 
     ctx.press(KeyCode::Char('g'));
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     assert!(journal.contains("- [x] A task"));
@@ -75,27 +76,4 @@ fn multi_day_entries_preserved_on_edit() {
     let journal = ctx.read_journal();
     assert!(journal.contains("Day A entry modified"));
     assert!(journal.contains("Day B entry"));
-}
-
-#[test]
-fn filter_edit_persists_to_journal() {
-    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let content = "# 2026/01/15\n- [ ] Filterable entry\n";
-    let mut ctx = TestContext::with_journal_content(date, content);
-
-    ctx.press(KeyCode::Char('/'));
-    ctx.type_str("Filterable");
-    ctx.press(KeyCode::Enter);
-
-    ctx.press(KeyCode::Char('i'));
-    ctx.press(KeyCode::End);
-    ctx.type_str(" edited");
-    ctx.press(KeyCode::Enter);
-
-    ctx.press(KeyCode::Tab);
-
-    assert!(ctx.screen_contains("Filterable entry edited"));
-
-    let journal = ctx.read_journal();
-    assert!(journal.contains("Filterable entry edited"));
 }

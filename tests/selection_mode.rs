@@ -172,7 +172,7 @@ fn c_key_batch_toggles_selected_tasks() {
     ctx.press(KeyCode::Char('j'));
     ctx.press(KeyCode::Char('v'));
 
-    ctx.press(KeyCode::Char('c'));
+    ctx.press(KeyCode::Char(' '));
 
     let journal = ctx.read_journal();
     assert!(journal.contains("[x] Task A"));
@@ -260,32 +260,6 @@ fn shift_x_removes_all_tags_from_selected() {
 }
 
 #[test]
-fn selection_works_in_filter_view() {
-    let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
-    let content = "# 2026/01/15\n- [ ] Task A\n- [ ] Task B\n- [ ] Task C\n";
-    let mut ctx = TestContext::with_journal_content(date, content);
-
-    ctx.press(KeyCode::Char('/'));
-    ctx.type_str("!tasks");
-    ctx.press(KeyCode::Enter);
-
-    ctx.press(KeyCode::Char('g'));
-    ctx.press(KeyCode::Char('v'));
-
-    assert!(matches!(ctx.app.input_mode, InputMode::Selection(_)));
-
-    ctx.press(KeyCode::Char('j'));
-    ctx.press(KeyCode::Char('v'));
-
-    ctx.press(KeyCode::Char('c'));
-
-    let journal = ctx.read_journal();
-    assert!(journal.contains("[x] Task A"));
-    assert!(journal.contains("[x] Task B"));
-    assert!(journal.contains("[ ] Task C"));
-}
-
-#[test]
 fn batch_delete_undos_as_single_operation() {
     let date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let content = "# 2026/01/15\n- [ ] Keep\n- [ ] Delete A\n- [ ] Delete B\n- [ ] Delete C\n";
@@ -369,7 +343,8 @@ fn selection_mode_allows_navigation_keys() {
 }
 
 #[test]
-fn selection_skips_projected_entries() {
+fn selection_allows_later_entries() {
+    // Later entries (@date) are now selectable, only Recurring entries are blocked
     let view_date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
     let content =
         "# 2026/01/10\n- [ ] Later task @01/15\n# 2026/01/15\n- [ ] Local A\n- [ ] Local B\n";
@@ -378,17 +353,44 @@ fn selection_skips_projected_entries() {
     assert!(ctx.screen_contains("Later task"));
     assert!(ctx.screen_contains("Local A"));
 
+    // Later entry is at index 0, should be selectable now
+    ctx.press(KeyCode::Char('g'));
+    ctx.press(KeyCode::Char('v'));
+    assert!(matches!(ctx.app.input_mode, InputMode::Selection(_)));
+
+    // Can navigate freely including Later entry
+    ctx.press(KeyCode::Char('j'));
+    assert_eq!(ctx.selected_index(), 1);
+
+    ctx.press(KeyCode::Char('k'));
+    assert_eq!(ctx.selected_index(), 0); // Can move back to Later entry
+}
+
+#[test]
+fn selection_skips_recurring_entries() {
+    // Recurring entries (@every-*) cannot be selected
+    let monday = NaiveDate::from_ymd_opt(2026, 1, 12).unwrap(); // A Monday
+    let content = "# 2026/01/05\n- [ ] Weekly standup @every-monday\n# 2026/01/12\n- [ ] Local A\n- [ ] Local B\n";
+    let mut ctx = TestContext::with_journal_content(monday, content);
+
+    assert!(ctx.screen_contains("Weekly standup"));
+    assert!(ctx.screen_contains("Local A"));
+
+    // Recurring entry is at index 0, should NOT be selectable
     ctx.press(KeyCode::Char('g'));
     ctx.press(KeyCode::Char('v'));
     assert!(matches!(ctx.app.input_mode, InputMode::Normal));
 
+    // Move to first local entry, then selection works
     ctx.press(KeyCode::Char('j'));
     ctx.press(KeyCode::Char('v'));
     assert!(matches!(ctx.app.input_mode, InputMode::Selection(_)));
 
+    // Jump to first should go to first non-recurring entry (index 1)
     ctx.press(KeyCode::Char('g'));
     assert_eq!(ctx.selected_index(), 1);
 
+    // Can't move up into recurring section
     ctx.press(KeyCode::Char('k'));
     assert_eq!(ctx.selected_index(), 1);
 }
