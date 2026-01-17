@@ -89,7 +89,7 @@ pub fn build_view_model(app: &App, context: &RenderContext, prep: RenderPrep) ->
     };
 
     let view_spec = build_view_spec(app, context);
-    let header = build_header();
+    let header = build_header(&app.surface);
 
     ViewModel {
         layout: view_spec.layout,
@@ -104,14 +104,14 @@ pub fn build_view_model(app: &App, context: &RenderContext, prep: RenderPrep) ->
     }
 }
 
-fn build_header() -> HeaderModel {
+fn build_header(surface: &super::surface::Surface) -> HeaderModel {
     let version = format!("v{} ", env!("CARGO_PKG_VERSION"));
     HeaderModel {
         left: None,
         right: Some(RatatuiLine::from(Span::styled(
             version,
             Style::default()
-                .fg(theme::TEXT_MUTED)
+                .fg(theme::secondary_text(surface))
                 .add_modifier(Modifier::DIM),
         ))),
     }

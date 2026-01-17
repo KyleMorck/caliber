@@ -40,7 +40,7 @@ impl Recorder {
         let recorded = generate_tape(&self.events);
 
         let tape = format!(
-            "Output ../../{}.gif\n\n{}\n{}",
+            "Output ../{}.gif\n\n{}\n{}",
             self.name, template, recorded
         );
 
@@ -60,9 +60,22 @@ fn load_template() -> io::Result<String> {
 }
 
 fn generate_tape(events: &[(Duration, KeyEvent)]) -> String {
-    let commands = events_to_commands(events);
-    let commands = collapse_repeats(commands);
+    let filtered: Vec<_> = events
+        .iter()
+        .filter(|(_, key)| !is_quit_key(key))
+        .cloned()
+        .collect();
+
+    let mut commands = events_to_commands(&filtered);
+    commands = collapse_repeats(commands);
+    commands.push(TapeCommand::Sleep(Duration::from_millis(1500)));
+
     format_commands(&commands)
+}
+
+fn is_quit_key(key: &KeyEvent) -> bool {
+    matches!(key.code, KeyCode::Char('q' | 'Q'))
+        && key.modifiers.contains(KeyModifiers::CONTROL)
 }
 
 fn events_to_commands(events: &[(Duration, KeyEvent)]) -> Vec<TapeCommand> {

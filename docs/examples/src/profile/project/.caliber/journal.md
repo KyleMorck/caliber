@@ -4,7 +4,7 @@
 - [x] Fix memory leak in background worker #bug
 * v0.3 released
 - Should probably add a CLI before launch #idea
-- [ ] Add export to CSV #feature
+- [x] Add export to CSV #feature
 
 # 2026/01/06
 - [x] Respond to GitHub issues
@@ -12,8 +12,8 @@
 - [x] Set up error tracking with Sentry
 * First external contributor PR merged
 - Need to decide on pricing tiers before launch #idea
-- [ ] Add keyboard shortcuts to main view #feature
-- [ ] Record demo video for landing page #marketing
+- [x] Add keyboard shortcuts to main view #feature
+- [x] Record demo video for landing page #marketing
 
 # 2026/01/07
 - [x] Implement CSV export #feature
