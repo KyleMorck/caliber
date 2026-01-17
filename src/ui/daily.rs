@@ -9,6 +9,7 @@ use super::model::ListModel;
 use super::rows;
 use super::rows::build_edit_rows_with_prefix_width;
 use super::shared::entry_style;
+use super::theme;
 
 pub fn build_daily_list(app: &App, width: usize) -> ListModel {
     let ViewMode::Daily(state) = &app.view else {
@@ -37,7 +38,7 @@ pub fn build_daily_list(app: &App, width: usize) -> ListModel {
 
     let hidden_count = app.hidden_completed_count();
     if app.hide_completed && hidden_count > 0 {
-        let message = format!("▼ [{hidden_count} hidden entries]");
+        let message = theme::hidden_entries_label(hidden_count);
         rows.push(rows::build_message_row(&message, Style::default().dim()));
     }
 

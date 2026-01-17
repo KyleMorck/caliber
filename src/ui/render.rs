@@ -132,12 +132,12 @@ fn render_footer_bar(
     let bg = surface.gray1;
 
     let (mode_label, mode_color) = match input_mode {
-        InputMode::Edit(_) => ("Edit", theme::EDIT_PRIMARY),
-        InputMode::Selection(_) => ("Select", theme::EDIT_PRIMARY),
-        InputMode::Reorder => ("Reorder", theme::EDIT_PRIMARY),
+        InputMode::Edit(_) => (theme::LABEL_MODE_EDIT, theme::EDIT_PRIMARY),
+        InputMode::Selection(_) => (theme::LABEL_MODE_SELECT, theme::EDIT_PRIMARY),
+        InputMode::Reorder => (theme::LABEL_MODE_REORDER, theme::EDIT_PRIMARY),
         _ => match view {
-            ViewMode::Daily(_) => ("Daily", theme::DAILY_PRIMARY),
-            ViewMode::Filter(_) => ("Filter", theme::FILTER_PRIMARY),
+            ViewMode::Daily(_) => (theme::LABEL_MODE_DAILY, theme::DAILY_PRIMARY),
+            ViewMode::Filter(_) => (theme::LABEL_MODE_FILTER, theme::FILTER_PRIMARY),
         },
     };
     let mode_text = format!(" {} ", mode_label);

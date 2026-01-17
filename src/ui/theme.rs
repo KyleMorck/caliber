@@ -122,3 +122,44 @@ pub const AGENDA_DATE_WIDTH: usize = 12;
 pub const AGENDA_ENTRY_PADDING: usize = 5;
 pub const AGENDA_MIN_GUTTER: u16 = 20;
 pub const AGENDA_BORDER_WIDTH: usize = 2;
+
+// Hint colors
+pub const HINT_FILTER_TYPE: Color = Color::Magenta;
+pub const HINT_INACTIVE: Color = Color::Reset;
+
+// UI Labels - Footer mode indicators
+pub const LABEL_MODE_EDIT: &str = "Edit";
+pub const LABEL_MODE_SELECT: &str = "Select";
+pub const LABEL_MODE_REORDER: &str = "Reorder";
+pub const LABEL_MODE_DAILY: &str = "Daily";
+pub const LABEL_MODE_FILTER: &str = "Filter";
+
+// UI Labels - Command palette
+pub const LABEL_TAB_COMMANDS: &str = "Commands";
+pub const LABEL_TAB_PROJECTS: &str = "Projects";
+pub const LABEL_TAB_TAGS: &str = "Tags";
+pub const LABEL_EMPTY_COMMANDS: &str = "No commands available";
+pub const LABEL_EMPTY_PROJECTS: &str = "No projects registered";
+pub const LABEL_EMPTY_TAGS: &str = "No tags found";
+
+// UI Labels - Confirm dialogs
+pub const LABEL_CONFIRM_YES: &str = "[Y]";
+pub const LABEL_CONFIRM_NO: &str = "[N]";
+pub const LABEL_YES: &str = " Yes    ";
+pub const LABEL_NO: &str = " No";
+pub const LABEL_CANNOT_UNDO: &str = "This cannot be undone.";
+
+// UI Labels - Confirm dialog titles
+pub const TITLE_CREATE_PROJECT: &str = " Create Project Journal ";
+pub const TITLE_DELETE_TAG: &str = " Delete Tag ";
+pub const TITLE_REMOVE_FROM_COMPLETED: &str = " Remove from Completed ";
+
+// UI Labels - Confirm dialog messages
+pub const MSG_NO_PROJECT_JOURNAL: &str = "No project journal found.";
+pub const MSG_CREATE_PROJECT_JOURNAL: &str = "Create .caliber/journal.md?";
+
+// UI Labels - Daily view
+#[must_use]
+pub fn hidden_entries_label(count: usize) -> String {
+    format!("▼ [{count} hidden entries]")
+}

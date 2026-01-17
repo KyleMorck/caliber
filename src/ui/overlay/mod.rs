@@ -109,24 +109,24 @@ impl CommandPaletteModel {
 pub fn render_confirm_modal(f: &mut Frame<'_>, area: Rect, model: ConfirmModel) {
     let (title, messages): (&str, Vec<String>) = match &model.context {
         ConfirmContext::CreateProjectJournal => (
-            " Create Project Journal ",
+            theme::TITLE_CREATE_PROJECT,
             vec![
-                "No project journal found.".to_string(),
-                "Create .caliber/journal.md?".to_string(),
+                theme::MSG_NO_PROJECT_JOURNAL.to_string(),
+                theme::MSG_CREATE_PROJECT_JOURNAL.to_string(),
             ],
         ),
         ConfirmContext::DeleteTag(tag) => (
-            " Delete Tag ",
+            theme::TITLE_DELETE_TAG,
             vec![
                 format!("Delete all occurrences of #{}?", tag),
-                "This cannot be undone.".to_string(),
+                theme::LABEL_CANNOT_UNDO.to_string(),
             ],
         ),
         ConfirmContext::DeleteTagFromCompleted(tag) => (
-            " Remove from Completed ",
+            theme::TITLE_REMOVE_FROM_COMPLETED,
             vec![
                 format!("Remove #{} from completed tasks?", tag),
-                "This cannot be undone.".to_string(),
+                theme::LABEL_CANNOT_UNDO.to_string(),
             ],
         ),
     };
@@ -148,10 +148,10 @@ pub fn render_confirm_modal(f: &mut Frame<'_>, area: Rect, model: ConfirmModel) 
     }
     lines.push(RatatuiLine::raw(""));
     lines.push(RatatuiLine::from(vec![
-        Span::styled("[Y]", Style::default().fg(theme::CONFIRM_YES)),
-        Span::raw(" Yes    "),
-        Span::styled("[N]", Style::default().fg(theme::CONFIRM_NO)),
-        Span::raw(" No"),
+        Span::styled(theme::LABEL_CONFIRM_YES, Style::default().fg(theme::CONFIRM_YES)),
+        Span::raw(theme::LABEL_YES),
+        Span::styled(theme::LABEL_CONFIRM_NO, Style::default().fg(theme::CONFIRM_NO)),
+        Span::raw(theme::LABEL_NO),
     ]));
     let content = ratatui::text::Text::from(lines);
     let paragraph = Paragraph::new(content).alignment(Alignment::Center);
@@ -182,9 +182,9 @@ fn filtered_commands(mode: CommandPaletteMode) -> Vec<&'static Command> {
 
 fn empty_message(mode: CommandPaletteMode) -> &'static str {
     match mode {
-        CommandPaletteMode::Commands => "No commands available",
-        CommandPaletteMode::Projects => "No projects registered",
-        CommandPaletteMode::Tags => "No tags found",
+        CommandPaletteMode::Commands => theme::LABEL_EMPTY_COMMANDS,
+        CommandPaletteMode::Projects => theme::LABEL_EMPTY_PROJECTS,
+        CommandPaletteMode::Tags => theme::LABEL_EMPTY_TAGS,
     }
 }
 
@@ -342,7 +342,11 @@ pub fn render_command_palette(
         .constraints([Constraint::Min(1), Constraint::Length(5)])
         .split(padded_area(tabs_layout[0], padding));
 
-    let tab_titles = ["Commands", "Projects", "Tags"];
+    let tab_titles = [
+        theme::LABEL_TAB_COMMANDS,
+        theme::LABEL_TAB_PROJECTS,
+        theme::LABEL_TAB_TAGS,
+    ];
     let tabs = Tabs::new(tab_titles)
         .select(tab_index(model.mode))
         .style(
@@ -373,7 +377,11 @@ pub fn render_command_palette(
     .alignment(Alignment::Right);
     f.render_widget(cancel_hint, tabs_row[1]);
 
-    let tab_labels = ["Commands", "Projects", "Tags"];
+    let tab_labels = [
+        theme::LABEL_TAB_COMMANDS,
+        theme::LABEL_TAB_PROJECTS,
+        theme::LABEL_TAB_TAGS,
+    ];
 
     let divider = "   ";
     let divider_width = divider.width();

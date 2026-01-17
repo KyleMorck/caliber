@@ -590,10 +590,12 @@ impl HintContext {
         match effective {
             Self::Tags { .. } => theme::TAG,
             Self::Commands { .. } => theme::HUB_PRIMARY,
-            Self::FilterTypes { .. } | Self::DateOps { .. } => Color::Magenta,
+            Self::FilterTypes { .. } | Self::DateOps { .. } => theme::HINT_FILTER_TYPE,
             Self::DateValues { .. } => theme::PROJECTED_DATE,
-            Self::SavedFilters { .. } => Color::Magenta,
-            Self::Inactive | Self::GuidanceMessage { .. } | Self::Negation { .. } => Color::Reset,
+            Self::SavedFilters { .. } => theme::HINT_FILTER_TYPE,
+            Self::Inactive | Self::GuidanceMessage { .. } | Self::Negation { .. } => {
+                theme::HINT_INACTIVE
+            }
         }
     }
 
