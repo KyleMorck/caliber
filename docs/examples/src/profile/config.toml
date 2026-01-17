@@ -8,6 +8,7 @@ sidebar_default = "calendar"
 2 = "bug"
 3 = "marketing"
 4 = "idea"
+5 = "next"
 
 [filters]
 t = "!tasks"

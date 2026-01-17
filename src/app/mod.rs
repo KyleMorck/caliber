@@ -542,6 +542,21 @@ impl App {
         self.calendar_store.events_for_date(self.current_date).len()
     }
 
+    #[must_use]
+    pub fn visible_calendar_event_count(&self) -> usize {
+        let events = self.calendar_store.events_for_date(self.current_date);
+        if self.hide_completed {
+            events.iter().filter(|e| !e.is_past()).count()
+        } else {
+            events.len()
+        }
+    }
+
+    #[must_use]
+    pub fn has_hidden_entries_row(&self) -> bool {
+        self.hide_completed && self.hidden_completed_count() > 0
+    }
+
     /// Get ProjectInfo for the current project (if in project journal).
     fn get_current_project_info(&self) -> Option<storage::ProjectInfo> {
         if !matches!(self.active_journal(), JournalSlot::Project) {

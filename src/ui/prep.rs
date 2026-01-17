@@ -36,7 +36,8 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
     let filter_visual_line = app.filter_visual_line();
     let filter_total_lines = app.filter_total_lines();
     let visible_entry_count = app.visible_entry_count();
-    let calendar_event_count = app.calendar_event_count();
+    let visible_calendar_count = app.visible_calendar_event_count();
+    let hidden_row = if app.has_hidden_entries_row() { 1 } else { 0 };
 
     match &mut app.view {
         ViewMode::Filter(state) => {
@@ -53,10 +54,11 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
         }
         ViewMode::Daily(state) => {
             let scroll_height = list_content_height_for_daily(layout);
+            let offset = visible_calendar_count + hidden_row;
             ensure_selected_visible(
                 &mut state.scroll_offset,
-                state.selected + calendar_event_count,
-                visible_entry_count + calendar_event_count,
+                state.selected + offset,
+                visible_entry_count + offset,
                 scroll_height,
             );
             if state.selected == 0 {
@@ -106,7 +108,9 @@ pub fn prepare_render(app: &mut App, layout: &RenderContext) -> RenderPrep {
                 .map(|entry_type| {
                     let prefix_width = entry_type.prefix().width();
                     let available_width = list_content_width_for_daily(layout);
-                    let entry_start_line = calendar_event_count
+                    let hidden_row = if app.has_hidden_entries_row() { 1 } else { 0 };
+                    let entry_start_line = app.visible_calendar_event_count()
+                        + hidden_row
                         + app.visible_projected_count()
                         + app.visible_entries_before(*entry_index);
                     build_cursor_context(buffer, prefix_width, available_width, entry_start_line)
