@@ -47,20 +47,28 @@ pub fn render_calendar(f: &mut Frame<'_>, model: &CalendarModel<'_>, area: Rect)
     let context_primary = theme::context_primary(model.journal_slot);
     let mut events = CalendarEventStore::default();
 
-    // Style non-selected, non-today days with content
+    // Style non-selected, non-today days based on content
     for (date, info) in model.day_cache {
         if *date == model.selected || *date == today {
             continue;
         }
-        if info.has_entries || info.has_calendar_events {
+        if info.has_incomplete_tasks {
+            // Incomplete tasks: yellow to draw attention
+            events.add(
+                to_time_date(*date),
+                Style::default().fg(theme::CALENDAR_INCOMPLETE).not_dim(),
+            );
+        } else if info.has_entries || info.has_calendar_events {
+            // Has content but no incomplete tasks: white, not dimmed
             events.add(
                 to_time_date(*date),
                 Style::default().fg(theme::CALENDAR_TEXT).not_dim(),
             );
         }
+        // Empty days use default style (white dimmed)
     }
 
-    // Today (priority 3) - uses context primary color
+    // Today - uses context primary color
     if today.month() == model.display_month.month()
         && today.year() == model.display_month.year()
         && today != model.selected
@@ -75,6 +83,8 @@ pub fn render_calendar(f: &mut Frame<'_>, model: &CalendarModel<'_>, area: Rect)
     let selected_info = model.day_cache.get(&model.selected);
     let selected_style = if model.selected == today {
         Style::default().fg(context_primary).reversed().not_dim()
+    } else if selected_info.is_some_and(|i| i.has_incomplete_tasks) {
+        Style::default().fg(theme::CALENDAR_INCOMPLETE).reversed().not_dim()
     } else if selected_info.is_some_and(|i| i.has_entries || i.has_calendar_events) {
         Style::default()
             .fg(theme::CALENDAR_TEXT)

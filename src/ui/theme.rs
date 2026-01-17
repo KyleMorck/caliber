@@ -35,6 +35,7 @@ pub const TEXT_ON_ACCENT: Color = Color::Black;
 
 // Calendar
 pub const CALENDAR_TEXT: Color = Color::White;
+pub const CALENDAR_INCOMPLETE: Color = Color::Yellow;
 
 // Status indicator
 pub const STATUS_TEXT: Color = Color::Gray;
