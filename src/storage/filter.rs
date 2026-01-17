@@ -187,11 +187,14 @@ fn parse_spread_date(
     let start_is_future = start.ends_with('+');
     let end_is_future = end.ends_with('+');
 
-    let start_date = (!start.is_empty())
-        .then(|| parse_filter_date(start, today))
+    let start_str = start.strip_suffix('+').unwrap_or(start);
+    let end_str = end.strip_suffix('+').unwrap_or(end);
+
+    let start_date = (!start_str.is_empty())
+        .then(|| parse_filter_date_with_bias(start_str, today, start_is_future))
         .flatten();
-    let end_date = (!end.is_empty())
-        .then(|| parse_filter_date(end, today))
+    let end_date = (!end_str.is_empty())
+        .then(|| parse_filter_date_with_bias(end_str, today, end_is_future))
         .flatten();
 
     if (!start.is_empty() && start_date.is_none()) || (!end.is_empty() && end_date.is_none()) {
@@ -250,6 +253,21 @@ pub fn parse_natural_date(input: &str, today: NaiveDate) -> Option<NaiveDate> {
 #[must_use]
 pub fn parse_filter_date(input: &str, today: NaiveDate) -> Option<NaiveDate> {
     parse_date(input, ParseContext::Filter, today)
+}
+
+/// Parses date with explicit bias control for spread syntax.
+#[must_use]
+fn parse_filter_date_with_bias(
+    input: &str,
+    today: NaiveDate,
+    future_bias: bool,
+) -> Option<NaiveDate> {
+    let ctx = if future_bias {
+        ParseContext::Interface
+    } else {
+        ParseContext::Filter
+    };
+    parse_date(input, ctx, today)
 }
 
 /// Normalizes entry structure to: [content] [recurring_dates] [#tags]

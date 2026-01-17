@@ -22,7 +22,12 @@ pub fn create_temp_profile(source: &Path) -> io::Result<PathBuf> {
     let temp_dir = std::env::temp_dir().join(format!("caliber-testrun-{}", std::process::id()));
     fs::create_dir_all(&temp_dir)?;
 
-    for file in ["config.toml", "hub_config.toml", "hub_journal.md", "scratchpad.md"] {
+    for file in [
+        "config.toml",
+        "hub_config.toml",
+        "hub_journal.md",
+        "scratchpad.md",
+    ] {
         let src = source.join(file);
         if src.exists() {
             fs::copy(&src, temp_dir.join(file))?;

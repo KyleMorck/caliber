@@ -39,10 +39,7 @@ impl Recorder {
         let template = load_template()?;
         let recorded = generate_tape(&self.events);
 
-        let tape = format!(
-            "Output ../{}.gif\n\n{}\n{}",
-            self.name, template, recorded
-        );
+        let tape = format!("Output ../{}.gif\n\n{}\n{}", self.name, template, recorded);
 
         fs::write(&output_path, &tape)?;
         eprintln!(
@@ -74,8 +71,7 @@ fn generate_tape(events: &[(Duration, KeyEvent)]) -> String {
 }
 
 fn is_quit_key(key: &KeyEvent) -> bool {
-    matches!(key.code, KeyCode::Char('q' | 'Q'))
-        && key.modifiers.contains(KeyModifiers::CONTROL)
+    matches!(key.code, KeyCode::Char('q' | 'Q')) && key.modifiers.contains(KeyModifiers::CONTROL)
 }
 
 fn events_to_commands(events: &[(Duration, KeyEvent)]) -> Vec<TapeCommand> {
@@ -87,7 +83,9 @@ fn events_to_commands(events: &[(Duration, KeyEvent)]) -> Vec<TapeCommand> {
         let gap = time.saturating_sub(last_time);
 
         let is_plain_char = matches!(key.code, KeyCode::Char(_))
-            && !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+            && !key
+                .modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
 
         if !pending_chars.is_empty() && (!is_plain_char || gap > Duration::from_millis(500)) {
             commands.push(TapeCommand::Type(std::mem::take(&mut pending_chars)));
@@ -100,7 +98,9 @@ fn events_to_commands(events: &[(Duration, KeyEvent)]) -> Vec<TapeCommand> {
 
         match key.code {
             KeyCode::Char(c)
-                if !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+                if !key
+                    .modifiers
+                    .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
             {
                 pending_chars.push(c);
             }
@@ -187,7 +187,8 @@ fn format_commands(commands: &[TapeCommand]) -> String {
 fn key_name(code: KeyCode) -> Option<String> {
     let name = match code {
         KeyCode::Enter => "Enter",
-        KeyCode::Tab | KeyCode::BackTab => "Tab",
+        KeyCode::Tab => "Tab",
+        KeyCode::BackTab => "Shift+Tab",
         KeyCode::Backspace => "Backspace",
         KeyCode::Esc => "Escape",
         KeyCode::Up => "Up",

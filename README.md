@@ -72,7 +72,7 @@ That's enough to get started. The sections below go deeper.
 
 Your home base. Each day is a page in your journal. Navigate between days with `h` / `l` or arrow keys, or jump to any date with `\` to open the date picker.
 
-Entries from other days that target today appear at the top — one-time `@date` entries and recurring `@every-*` entries surface when the day comes.
+Recurring entries (`@every-*`) from other days appear at the top when their schedule matches today.
 
 | Key | Action |
 |-----|--------|
