@@ -53,7 +53,7 @@ pub fn render_app(f: &mut Frame<'_>, app: &mut App) {
     let view_model = build_view_model(app, &context, prep);
 
     render_header_bar(f, context.header_area, view_model.header);
-    render_view_heading(f, &context, app);
+    render_view_heading(f, &context, app, &app.surface);
 
     let mut list_content_area = None;
     let mut primary_panel_area = None;
@@ -243,7 +243,12 @@ fn render_footer_bar(f: &mut Frame<'_>, area: Rect, ctx: FooterContext<'_>) {
     );
 }
 
-fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
+fn render_view_heading(
+    f: &mut Frame<'_>,
+    context: &RenderContext,
+    app: &App,
+    surface: &super::surface::Surface,
+) {
     let heading_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(1)])
@@ -299,11 +304,12 @@ fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
     let highlight_len = label_width.min(rule_width.saturating_sub(highlight_start));
     let after_len = rule_width.saturating_sub(highlight_start + highlight_len);
 
+    let rule_color = theme::secondary_text(surface);
     let mut rule_spans = Vec::new();
     if highlight_start > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(highlight_start),
-            Style::default().fg(theme::TEXT_MUTED),
+            Style::default().fg(rule_color),
         ));
     }
     if highlight_len > 0 {
@@ -315,7 +321,7 @@ fn render_view_heading(f: &mut Frame<'_>, context: &RenderContext, app: &App) {
     if after_len > 0 {
         rule_spans.push(Span::styled(
             "─".repeat(after_len),
-            Style::default().fg(theme::TEXT_MUTED),
+            Style::default().fg(rule_color),
         ));
     }
 

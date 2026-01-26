@@ -30,7 +30,6 @@ pub const BORDER_DEFAULT: Color = Color::White;
 pub const BORDER_MUTED: Color = Color::Gray;
 
 // Text colors
-pub const TEXT_MUTED: Color = Color::DarkGray;
 pub const TEXT_ON_ACCENT: Color = Color::Black;
 
 // Calendar
